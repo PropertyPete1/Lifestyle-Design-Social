@@ -1,0 +1,308 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AnalyticsService = void 0;
+const logger_1 = require("../utils/logger");
+const Post_1 = require("../models/Post");
+const Video_1 = require("../models/Video");
+const User_1 = require("../models/User");
+const database_1 = require("../config/database");
+class AnalyticsService {
+    constructor() {
+        this.postModel = new Post_1.PostModel(database_1.pool);
+        this.videoModel = new Video_1.VideoModel(database_1.pool);
+        this.userModel = new User_1.UserModel(database_1.pool);
+    }
+    async recordPostEngagement(postId, metrics) {
+        try {
+            logger_1.logger.info(`Recording engagement for post ${postId}`);
+            const engagementRate = this.calculateEngagementRate(metrics);
+            await this.postModel.updateEngagement(postId, {
+                ...metrics,
+                engagementRate,
+                lastUpdated: new Date(),
+            });
+            logger_1.logger.info(`Recorded engagement for post ${postId}: ${engagementRate.toFixed(2)}%`);
+        }
+        catch (error) {
+            logger_1.logger.error('Failed to record post engagement:', error);
+            throw error;
+        }
+    }
+    calculateEngagementRate(metrics) {
+        const totalEngagement = metrics.likes + metrics.comments + metrics.shares;
+        const reach = metrics.reach || metrics.impressions || 1000;
+        return (totalEngagement / reach) * 100;
+    }
+    async getUserAnalytics(userId, days = 30) {
+        try {
+            logger_1.logger.info(`Getting analytics for user ${userId} (${days} days)`);
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+            const posts = await this.postModel.findByUser(userId, {
+                status: 'posted',
+                startDate,
+                endDate: new Date(),
+            });
+            const totalPosts = posts.length;
+            const totalEngagement = posts.reduce((sum, post) => {
+                return sum + (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
+            }, 0);
+            const averageEngagementRate = posts.length > 0
+                ? posts.reduce((sum, post) => sum + (post.engagementRate || 0), 0) / posts.length
+                : 0;
+            const bestPerformingPosts = posts
+                .sort((a, b) => (b.engagementRate || 0) - (a.engagementRate || 0))
+                .slice(0, 5);
+            const postingTrends = this.analyzePostingTrends(posts);
+            const categoryPerformance = await this.analyzeCategoryPerformance(userId, startDate);
+            const timeAnalysis = this.analyzePostingTimes(posts);
+            return {
+                totalPosts,
+                totalEngagement,
+                averageEngagementRate,
+                bestPerformingPosts,
+                postingTrends,
+                categoryPerformance,
+                timeAnalysis,
+            };
+        }
+        catch (error) {
+            logger_1.logger.error('Failed to get user analytics:', error);
+            throw error;
+        }
+    }
+    analyzePostingTrends(posts) {
+        const trends = [];
+        const dailyStats = {};
+        posts.forEach(post => {
+            const date = new Date(post.postedTime).toISOString().split('T')[0];
+            if (!dailyStats[date]) {
+                dailyStats[date] = { posts: 0, engagement: 0 };
+            }
+            dailyStats[date].posts++;
+            dailyStats[date].engagement += (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
+        });
+        Object.entries(dailyStats)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .forEach(([date, stats]) => {
+            trends.push({
+                date,
+                posts: stats.posts,
+                engagement: stats.engagement,
+                averageEngagement: stats.posts > 0 ? stats.engagement / stats.posts : 0,
+            });
+        });
+        return trends;
+    }
+    async analyzeCategoryPerformance(userId, startDate) {
+        try {
+            const videos = await this.videoModel.findByUser(userId, { startDate });
+            const posts = await this.postModel.findByUser(userId, { startDate });
+            const categoryStats = {};
+            videos.forEach(video => {
+                const category = video.category;
+                if (!categoryStats[category]) {
+                    categoryStats[category] = {
+                        totalVideos: 0,
+                        totalPosts: 0,
+                        totalEngagement: 0,
+                        averageEngagementRate: 0,
+                    };
+                }
+                categoryStats[category].totalVideos++;
+            });
+            posts.forEach(post => {
+                const video = videos.find(v => v.id === post.videoId);
+                if (video && categoryStats[video.category]) {
+                    categoryStats[video.category].totalPosts++;
+                    categoryStats[video.category].totalEngagement +=
+                        (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
+                }
+            });
+            Object.values(categoryStats).forEach(stats => {
+                if (stats.totalPosts > 0) {
+                    stats.averageEngagementRate = stats.totalEngagement / stats.totalPosts;
+                }
+            });
+            return categoryStats;
+        }
+        catch (error) {
+            logger_1.logger.error('Failed to analyze category performance:', error);
+            return {};
+        }
+    }
+    analyzePostingTimes(posts) {
+        const hourlyStats = {};
+        for (let hour = 0; hour < 24; hour++) {
+            hourlyStats[hour] = { engagement: 0, count: 0 };
+        }
+        posts.forEach(post => {
+            const hour = new Date(post.postedTime).getHours();
+            const engagement = (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
+            hourlyStats[hour].engagement += engagement;
+            hourlyStats[hour].count++;
+        });
+        return Object.entries(hourlyStats).map(([hour, stats]) => ({
+            hour: parseInt(hour),
+            averageEngagement: stats.count > 0 ? stats.engagement / stats.count : 0,
+            postCount: stats.count,
+        }));
+    }
+    async getBestPostingTimes(userId, days = 90) {
+        try {
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+            const posts = await this.postModel.findByUser(userId, {
+                status: 'posted',
+                startDate,
+                endDate: new Date(),
+            });
+            const timeAnalysis = this.analyzePostingTimes(posts);
+            const bestTimes = timeAnalysis
+                .filter(time => time.postCount >= 3)
+                .sort((a, b) => b.averageEngagement - a.averageEngagement)
+                .slice(0, 5)
+                .map(time => `${time.hour.toString().padStart(2, '0')}:00`);
+            return {
+                bestTimes,
+                timeAnalysis,
+                totalPostsAnalyzed: posts.length,
+            };
+        }
+        catch (error) {
+            logger_1.logger.error('Failed to get best posting times:', error);
+            return {
+                bestTimes: ['09:00', '13:00', '18:00'],
+                timeAnalysis: [],
+                totalPostsAnalyzed: 0,
+            };
+        }
+    }
+    async getEngagementInsights(userId, days = 30) {
+        try {
+            const analytics = await this.getUserAnalytics(userId, days);
+            const insights = {
+                overallPerformance: {
+                    totalPosts: analytics.totalPosts,
+                    totalEngagement: analytics.totalEngagement,
+                    averageEngagementRate: analytics.averageEngagementRate,
+                    trend: this.calculateTrend(analytics.postingTrends),
+                },
+                topPerformers: analytics.bestPerformingPosts.slice(0, 3),
+                categoryInsights: analytics.categoryPerformance,
+                timeInsights: analytics.timeAnalysis,
+                recommendations: this.generateRecommendations(analytics),
+            };
+            return insights;
+        }
+        catch (error) {
+            logger_1.logger.error('Failed to get engagement insights:', error);
+            throw error;
+        }
+    }
+    calculateTrend(trends) {
+        if (trends.length < 2)
+            return 'stable';
+        const recent = trends.slice(-7);
+        const previous = trends.slice(-14, -7);
+        const recentAvg = recent.reduce((sum, day) => sum + day.averageEngagement, 0) / recent.length;
+        const previousAvg = previous.reduce((sum, day) => sum + day.averageEngagement, 0) / previous.length;
+        const change = ((recentAvg - previousAvg) / previousAvg) * 100;
+        if (change > 10)
+            return 'positive';
+        if (change < -10)
+            return 'negative';
+        return 'stable';
+    }
+    generateRecommendations(analytics) {
+        const recommendations = [];
+        if (analytics.averageEngagementRate < 2) {
+            recommendations.push('Consider posting more engaging content with better captions and hashtags');
+        }
+        else if (analytics.averageEngagementRate > 5) {
+            recommendations.push('Great engagement! Keep up the quality content');
+        }
+        if (analytics.totalPosts < 10) {
+            recommendations.push('Increase posting frequency to build audience engagement');
+        }
+        const categories = Object.entries(analytics.categoryPerformance);
+        if (categories.length > 1) {
+            const bestCategory = categories.reduce((best, current) => current[1].averageEngagementRate > best[1].averageEngagementRate ? current : best);
+            recommendations.push(`Focus more on ${bestCategory[0]} content as it performs best`);
+        }
+        const bestTimes = analytics.timeAnalysis
+            .filter(time => time.postCount >= 3)
+            .sort((a, b) => b.averageEngagement - a.averageEngagement)
+            .slice(0, 3);
+        if (bestTimes.length > 0) {
+            const timeRecommendation = `Post more during these hours: ${bestTimes.map(t => `${t.hour}:00`).join(', ')}`;
+            recommendations.push(timeRecommendation);
+        }
+        return recommendations;
+    }
+    async getVideoPerformance(videoId) {
+        try {
+            const posts = await this.postModel.findByVideo(videoId);
+            if (posts.length === 0) {
+                return {
+                    totalPosts: 0,
+                    totalEngagement: 0,
+                    averageEngagementRate: 0,
+                    bestPost: null,
+                };
+            }
+            const totalPosts = posts.length;
+            const totalEngagement = posts.reduce((sum, post) => {
+                return sum + (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
+            }, 0);
+            const averageEngagementRate = posts.reduce((sum, post) => sum + (post.engagementRate || 0), 0) / posts.length;
+            const bestPost = posts.reduce((best, current) => (current.engagementRate || 0) > (best.engagementRate || 0) ? current : best);
+            return {
+                totalPosts,
+                totalEngagement,
+                averageEngagementRate,
+                bestPost,
+                posts,
+            };
+        }
+        catch (error) {
+            logger_1.logger.error('Failed to get video performance:', error);
+            throw error;
+        }
+    }
+    async exportAnalytics(userId, format = 'json') {
+        try {
+            const analytics = await this.getUserAnalytics(userId, 365);
+            if (format === 'csv') {
+                return this.convertToCSV(analytics);
+            }
+            return JSON.stringify(analytics, null, 2);
+        }
+        catch (error) {
+            logger_1.logger.error('Failed to export analytics:', error);
+            throw error;
+        }
+    }
+    convertToCSV(analytics) {
+        const csvRows = [
+            ['Metric', 'Value'],
+            ['Total Posts', analytics.totalPosts.toString()],
+            ['Total Engagement', analytics.totalEngagement.toString()],
+            ['Average Engagement Rate', analytics.averageEngagementRate.toFixed(2)],
+        ];
+        csvRows.push(['', '']);
+        csvRows.push(['Date', 'Posts', 'Engagement', 'Average Engagement']);
+        analytics.postingTrends.forEach(trend => {
+            csvRows.push([
+                trend.date,
+                trend.posts.toString(),
+                trend.engagement.toString(),
+                trend.averageEngagement.toFixed(2),
+            ]);
+        });
+        return csvRows.map(row => row.join(',')).join('\n');
+    }
+}
+exports.AnalyticsService = AnalyticsService;
+exports.default = AnalyticsService;
+//# sourceMappingURL=analyticsService.js.map

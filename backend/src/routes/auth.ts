@@ -33,11 +33,12 @@ const generateToken = (userId: string): string => {
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
-router.post('/register', validateRegistration, async (req: Request, res: Response) => {
+router.post('/register', validateRegistration, async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const { email, name, password } = req.body;
@@ -45,7 +46,8 @@ router.post('/register', validateRegistration, async (req: Request, res: Respons
     // Check if user already exists
     const existingUser = await userModel.findByEmail(email);
     if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+      res.status(400).json({ error: 'User already exists' });
+      return;
     }
 
     // Hash password
@@ -74,20 +76,23 @@ router.post('/register', validateRegistration, async (req: Request, res: Respons
       },
       token,
     });
+    return;
   } catch (error) {
     logger.error('Registration error:', error);
     res.status(500).json({ error: 'Server error' });
+    return;
   }
 });
 
 // @route   POST /api/auth/login
 // @desc    Login user
 // @access  Public
-router.post('/login', validateLogin, async (req: Request, res: Response) => {
+router.post('/login', validateLogin, async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const { email, password } = req.body;
@@ -95,13 +100,15 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
     // Find user
     const user = await userModel.findByEmail(email);
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
     }
 
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
     }
 
     // Update last login
@@ -124,28 +131,32 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
       },
       token,
     });
+    return;
   } catch (error) {
     logger.error('Login error:', error);
     res.status(500).json({ error: 'Server error' });
+    return;
   }
 });
 
 // @route   GET /api/auth/me
 // @desc    Get current user
 // @access  Private
-router.get('/me', async (req: Request, res: Response) => {
+router.get('/me', async (req: Request, res: Response): Promise<void> => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     const user = await userModel.findById(decoded.userId);
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid token' });
+      res.status(401).json({ error: 'Invalid token' });
+      return;
     }
 
     res.json({
@@ -163,21 +174,24 @@ router.get('/me', async (req: Request, res: Response) => {
         lastLoginAt: user.lastLoginAt,
       },
     });
+    return;
   } catch (error) {
     logger.error('Get user error:', error);
     res.status(401).json({ error: 'Invalid token' });
+    return;
   }
 });
 
 // @route   PUT /api/auth/instagram
 // @desc    Update Instagram credentials
 // @access  Private
-router.put('/instagram', async (req: Request, res: Response) => {
+router.put('/instagram', async (req: Request, res: Response): Promise<void> => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
@@ -191,7 +205,8 @@ router.put('/instagram', async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     logger.info(`Instagram credentials updated for user: ${user.email}`);
@@ -204,21 +219,24 @@ router.put('/instagram', async (req: Request, res: Response) => {
         instagramUserId: user.instagramUserId,
       },
     });
+    return;
   } catch (error) {
     logger.error('Instagram credentials update error:', error);
     res.status(500).json({ error: 'Server error' });
+    return;
   }
 });
 
 // @route   PUT /api/auth/posting-settings
 // @desc    Update posting settings
 // @access  Private
-router.put('/posting-settings', async (req: Request, res: Response) => {
+router.put('/posting-settings', async (req: Request, res: Response): Promise<void> => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
@@ -241,7 +259,8 @@ router.put('/posting-settings', async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     logger.info(`Posting settings updated for user: ${user.email}`);
@@ -257,9 +276,11 @@ router.put('/posting-settings', async (req: Request, res: Response) => {
         testMode: user.testMode,
       },
     });
+    return;
   } catch (error) {
     logger.error('Posting settings update error:', error);
     res.status(500).json({ error: 'Server error' });
+    return;
   }
 });
 

@@ -16,10 +16,15 @@ class AnalyticsService {
         try {
             logger_1.logger.info(`Recording engagement for post ${postId}`);
             const engagementRate = this.calculateEngagementRate(metrics);
-            await this.postModel.updateEngagement(postId, {
-                ...metrics,
-                engagementRate,
-                lastUpdated: new Date(),
+            await this.postModel.update(postId, {
+                engagementMetrics: {
+                    likes: metrics.likes,
+                    comments: metrics.comments,
+                    shares: metrics.shares,
+                    views: metrics.views,
+                    reach: metrics.reach,
+                    impressions: metrics.impressions,
+                },
             });
             logger_1.logger.info(`Recorded engagement for post ${postId}: ${engagementRate.toFixed(2)}%`);
         }
@@ -45,13 +50,26 @@ class AnalyticsService {
             });
             const totalPosts = posts.length;
             const totalEngagement = posts.reduce((sum, post) => {
-                return sum + (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
+                const metrics = post.engagementMetrics;
+                return sum + (metrics?.likes || 0) + (metrics?.comments || 0) + (metrics?.shares || 0);
             }, 0);
             const averageEngagementRate = posts.length > 0
-                ? posts.reduce((sum, post) => sum + (post.engagementRate || 0), 0) / posts.length
+                ? posts.reduce((sum, post) => {
+                    const metrics = post.engagementMetrics;
+                    if (!metrics)
+                        return sum;
+                    const engagement = metrics.likes + metrics.comments + metrics.shares;
+                    const reach = metrics.reach || metrics.impressions || 1000;
+                    return sum + (engagement / reach) * 100;
+                }, 0) / posts.length
                 : 0;
             const bestPerformingPosts = posts
-                .sort((a, b) => (b.engagementRate || 0) - (a.engagementRate || 0))
+                .filter(post => post.engagementMetrics)
+                .sort((a, b) => {
+                const aRate = this.calculatePostEngagementRate(a);
+                const bRate = this.calculatePostEngagementRate(b);
+                return bRate - aRate;
+            })
                 .slice(0, 5);
             const postingTrends = this.analyzePostingTrends(posts);
             const categoryPerformance = await this.analyzeCategoryPerformance(userId, startDate);
@@ -71,16 +89,29 @@ class AnalyticsService {
             throw error;
         }
     }
+    calculatePostEngagementRate(post) {
+        const metrics = post.engagementMetrics;
+        if (!metrics)
+            return 0;
+        const totalEngagement = metrics.likes + metrics.comments + metrics.shares;
+        const reach = metrics.reach || metrics.impressions || 1000;
+        return (totalEngagement / reach) * 100;
+    }
     analyzePostingTrends(posts) {
         const trends = [];
         const dailyStats = {};
         posts.forEach(post => {
-            const date = new Date(post.postedTime).toISOString().split('T')[0];
-            if (!dailyStats[date]) {
-                dailyStats[date] = { posts: 0, engagement: 0 };
+            const date = post.postedTime ? new Date(post.postedTime).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+            if (date) {
+                if (!dailyStats[date]) {
+                    dailyStats[date] = { posts: 0, engagement: 0 };
+                }
+                dailyStats[date].posts++;
+                const metrics = post.engagementMetrics;
+                if (metrics) {
+                    dailyStats[date].engagement += metrics.likes + metrics.comments + metrics.shares;
+                }
             }
-            dailyStats[date].posts++;
-            dailyStats[date].engagement += (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
         });
         Object.entries(dailyStats)
             .sort(([a], [b]) => a.localeCompare(b))
@@ -96,7 +127,7 @@ class AnalyticsService {
     }
     async analyzeCategoryPerformance(userId, startDate) {
         try {
-            const videos = await this.videoModel.findByUser(userId, { startDate });
+            const videos = await this.videoModel.findByUser(userId);
             const posts = await this.postModel.findByUser(userId, { startDate });
             const categoryStats = {};
             videos.forEach(video => {
@@ -113,10 +144,17 @@ class AnalyticsService {
             });
             posts.forEach(post => {
                 const video = videos.find(v => v.id === post.videoId);
-                if (video && categoryStats[video.category]) {
-                    categoryStats[video.category].totalPosts++;
-                    categoryStats[video.category].totalEngagement +=
-                        (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
+                if (video) {
+                    const category = video.category;
+                    const categoryData = categoryStats[category];
+                    if (categoryData) {
+                        categoryData.totalPosts++;
+                        const metrics = post.engagementMetrics;
+                        if (metrics) {
+                            categoryData.totalEngagement +=
+                                metrics.likes + metrics.comments + metrics.shares;
+                        }
+                    }
                 }
             });
             Object.values(categoryStats).forEach(stats => {
@@ -137,10 +175,13 @@ class AnalyticsService {
             hourlyStats[hour] = { engagement: 0, count: 0 };
         }
         posts.forEach(post => {
-            const hour = new Date(post.postedTime).getHours();
-            const engagement = (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
-            hourlyStats[hour].engagement += engagement;
-            hourlyStats[hour].count++;
+            const hour = post.postedTime ? new Date(post.postedTime).getHours() : 0;
+            const metrics = post.engagementMetrics;
+            const engagement = metrics ? metrics.likes + metrics.comments + metrics.shares : 0;
+            if (hourlyStats[hour]) {
+                hourlyStats[hour].engagement += engagement;
+                hourlyStats[hour].count++;
+            }
         });
         return Object.entries(hourlyStats).map(([hour, stats]) => ({
             hour: parseInt(hour),
@@ -201,12 +242,16 @@ class AnalyticsService {
         }
     }
     calculateTrend(trends) {
-        if (trends.length < 2)
+        if (trends.length < 14)
             return 'stable';
         const recent = trends.slice(-7);
         const previous = trends.slice(-14, -7);
+        if (recent.length === 0 || previous.length === 0)
+            return 'stable';
         const recentAvg = recent.reduce((sum, day) => sum + day.averageEngagement, 0) / recent.length;
         const previousAvg = previous.reduce((sum, day) => sum + day.averageEngagement, 0) / previous.length;
+        if (previousAvg === 0)
+            return 'stable';
         const change = ((recentAvg - previousAvg) / previousAvg) * 100;
         if (change > 10)
             return 'positive';
@@ -242,21 +287,24 @@ class AnalyticsService {
     }
     async getVideoPerformance(videoId) {
         try {
-            const posts = await this.postModel.findByVideo(videoId);
+            const allPosts = await this.postModel.findByUser('', {});
+            const posts = allPosts.filter(post => post.videoId === videoId);
             if (posts.length === 0) {
                 return {
                     totalPosts: 0,
                     totalEngagement: 0,
                     averageEngagementRate: 0,
                     bestPost: null,
+                    posts: [],
                 };
             }
             const totalPosts = posts.length;
             const totalEngagement = posts.reduce((sum, post) => {
-                return sum + (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
+                const metrics = post.engagementMetrics;
+                return sum + (metrics ? metrics.likes + metrics.comments + metrics.shares : 0);
             }, 0);
-            const averageEngagementRate = posts.reduce((sum, post) => sum + (post.engagementRate || 0), 0) / posts.length;
-            const bestPost = posts.reduce((best, current) => (current.engagementRate || 0) > (best.engagementRate || 0) ? current : best);
+            const averageEngagementRate = posts.reduce((sum, post) => sum + this.calculatePostEngagementRate(post), 0) / posts.length;
+            const bestPost = posts.reduce((best, current) => this.calculatePostEngagementRate(current) > this.calculatePostEngagementRate(best) ? current : best);
             return {
                 totalPosts,
                 totalEngagement,

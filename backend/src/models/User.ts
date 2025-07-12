@@ -9,6 +9,11 @@ export interface User {
   instagramAccessToken?: string;
   instagramRefreshToken?: string;
   instagramUserId?: string;
+  tiktokAccessToken?: string;
+  tiktokUserId?: string;
+  youtubeAccessToken?: string;
+  youtubeRefreshToken?: string;
+  youtubeChannelId?: string;
   autoPostingEnabled: boolean;
   postingTimes: string[]; // Dynamic posting times
   pinnedHours?: string[]; // User-pinned hours
@@ -197,6 +202,62 @@ export class UserModel {
     await this.pool.query(query, [id]);
   }
 
+  async updateSocialTokens(
+    id: string,
+    tokens: {
+      instagramAccessToken?: string | null;
+      instagramUserId?: string | null;
+      tiktokAccessToken?: string | null;
+      tiktokUserId?: string | null;
+      youtubeAccessToken?: string | null;
+      youtubeRefreshToken?: string | null;
+      youtubeChannelId?: string | null;
+    }
+  ): Promise<User | null> {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    // Map camelCase to snake_case for database columns
+    const fieldMap: Record<string, string> = {
+      instagramAccessToken: 'instagram_access_token',
+      instagramUserId: 'instagram_user_id',
+      tiktokAccessToken: 'tiktok_access_token',
+      tiktokUserId: 'tiktok_user_id',
+      youtubeAccessToken: 'youtube_access_token',
+      youtubeRefreshToken: 'youtube_refresh_token',
+      youtubeChannelId: 'youtube_channel_id',
+    };
+
+    Object.entries(tokens).forEach(([key, value]) => {
+      if (value !== undefined) {
+        const dbField = fieldMap[key];
+        if (dbField) {
+          fields.push(`${dbField} = $${paramCount}`);
+          values.push(value);
+          paramCount++;
+        }
+      }
+    });
+
+    if (fields.length === 0) return this.findById(id);
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const query = `
+      UPDATE users 
+      SET ${fields.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING *
+    `;
+
+    const result = await this.pool.query(query, values);
+    
+    if (result.rows.length === 0) return null;
+    return this.mapRowToUser(result.rows[0]);
+  }
+
   private mapRowToUser(row: any): User {
     return {
       id: row.id,
@@ -207,6 +268,11 @@ export class UserModel {
       instagramAccessToken: row.instagram_access_token,
       instagramRefreshToken: row.instagram_refresh_token,
       instagramUserId: row.instagram_user_id,
+      tiktokAccessToken: row.tiktok_access_token,
+      tiktokUserId: row.tiktok_user_id,
+      youtubeAccessToken: row.youtube_access_token,
+      youtubeRefreshToken: row.youtube_refresh_token,
+      youtubeChannelId: row.youtube_channel_id,
       autoPostingEnabled: row.auto_posting_enabled,
       postingTimes: JSON.parse(row.posting_times || '[]'),
       pinnedHours: row.pinned_hours ? JSON.parse(row.pinned_hours) : undefined,

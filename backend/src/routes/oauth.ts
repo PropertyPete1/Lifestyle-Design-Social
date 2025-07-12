@@ -4,11 +4,52 @@ import { UserModel } from '../models/User';
 import { pool } from '../config/database';
 import { authenticateToken } from '../middleware/auth';
 
+// OAuth response interfaces
+interface InstagramTokenResponse {
+  access_token: string;
+  user_id: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface TikTokTokenResponse {
+  access_token: string;
+  open_id: string;
+  refresh_token?: string;
+  expires_in?: number;
+  error?: string;
+  error_description?: string;
+}
+
+interface YouTubeTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface YouTubeChannelResponse {
+  items?: Array<{
+    id: string;
+    snippet: {
+      title: string;
+      description: string;
+    };
+    statistics: {
+      subscriberCount: string;
+      videoCount: string;
+      viewCount: string;
+    };
+  }>;
+}
+
 const router = express.Router();
 const userModel = new UserModel(pool);
 
 // Instagram OAuth Routes
-router.get('/instagram/auth', authenticateToken, (req, res) => {
+router.get('/instagram/auth', authenticateToken, (req, res): void => {
   const clientId = process.env['INSTAGRAM_APP_ID'];
   const redirectUri = process.env['INSTAGRAM_REDIRECT_URI'] || 'http://localhost:3000/oauth/instagram/callback';
   const scope = 'user_profile,user_media';
@@ -18,13 +59,14 @@ router.get('/instagram/auth', authenticateToken, (req, res) => {
   res.json({ authUrl });
 });
 
-router.get('/instagram/callback', async (req, res) => {
+router.get('/instagram/callback', async (req, res): Promise<void> => {
   try {
     const { code, state } = req.query;
     const userId = state as string;
 
     if (!code || !userId) {
-      return res.status(400).json({ error: 'Missing authorization code or user ID' });
+      res.status(400).json({ error: 'Missing authorization code or user ID' });
+      return;
     }
 
     // Exchange code for access token
@@ -40,11 +82,12 @@ router.get('/instagram/callback', async (req, res) => {
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await tokenResponse.json() as InstagramTokenResponse;
 
     if (tokenData.error) {
       logger.error('Instagram OAuth error:', tokenData.error);
-      return res.status(400).json({ error: 'Failed to get Instagram access token' });
+      res.status(400).json({ error: 'Failed to get Instagram access token' });
+      return;
     }
 
     // Store token in database
@@ -62,7 +105,7 @@ router.get('/instagram/callback', async (req, res) => {
 });
 
 // TikTok OAuth Routes
-router.get('/tiktok/auth', authenticateToken, (req, res) => {
+router.get('/tiktok/auth', authenticateToken, (req, res): void => {
   const clientKey = process.env['TIKTOK_CLIENT_KEY'];
   const redirectUri = process.env['TIKTOK_REDIRECT_URI'] || 'http://localhost:3000/oauth/tiktok/callback';
   const scope = 'user.info.basic,video.list';
@@ -72,13 +115,14 @@ router.get('/tiktok/auth', authenticateToken, (req, res) => {
   res.json({ authUrl });
 });
 
-router.get('/tiktok/callback', async (req, res) => {
+router.get('/tiktok/callback', async (req, res): Promise<void> => {
   try {
     const { code, state } = req.query;
     const userId = state as string;
 
     if (!code || !userId) {
-      return res.status(400).json({ error: 'Missing authorization code or user ID' });
+      res.status(400).json({ error: 'Missing authorization code or user ID' });
+      return;
     }
 
     // Exchange code for access token
@@ -94,11 +138,12 @@ router.get('/tiktok/callback', async (req, res) => {
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await tokenResponse.json() as TikTokTokenResponse;
 
     if (tokenData.error) {
       logger.error('TikTok OAuth error:', tokenData.error);
-      return res.status(400).json({ error: 'Failed to get TikTok access token' });
+      res.status(400).json({ error: 'Failed to get TikTok access token' });
+      return;
     }
 
     // Store token in database
@@ -116,7 +161,7 @@ router.get('/tiktok/callback', async (req, res) => {
 });
 
 // YouTube OAuth Routes
-router.get('/youtube/auth', authenticateToken, (req, res) => {
+router.get('/youtube/auth', authenticateToken, (req, res): void => {
   const clientId = process.env['YOUTUBE_CLIENT_ID'];
   const redirectUri = process.env['YOUTUBE_REDIRECT_URI'] || 'http://localhost:3000/oauth/youtube/callback';
   const scope = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube';
@@ -126,13 +171,14 @@ router.get('/youtube/auth', authenticateToken, (req, res) => {
   res.json({ authUrl });
 });
 
-router.get('/youtube/callback', async (req, res) => {
+router.get('/youtube/callback', async (req, res): Promise<void> => {
   try {
     const { code, state } = req.query;
     const userId = state as string;
 
     if (!code || !userId) {
-      return res.status(400).json({ error: 'Missing authorization code or user ID' });
+      res.status(400).json({ error: 'Missing authorization code or user ID' });
+      return;
     }
 
     // Exchange code for access token
@@ -148,16 +194,17 @@ router.get('/youtube/callback', async (req, res) => {
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await tokenResponse.json() as YouTubeTokenResponse;
 
     if (tokenData.error) {
       logger.error('YouTube OAuth error:', tokenData.error);
-      return res.status(400).json({ error: 'Failed to get YouTube access token' });
+      res.status(400).json({ error: 'Failed to get YouTube access token' });
+      return;
     }
 
     // Get channel information
     const channelResponse = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true&access_token=${tokenData.access_token}`);
-    const channelData = await channelResponse.json();
+    const channelData = await channelResponse.json() as YouTubeChannelResponse;
 
     // Store token in database
     await userModel.updateSocialTokens(userId, {
@@ -175,13 +222,14 @@ router.get('/youtube/callback', async (req, res) => {
 });
 
 // Disconnect social accounts
-router.post('/disconnect/:platform', authenticateToken, async (req, res) => {
+router.post('/disconnect/:platform', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { platform } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
     }
 
     const updateData: any = {};
@@ -201,7 +249,8 @@ router.post('/disconnect/:platform', authenticateToken, async (req, res) => {
         updateData.youtubeChannelId = null;
         break;
       default:
-        return res.status(400).json({ error: 'Invalid platform' });
+        res.status(400).json({ error: 'Invalid platform' });
+        return;
     }
 
     await userModel.updateSocialTokens(userId, updateData);
@@ -215,17 +264,19 @@ router.post('/disconnect/:platform', authenticateToken, async (req, res) => {
 });
 
 // Get connected social accounts
-router.get('/connected', authenticateToken, async (req, res) => {
+router.get('/connected', authenticateToken, async (req, res): Promise<void> => {
   try {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
     }
 
     const user = await userModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     const connectedAccounts = {
@@ -242,34 +293,37 @@ router.get('/connected', authenticateToken, async (req, res) => {
 });
 
 // Refresh tokens
-router.post('/refresh/:platform', authenticateToken, async (req, res) => {
+router.post('/refresh/:platform', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { platform } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
     }
 
     const user = await userModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
-
-    let newToken: string;
 
     switch (platform) {
       case 'instagram':
         // Instagram tokens are long-lived, no refresh needed
-        return res.json({ success: true, message: 'Instagram tokens are long-lived' });
+        res.json({ success: true, message: 'Instagram tokens are long-lived' });
+        return;
       
       case 'tiktok':
         // TikTok token refresh would go here
-        return res.json({ success: true, message: 'TikTok token refresh not implemented yet' });
+        res.json({ success: true, message: 'TikTok token refresh not implemented yet' });
+        return;
       
       case 'youtube':
         if (!user.youtubeRefreshToken) {
-          return res.status(400).json({ error: 'No refresh token available' });
+          res.status(400).json({ error: 'No refresh token available' });
+          return;
         }
 
         const response = await fetch('https://oauth2.googleapis.com/token', {
@@ -283,25 +337,25 @@ router.post('/refresh/:platform', authenticateToken, async (req, res) => {
           }),
         });
 
-        const tokenData = await response.json();
+        const tokenData = await response.json() as YouTubeTokenResponse;
         
         if (tokenData.error) {
-          return res.status(400).json({ error: 'Failed to refresh YouTube token' });
+          res.status(400).json({ error: 'Failed to refresh YouTube token' });
+          return;
         }
 
         await userModel.updateSocialTokens(userId, {
           youtubeAccessToken: tokenData.access_token,
         });
 
-        newToken = tokenData.access_token;
-        break;
+        logger.info(`Refreshed ${platform} token for user ${userId}`);
+        res.json({ success: true, message: `${platform} token refreshed successfully` });
+        return;
       
       default:
-        return res.status(400).json({ error: 'Invalid platform' });
+        res.status(400).json({ error: 'Invalid platform' });
+        return;
     }
-
-    logger.info(`Refreshed ${platform} token for user ${userId}`);
-    res.json({ success: true, message: `${platform} token refreshed successfully` });
   } catch (error) {
     logger.error('Refresh token error:', error);
     res.status(500).json({ error: 'Failed to refresh token' });

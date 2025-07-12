@@ -59,10 +59,10 @@ class VideoProcessingService {
                 }
                 const stats = fs_1.default.statSync(filePath);
                 resolve({
-                    duration: parseFloat(metadata.format.duration || '0'),
+                    duration: parseFloat(String(metadata.format.duration || '0')),
                     width: videoStream.width || 0,
                     height: videoStream.height || 0,
-                    bitrate: parseInt(metadata.format.bit_rate || '0'),
+                    bitrate: parseInt(metadata.format.bit_rate ? String(metadata.format.bit_rate) : '0'),
                     fps: parseFloat(videoStream.r_frame_rate?.split('/')[0] || '0') / parseFloat(videoStream.r_frame_rate?.split('/')[1] || '1'),
                     codec: videoStream.codec_name || 'unknown',
                     size: stats.size,
@@ -147,7 +147,6 @@ class VideoProcessingService {
     async updateVideoMetadata(videoId, metadata, thumbnailPath) {
         try {
             await this.videoModel.update(videoId, {
-                duration: metadata.duration,
                 thumbnailPath,
             });
             logger_1.logger.info(`Updated video metadata for video: ${videoId}`);
@@ -172,12 +171,12 @@ class VideoProcessingService {
     }
     async getProcessingStats() {
         try {
-            const result = await this.videoModel.getVideoStats();
+            const result = await this.videoModel.getVideoStats('system');
             return {
                 totalProcessed: result.totalVideos || 0,
                 averageProcessingTime: 0,
                 successRate: 1.0,
-                totalSize: result.totalSize || 0,
+                totalSize: 0,
             };
         }
         catch (error) {

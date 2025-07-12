@@ -195,7 +195,12 @@ export class MultiPlatformService {
     // Instagram processing (1:1 aspect ratio)
     if (platforms.instagram) {
       try {
-        const instagramSettings = this.instagramService.getInstagramVideoSettings();
+        const instagramSettings = {
+          maxDuration: 60,
+          maxFileSize: 100 * 1024 * 1024, // 100MB
+          supportedFormats: ['mp4', 'mov'],
+          aspectRatio: '9:16'
+        };
         const result = await this.videoService.processVideo(videoPath, 'system', {
           compressVideo: true,
           generateThumbnail: true,
@@ -352,7 +357,12 @@ export class MultiPlatformService {
    */
   getPlatformRequirements(): PlatformRequirements {
     return {
-      instagram: this.instagramService.getInstagramVideoSettings(),
+      instagram: {
+        maxDuration: 60,
+        maxFileSize: 100 * 1024 * 1024, // 100MB
+        recommendedDimensions: { width: 1080, height: 1920 },
+        recommendedBitrate: 3500,
+      },
       tiktok: this.tiktokService.getVideoRequirements(),
       youtube: this.youtubeService.getVideoRequirements(),
     };

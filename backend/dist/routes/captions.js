@@ -1,106 +1,95 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const auth_1 = require("../middleware/auth");
+const captionGenerationService_1 = require("../services/captionGenerationService");
 const Video_1 = require("../models/Video");
 const database_1 = require("../config/database");
 const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
+const captionService = new captionGenerationService_1.CaptionGenerationService();
 const videoModel = new Video_1.VideoModel(database_1.pool);
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const authenticateToken = (req, res, next) => {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
-    }
+router.post('/generate', auth_1.authenticateToken, async (req, res) => {
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        req.userId = decoded.userId;
-        next();
-    }
-    catch (error) {
-        return res.status(401).json({ error: 'Invalid token' });
-    }
-};
-router.post('/generate', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.userId;
-        const { videoId, tone = 'professional', style = 'engaging', includeHashtags = true, maxLength = 2200, includeCallToAction = true, } = req.body;
-        const video = await videoModel.findById(videoId);
-        if (!video || video.userId !== userId) {
-            return res.status(404).json({ error: 'Video not found' });
+        const userId = req.user.id;
+        const { videoId, platform, style, includeHashtags, customPrompt } = req.body;
+        if (!videoId) {
+            res.status(400).json({ error: 'Video ID is required' });
+            return;
         }
-        const caption = generateCaption({
-            video,
-            tone,
-            style,
-            includeHashtags,
-            maxLength,
-            includeCallToAction,
+        const video = await videoModel.findById(videoId);
+        if (!video) {
+            res.status(404).json({ error: 'Video not found' });
+            return;
+        }
+        const caption = await captionService.generateCaption({
+            videoId,
+            tone: style || 'professional',
+            includeHashtags: includeHashtags !== false,
         });
-        logger_1.logger.info(`Generated caption for video: ${video.id} by user ${userId}`);
         res.json({
-            caption,
-            video: {
-                id: video.id,
-                title: video.title,
-                category: video.category,
-                propertyType: video.propertyType,
-                location: video.location,
-                price: video.price,
-            }
+            caption: caption.caption,
+            hashtags: caption.hashtags,
+            tone: caption.tone,
+            length: caption.length,
+            emojis: caption.emojis
         });
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Generate caption error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Caption generation error:', error);
+        res.status(500).json({ error: 'Failed to generate caption' });
+        return;
     }
 });
-router.post('/generate-batch', authenticateToken, async (req, res) => {
+router.post('/generate-batch', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { videoIds, tone = 'professional', style = 'engaging', includeHashtags = true, maxLength = 2200, includeCallToAction = true, } = req.body;
-        if (!Array.isArray(videoIds) || videoIds.length === 0) {
-            return res.status(400).json({ error: 'Video IDs array is required' });
+        const userId = req.user.id;
+        const { videoIds, platform, style, includeHashtags } = req.body;
+        if (!videoIds || !Array.isArray(videoIds)) {
+            res.status(400).json({ error: 'Video IDs array is required' });
+            return;
         }
-        const captions = [];
-        for (const videoId of videoIds) {
-            const video = await videoModel.findById(videoId);
-            if (video && video.userId === userId) {
-                const caption = generateCaption({
-                    video,
-                    tone,
-                    style,
-                    includeHashtags,
-                    maxLength,
-                    includeCallToAction,
-                });
-                captions.push({
+        const captions = await Promise.all(videoIds.map(async (videoId) => {
+            try {
+                const caption = await captionService.generateCaption({
                     videoId,
-                    caption,
-                    video: {
-                        id: video.id,
-                        title: video.title,
-                        category: video.category,
-                    }
+                    tone: style || 'professional',
+                    includeHashtags: includeHashtags !== false
                 });
+                return {
+                    videoId,
+                    success: true,
+                    caption: caption.caption,
+                    hashtags: caption.hashtags,
+                    tone: caption.tone,
+                    length: caption.length
+                };
             }
-        }
-        logger_1.logger.info(`Generated ${captions.length} captions for user ${userId}`);
+            catch (error) {
+                return {
+                    videoId,
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to generate caption'
+                };
+            }
+        }));
         res.json({
             captions,
-            total: captions.length,
+            total: videoIds.length,
+            successful: captions.filter(c => c.success).length,
+            failed: captions.filter(c => !c.success).length
         });
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Generate batch captions error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Batch caption generation error:', error);
+        res.status(500).json({ error: 'Failed to generate batch captions' });
+        return;
     }
 });
-router.get('/templates', authenticateToken, async (req, res) => {
+router.get('/templates', auth_1.authenticateToken, async (req, res) => {
     try {
         const { category, tone } = req.query;
         const templates = getCaptionTemplates({
@@ -114,7 +103,7 @@ router.get('/templates', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
-router.post('/hashtags', authenticateToken, async (req, res) => {
+router.post('/hashtags', auth_1.authenticateToken, async (req, res) => {
     try {
         const { content, category = 'real-estate', location, propertyType, price, count = 20, } = req.body;
         const hashtags = generateHashtags({
@@ -135,7 +124,7 @@ router.post('/hashtags', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
-router.get('/hashtag-suggestions', authenticateToken, async (req, res) => {
+router.get('/hashtag-suggestions', auth_1.authenticateToken, async (req, res) => {
     try {
         const { category, location, propertyType } = req.query;
         const suggestions = getHashtagSuggestions({
@@ -150,7 +139,7 @@ router.get('/hashtag-suggestions', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
-router.post('/optimize', authenticateToken, async (req, res) => {
+router.post('/optimize', auth_1.authenticateToken, async (req, res) => {
     try {
         const { caption, videoId, optimizationType = 'engagement', targetLength, includeHashtags = true, } = req.body;
         let video = null;

@@ -183,6 +183,7 @@ async function checkExternalServices() {
                 services.services.instagram = {
                     status: 'available',
                     message: 'Instagram API is accessible',
+                    timestamp: new Date().toISOString()
                 };
             }
             catch (error) {
@@ -190,6 +191,7 @@ async function checkExternalServices() {
                     status: 'unavailable',
                     message: 'Instagram API is not accessible',
                     error: error instanceof Error ? error.message : 'Unknown error',
+                    timestamp: new Date().toISOString()
                 };
                 services.status = 'degraded';
                 services.message = 'Some external services are unavailable';

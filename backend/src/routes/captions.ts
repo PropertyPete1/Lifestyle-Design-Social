@@ -1,137 +1,104 @@
-import { Router, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import { Request, Response, Router } from 'express';
+import { authenticateToken } from '../middleware/auth';
+import { CaptionGenerationService } from '../services/captionGenerationService';
 import { VideoModel } from '../models/Video';
 import { pool } from '../config/database';
 import { logger } from '../utils/logger';
 
 const router = Router();
+const captionService = new CaptionGenerationService();
 const videoModel = new VideoModel(pool);
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-// Authentication middleware
-const authenticateToken = (req: Request, res: Response, next: Function) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
+// Remove the duplicate authenticateToken definition since we're importing it
 
+router.post('/generate', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    (req as any).userId = decoded.userId;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-// @route   POST /api/captions/generate
-// @desc    Generate AI-powered caption
-// @access  Private
-router.post('/generate', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const {
-      videoId,
-      tone = 'professional',
-      style = 'engaging',
-      includeHashtags = true,
-      maxLength = 2200,
-      includeCallToAction = true,
-    } = req.body;
-
-    // Get video details
-    const video = await videoModel.findById(videoId);
-    if (!video || video.userId !== userId) {
-      return res.status(404).json({ error: 'Video not found' });
+    const userId = req.user!.id;
+    const { videoId, platform, style, includeHashtags, customPrompt } = req.body;
+    
+    if (!videoId) {
+      res.status(400).json({ error: 'Video ID is required' });
+      return;
     }
-
-    // TODO: Integrate with OpenAI or similar AI service
-    // For now, we'll create a template-based caption
-    const caption = generateCaption({
-      video,
-      tone,
-      style,
-      includeHashtags,
-      maxLength,
-      includeCallToAction,
+    
+    const video = await videoModel.findById(videoId);
+    if (!video) {
+      res.status(404).json({ error: 'Video not found' });
+      return;
+    }
+    
+    const caption = await captionService.generateCaption({
+      videoId,
+      tone: style || 'professional',
+      includeHashtags: includeHashtags !== false,
     });
-
-    logger.info(`Generated caption for video: ${video.id} by user ${userId}`);
-
+    
     res.json({
-      caption,
-      video: {
-        id: video.id,
-        title: video.title,
-        category: video.category,
-        propertyType: video.propertyType,
-        location: video.location,
-        price: video.price,
-      }
+      caption: caption.caption,
+      hashtags: caption.hashtags,
+      tone: caption.tone,
+      length: caption.length,
+      emojis: caption.emojis
     });
+    return;
   } catch (error) {
-    logger.error('Generate caption error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Caption generation error:', error);
+    res.status(500).json({ error: 'Failed to generate caption' });
+    return;
   }
 });
 
-// @route   POST /api/captions/generate-batch
-// @desc    Generate captions for multiple videos
-// @access  Private
-router.post('/generate-batch', authenticateToken, async (req: Request, res: Response) => {
+router.post('/generate-batch', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).userId;
-    const {
-      videoIds,
-      tone = 'professional',
-      style = 'engaging',
-      includeHashtags = true,
-      maxLength = 2200,
-      includeCallToAction = true,
-    } = req.body;
-
-    if (!Array.isArray(videoIds) || videoIds.length === 0) {
-      return res.status(400).json({ error: 'Video IDs array is required' });
+    const userId = req.user!.id;
+    const { videoIds, platform, style, includeHashtags } = req.body;
+    
+    if (!videoIds || !Array.isArray(videoIds)) {
+      res.status(400).json({ error: 'Video IDs array is required' });
+      return;
     }
-
-    const captions = [];
-
-    for (const videoId of videoIds) {
-      const video = await videoModel.findById(videoId);
-      if (video && video.userId === userId) {
-        const caption = generateCaption({
-          video,
-          tone,
-          style,
-          includeHashtags,
-          maxLength,
-          includeCallToAction,
-        });
-
-        captions.push({
+    
+    const captions = await Promise.all(
+      videoIds.map(async (videoId: string) => {
+        try {
+                  const caption = await captionService.generateCaption({
           videoId,
-          caption,
-          video: {
-            id: video.id,
-            title: video.title,
-            category: video.category,
-          }
+          tone: style || 'professional',
+          includeHashtags: includeHashtags !== false
         });
-      }
-    }
-
-    logger.info(`Generated ${captions.length} captions for user ${userId}`);
-
+        
+        return {
+          videoId,
+          success: true,
+          caption: caption.caption,
+          hashtags: caption.hashtags,
+          tone: caption.tone,
+          length: caption.length
+        };
+        } catch (error) {
+          return {
+            videoId,
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to generate caption'
+          };
+        }
+      })
+    );
+    
     res.json({
       captions,
-      total: captions.length,
+      total: videoIds.length,
+      successful: captions.filter(c => c.success).length,
+      failed: captions.filter(c => !c.success).length
     });
+    return;
   } catch (error) {
-    logger.error('Generate batch captions error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Batch caption generation error:', error);
+    res.status(500).json({ error: 'Failed to generate batch captions' });
+    return;
   }
 });
 

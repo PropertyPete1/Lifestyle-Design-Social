@@ -8,6 +8,11 @@ export interface User {
     instagramAccessToken?: string;
     instagramRefreshToken?: string;
     instagramUserId?: string;
+    tiktokAccessToken?: string;
+    tiktokUserId?: string;
+    youtubeAccessToken?: string;
+    youtubeRefreshToken?: string;
+    youtubeChannelId?: string;
     autoPostingEnabled: boolean;
     postingTimes: string[];
     pinnedHours?: string[];
@@ -59,6 +64,15 @@ export declare class UserModel {
         testMode?: boolean;
     }): Promise<User | null>;
     updateLastLogin(id: string): Promise<void>;
+    updateSocialTokens(id: string, tokens: {
+        instagramAccessToken?: string | null;
+        instagramUserId?: string | null;
+        tiktokAccessToken?: string | null;
+        tiktokUserId?: string | null;
+        youtubeAccessToken?: string | null;
+        youtubeRefreshToken?: string | null;
+        youtubeChannelId?: string | null;
+    }): Promise<User | null>;
     private mapRowToUser;
     private camelToSnake;
 }

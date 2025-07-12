@@ -26,8 +26,6 @@ export interface CaptionTemplate {
 }
 export declare class CaptionGenerationService {
     private videoModel;
-    private captionModel;
-    private hashtagModel;
     constructor();
     generateCaption(options: CaptionGenerationOptions): Promise<GeneratedCaption>;
     private getCaptionTemplate;

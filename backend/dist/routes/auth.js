@@ -29,12 +29,14 @@ router.post('/register', validateRegistration, async (req, res) => {
     try {
         const errors = (0, express_validator_1.validationResult)(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+            res.status(400).json({ errors: errors.array() });
+            return;
         }
         const { email, name, password } = req.body;
         const existingUser = await userModel.findByEmail(email);
         if (existingUser) {
-            return res.status(400).json({ error: 'User already exists' });
+            res.status(400).json({ error: 'User already exists' });
+            return;
         }
         const saltRounds = 12;
         const passwordHash = await bcryptjs_1.default.hash(password, saltRounds);
@@ -55,26 +57,31 @@ router.post('/register', validateRegistration, async (req, res) => {
             },
             token,
         });
+        return;
     }
     catch (error) {
         logger_1.logger.error('Registration error:', error);
         res.status(500).json({ error: 'Server error' });
+        return;
     }
 });
 router.post('/login', validateLogin, async (req, res) => {
     try {
         const errors = (0, express_validator_1.validationResult)(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+            res.status(400).json({ errors: errors.array() });
+            return;
         }
         const { email, password } = req.body;
         const user = await userModel.findByEmail(email);
         if (!user) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+            res.status(401).json({ error: 'Invalid credentials' });
+            return;
         }
         const isPasswordValid = await bcryptjs_1.default.compare(password, user.passwordHash);
         if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+            res.status(401).json({ error: 'Invalid credentials' });
+            return;
         }
         await userModel.updateLastLogin(user.id);
         const token = generateToken(user.id);
@@ -91,22 +98,26 @@ router.post('/login', validateLogin, async (req, res) => {
             },
             token,
         });
+        return;
     }
     catch (error) {
         logger_1.logger.error('Login error:', error);
         res.status(500).json({ error: 'Server error' });
+        return;
     }
 });
 router.get('/me', async (req, res) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '');
         if (!token) {
-            return res.status(401).json({ error: 'No token provided' });
+            res.status(401).json({ error: 'No token provided' });
+            return;
         }
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
         const user = await userModel.findById(decoded.userId);
         if (!user) {
-            return res.status(401).json({ error: 'Invalid token' });
+            res.status(401).json({ error: 'Invalid token' });
+            return;
         }
         res.json({
             user: {
@@ -123,17 +134,20 @@ router.get('/me', async (req, res) => {
                 lastLoginAt: user.lastLoginAt,
             },
         });
+        return;
     }
     catch (error) {
         logger_1.logger.error('Get user error:', error);
         res.status(401).json({ error: 'Invalid token' });
+        return;
     }
 });
 router.put('/instagram', async (req, res) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '');
         if (!token) {
-            return res.status(401).json({ error: 'No token provided' });
+            res.status(401).json({ error: 'No token provided' });
+            return;
         }
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
         const { instagramUsername, instagramAccessToken, instagramRefreshToken, instagramUserId } = req.body;
@@ -144,7 +158,8 @@ router.put('/instagram', async (req, res) => {
             instagramUserId,
         });
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            res.status(404).json({ error: 'User not found' });
+            return;
         }
         logger_1.logger.info(`Instagram credentials updated for user: ${user.email}`);
         res.json({
@@ -155,17 +170,20 @@ router.put('/instagram', async (req, res) => {
                 instagramUserId: user.instagramUserId,
             },
         });
+        return;
     }
     catch (error) {
         logger_1.logger.error('Instagram credentials update error:', error);
         res.status(500).json({ error: 'Server error' });
+        return;
     }
 });
 router.put('/posting-settings', async (req, res) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '');
         if (!token) {
-            return res.status(401).json({ error: 'No token provided' });
+            res.status(401).json({ error: 'No token provided' });
+            return;
         }
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
         const { autoPostingEnabled, postingTimes, pinnedHours, excludedHours, timezone, testMode, } = req.body;
@@ -178,7 +196,8 @@ router.put('/posting-settings', async (req, res) => {
             testMode,
         });
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            res.status(404).json({ error: 'User not found' });
+            return;
         }
         logger_1.logger.info(`Posting settings updated for user: ${user.email}`);
         res.json({
@@ -192,10 +211,12 @@ router.put('/posting-settings', async (req, res) => {
                 testMode: user.testMode,
             },
         });
+        return;
     }
     catch (error) {
         logger_1.logger.error('Posting settings update error:', error);
         res.status(500).json({ error: 'Server error' });
+        return;
     }
 });
 router.post('/logout', async (req, res) => {

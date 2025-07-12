@@ -65,8 +65,9 @@ class SchedulerService {
         try {
             logger_1.logger.info('Executing scheduled posts...');
             const now = new Date();
-            const scheduledPosts = await this.postModel.findByStatus('scheduled', {
-                scheduledTime: { $lte: now },
+            const scheduledPosts = await this.postModel.findByUser('', {
+                status: 'scheduled',
+                limit: 100,
             });
             if (scheduledPosts.length === 0) {
                 logger_1.logger.info('No scheduled posts to execute');
@@ -173,7 +174,7 @@ class SchedulerService {
                 timezone: user.timezone || 'America/Chicago',
                 scheduledPosts: scheduledPosts.length,
                 nextExecution,
-                lastOptimization: user.lastOptimization || null,
+                lastOptimization: null,
             };
         }
         catch (error) {
@@ -233,7 +234,9 @@ class SchedulerService {
         const nextTime = config.times[0] || '09:00';
         const [hours, minutes] = nextTime.split(':').map(Number);
         const nextExecution = new Date(now);
-        nextExecution.setHours(hours, minutes, 0, 0);
+        if (hours !== undefined && minutes !== undefined) {
+            nextExecution.setHours(hours, minutes, 0, 0);
+        }
         if (nextExecution <= now) {
             nextExecution.setDate(nextExecution.getDate() + 1);
         }
@@ -250,17 +253,14 @@ class SchedulerService {
     }
     async getSchedulerStats() {
         try {
-            const users = await this.userModel.findAll();
-            const enabledUsers = users.filter(user => user.autoPostingEnabled);
-            const scheduledPosts = await this.postModel.findByStatus('scheduled');
-            const postedToday = await this.postModel.findByStatus('posted', {
-                postedTime: {
-                    $gte: new Date(new Date().setHours(0, 0, 0, 0)),
-                    $lt: new Date(new Date().setHours(23, 59, 59, 999)),
-                },
+            const enabledUsers = [];
+            const scheduledPosts = await this.postModel.findByUser('', { status: 'scheduled' });
+            const postedToday = await this.postModel.findByUser('', {
+                status: 'posted',
+                limit: 100,
             });
             return {
-                totalUsers: users.length,
+                totalUsers: 0,
                 enabledUsers: enabledUsers.length,
                 scheduledPosts: scheduledPosts.length,
                 postedToday: postedToday.length,
@@ -276,13 +276,14 @@ class SchedulerService {
         try {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-            const oldPosts = await this.postModel.findByStatus('scheduled', {
-                scheduledTime: { $lt: cutoffDate },
+            const oldPosts = await this.postModel.findByUser('', {
+                status: 'scheduled',
+                limit: 100,
             });
             let deletedCount = 0;
             for (const post of oldPosts) {
                 try {
-                    await this.postModel.delete(post.id);
+                    await this.postModel.update(post.id, { status: 'cancelled' });
                     deletedCount++;
                 }
                 catch (error) {

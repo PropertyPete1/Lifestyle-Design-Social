@@ -332,7 +332,7 @@ export class YouTubeService {
     };
 
     const categoryTitles = titles[category] || titles['real-estate'];
-    return categoryTitles[Math.floor(Math.random() * categoryTitles.length)];
+    return categoryTitles?.[Math.floor(Math.random() * categoryTitles.length)] || baseTitle;
   }
 
   /**
@@ -340,7 +340,7 @@ export class YouTubeService {
    */
   generateYouTubeDescription(caption: string, hashtags: string[]): string {
     const description = `${caption}\n\n`;
-    const hashtagString = hashtags.join(' ');
+    const hashtagString = hashtags?.join(' ') || '';
     const callToAction = '\n\n🔔 Subscribe for more real estate content!\n📧 Contact us for property inquiries\n🏠 Follow us on Instagram: @demo_realtor';
     
     return description + hashtagString + callToAction;
@@ -365,7 +365,7 @@ export class YouTubeService {
       ],
     };
 
-    return tags[category] || tags['real-estate'];
+    return tags[category] || tags['real-estate'] || [];
   }
 }
 

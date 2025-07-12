@@ -1,229 +1,197 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const Post_1 = require("../models/Post");
-const Video_1 = require("../models/Video");
-const database_1 = require("../config/database");
-const logger_1 = require("../utils/logger");
+const auth_1 = require("../middleware/auth");
+const analyticsService_1 = require("../services/analyticsService");
 const router = (0, express_1.Router)();
-const postModel = new Post_1.PostModel(database_1.pool);
-const videoModel = new Video_1.VideoModel(database_1.pool);
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const authenticateToken = (req, res, next) => {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
-    }
+const analyticsService = new analyticsService_1.AnalyticsService();
+router.get('/overview', auth_1.authenticateToken, async (req, res) => {
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        req.userId = decoded.userId;
-        next();
-    }
-    catch (error) {
-        return res.status(401).json({ error: 'Invalid token' });
-    }
-};
-router.get('/overview', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.userId;
-        const { days = 30 } = req.query;
-        const overview = await postModel.getAnalyticsOverview(userId, parseInt(days));
-        res.json({ overview });
-    }
-    catch (error) {
-        logger_1.logger.error('Get analytics overview error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-router.get('/engagement', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.userId;
-        const { days = 30, platform } = req.query;
-        const engagement = await postModel.getEngagementMetrics(userId, {
-            days: parseInt(days),
-            platform: platform,
+        const userId = req.user.id;
+        const days = req.query.days || '30';
+        const analytics = await analyticsService.getUserAnalytics(userId, parseInt(days));
+        res.json({
+            totalPosts: analytics.totalPosts,
+            totalEngagement: analytics.totalEngagement,
+            avgEngagement: analytics.averageEngagementRate,
+            growth: analytics.postingTrends.length > 0 ? 'positive' : 'stable'
         });
-        res.json({ engagement });
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get engagement metrics error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Analytics overview error:', error);
+        res.status(500).json({ error: 'Failed to fetch analytics overview' });
+        return;
     }
 });
-router.get('/best-times', authenticateToken, async (req, res) => {
+router.get('/posting-times', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { days = 90 } = req.query;
-        const bestTimes = await postModel.getBestPostingTimes(userId, parseInt(days));
-        res.json({ bestTimes });
+        const userId = req.user.id;
+        const days = req.query.days || '30';
+        const bestTimes = await analyticsService.getBestPostingTimes(userId, parseInt(days));
+        res.json(bestTimes);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get best times error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Best posting times error:', error);
+        res.status(500).json({ error: 'Failed to fetch best posting times' });
+        return;
     }
 });
-router.get('/hashtag-performance', authenticateToken, async (req, res) => {
+router.get('/hashtag-performance', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { days = 30 } = req.query;
-        const hashtagPerformance = await postModel.getHashtagPerformance(userId, parseInt(days));
-        res.json({ hashtagPerformance });
+        const userId = req.user.id;
+        const days = req.query.days || '30';
+        const analytics = await analyticsService.getUserAnalytics(userId, parseInt(days));
+        const hashtagPerformance = analytics.categoryPerformance;
+        res.json(hashtagPerformance);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get hashtag performance error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Hashtag performance error:', error);
+        res.status(500).json({ error: 'Failed to fetch hashtag performance' });
+        return;
     }
 });
-router.get('/video-performance', authenticateToken, async (req, res) => {
+router.get('/video-performance', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { days = 30, category } = req.query;
-        const videoPerformance = await postModel.getVideoPerformance(userId, {
-            days: parseInt(days),
-            category: category,
-        });
-        res.json({ videoPerformance });
+        const userId = req.user.id;
+        const days = req.query.days || '30';
+        const analytics = await analyticsService.getUserAnalytics(userId, parseInt(days));
+        const videoPerformance = analytics.categoryPerformance;
+        res.json(videoPerformance);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get video performance error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Video performance error:', error);
+        res.status(500).json({ error: 'Failed to fetch video performance' });
+        return;
     }
 });
-router.get('/growth', authenticateToken, async (req, res) => {
+router.get('/growth', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { period = 'monthly' } = req.query;
-        const growth = await postModel.getGrowthMetrics(userId, period);
-        res.json({ growth });
+        const userId = req.user.id;
+        const period = req.query.period || 'daily';
+        const analytics = await analyticsService.getUserAnalytics(userId, 30);
+        const growth = analytics.postingTrends;
+        res.json(growth);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get growth metrics error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Growth metrics error:', error);
+        res.status(500).json({ error: 'Failed to fetch growth metrics' });
+        return;
     }
 });
-router.get('/audience', authenticateToken, async (req, res) => {
+router.get('/audience', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { days = 30 } = req.query;
-        const audience = await postModel.getAudienceInsights(userId, parseInt(days));
-        res.json({ audience });
+        const userId = req.user.id;
+        const days = req.query.days || '30';
+        const insights = await analyticsService.getEngagementInsights(userId, parseInt(days));
+        const audience = insights.categoryInsights;
+        res.json(audience);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get audience insights error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Audience insights error:', error);
+        res.status(500).json({ error: 'Failed to fetch audience insights' });
+        return;
     }
 });
-router.get('/competitor', authenticateToken, async (req, res) => {
+router.get('/competitor-analysis', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { competitors = [] } = req.query;
-        const competitorAnalysis = await postModel.getCompetitorAnalysis(userId, Array.isArray(competitors) ? competitors : [competitors]);
-        res.json({ competitorAnalysis });
+        const userId = req.user.id;
+        const platform = req.query.platform || 'instagram';
+        const days = req.query.days || '30';
+        const analytics = await analyticsService.getUserAnalytics(userId, parseInt(days));
+        const competitorAnalysis = analytics.categoryPerformance;
+        res.json(competitorAnalysis);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get competitor analysis error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Competitor analysis error:', error);
+        res.status(500).json({ error: 'Failed to fetch competitor analysis' });
+        return;
     }
 });
-router.get('/reports', authenticateToken, async (req, res) => {
+router.post('/generate-report', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { type = 'weekly', format = 'json' } = req.query;
-        const report = await postModel.generateAnalyticsReport(userId, {
-            type: type,
-            format: format,
-        });
-        if (format === 'csv') {
-            res.setHeader('Content-Type', 'text/csv');
-            res.setHeader('Content-Disposition', `attachment; filename=analytics-${type}-${new Date().toISOString().split('T')[0]}.csv`);
-            res.send(report);
-        }
-        else if (format === 'pdf') {
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename=analytics-${type}-${new Date().toISOString().split('T')[0]}.pdf`);
-            res.send(report);
-        }
-        else {
-            res.json({ report });
-        }
+        const userId = req.user.id;
+        const { reportType, dateRange, platforms } = req.body;
+        const analytics = await analyticsService.getUserAnalytics(userId, 30);
+        const report = {
+            type: reportType,
+            dateRange,
+            platforms,
+            data: analytics,
+            insights: await analyticsService.getEngagementInsights(userId, 30)
+        };
+        res.json(report);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Generate analytics report error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Generate report error:', error);
+        res.status(500).json({ error: 'Failed to generate analytics report' });
+        return;
     }
 });
-router.post('/export', authenticateToken, async (req, res) => {
+router.post('/export', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { startDate, endDate, format = 'json', includePosts = true, includeVideos = true } = req.body;
-        if (!startDate || !endDate) {
-            return res.status(400).json({ error: 'Start date and end date are required' });
-        }
-        const exportData = await postModel.exportAnalyticsData(userId, {
-            startDate: new Date(startDate),
-            endDate: new Date(endDate),
-            format: format,
-            includePosts,
-            includeVideos,
-        });
-        const filename = `analytics-export-${new Date().toISOString().split('T')[0]}.${format}`;
-        if (format === 'csv') {
-            res.setHeader('Content-Type', 'text/csv');
-            res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-            res.send(exportData);
-        }
-        else if (format === 'xlsx') {
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-            res.send(exportData);
-        }
-        else {
-            res.json({ data: exportData });
-        }
+        const userId = req.user.id;
+        const { format, dateRange, metrics } = req.body;
+        const exportData = await analyticsService.exportAnalytics(userId, format || 'csv');
+        res.setHeader('Content-Type', format === 'json' ? 'application/json' : 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="analytics-${Date.now()}.${format}"`);
+        res.send(exportData);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Export analytics error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Export analytics error:', error);
+        res.status(500).json({ error: 'Failed to export analytics data' });
+        return;
     }
 });
-router.get('/insights', authenticateToken, async (req, res) => {
+router.get('/ai-insights', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { days = 30 } = req.query;
-        const insights = await postModel.getAIInsights(userId, parseInt(days));
-        res.json({ insights });
+        const userId = req.user.id;
+        const days = req.query.days || '30';
+        const insights = await analyticsService.getEngagementInsights(userId, parseInt(days));
+        res.json(insights);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get AI insights error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('AI insights error:', error);
+        res.status(500).json({ error: 'Failed to fetch AI insights' });
+        return;
     }
 });
-router.get('/trends', authenticateToken, async (req, res) => {
+router.get('/trending-topics', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { platform = 'instagram' } = req.query;
-        const trends = await postModel.getTrendingTopics(userId, platform);
-        res.json({ trends });
+        const userId = req.user.id;
+        const platform = req.query.platform || 'instagram';
+        const analytics = await analyticsService.getUserAnalytics(userId, 30);
+        const trends = analytics.postingTrends;
+        res.json(trends);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get trends error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Trending topics error:', error);
+        res.status(500).json({ error: 'Failed to fetch trending topics' });
+        return;
     }
 });
-router.get('/performance-summary', authenticateToken, async (req, res) => {
+router.get('/performance-summary', auth_1.authenticateToken, async (req, res) => {
     try {
-        const userId = req.userId;
-        const { days = 30 } = req.query;
-        const summary = await postModel.getPerformanceSummary(userId, parseInt(days));
-        res.json({ summary });
+        const userId = req.user.id;
+        const days = req.query.days || '30';
+        const summary = await analyticsService.getEngagementInsights(userId, parseInt(days));
+        res.json(summary);
+        return;
     }
     catch (error) {
-        logger_1.logger.error('Get performance summary error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Performance summary error:', error);
+        res.status(500).json({ error: 'Failed to fetch performance summary' });
+        return;
     }
 });
 exports.default = router;

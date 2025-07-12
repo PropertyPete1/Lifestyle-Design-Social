@@ -200,13 +200,28 @@ function checkSystemHealth(): any {
   }
 }
 
+interface ServiceStatus {
+  status: string;
+  message: string;
+  error?: string;
+  timestamp: string;
+}
+
+interface ServicesHealth {
+  instagram?: ServiceStatus;
+  tiktok?: ServiceStatus;
+  youtube?: ServiceStatus;
+  database?: ServiceStatus;
+  redis?: ServiceStatus;
+}
+
 async function checkExternalServices(): Promise<any> {
   try {
     const services = {
       status: 'healthy',
       message: 'All external services are available',
       timestamp: new Date().toISOString(),
-      services: {},
+      services: {} as ServicesHealth,
     };
 
     // Check Instagram API (if configured)
@@ -216,12 +231,14 @@ async function checkExternalServices(): Promise<any> {
         services.services.instagram = {
           status: 'available',
           message: 'Instagram API is accessible',
+          timestamp: new Date().toISOString()
         };
       } catch (error) {
         services.services.instagram = {
           status: 'unavailable',
           message: 'Instagram API is not accessible',
           error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
         };
         services.status = 'degraded';
         services.message = 'Some external services are unavailable';

@@ -1,0 +1,50 @@
+{
+  "name": "auto-posting-app",
+  "version": "1.0.0",
+  "description": "AI-powered auto-posting app for real estate videos on Twitter and Instagram",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "nodemon server/index.js",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "install-all": "npm install && cd client && npm install",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "ffmpeg-static": "^5.2.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "helmet": "^7.0.0",
+    "instagram-private-api": "^1.45.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.5.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.2",
+    "openai": "^4.0.0",
+    "sharp": "^0.32.5",
+    "sqlite3": "^5.1.7",
+    "twitter-api-v2": "^1.15.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "ai",
+    "auto-posting",
+    "real-estate",
+    "social-media",
+    "twitter",
+    "instagram"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

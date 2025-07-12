@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -7,29 +7,13 @@ import { VideoModel } from '../models/Video';
 import { pool } from '../config/database';
 import { logger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 const videoModel = new VideoModel(pool);
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-// Authentication middleware
-const authenticateToken = (req: Request, res: Response, next: Function) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    (req as any).userId = decoded.userId;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
 
 // Configure multer for video upload
 const storage = multer.diskStorage({
@@ -67,10 +51,11 @@ const upload = multer({
 // @route   POST /api/videos/upload
 // @desc    Upload a new video
 // @access  Private
-router.post('/upload', authenticateToken, upload.single('video'), async (req: Request, res: Response) => {
+router.post('/upload', authenticateToken, upload.single('video'), async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No video file uploaded' });
+      res.status(400).json({ error: 'No video file uploaded' });
+      return;
     }
 
     const userId = (req as any).userId;
@@ -130,7 +115,7 @@ router.post('/upload', authenticateToken, upload.single('video'), async (req: Re
 // @route   GET /api/videos
 // @desc    Get user's videos
 // @access  Private
-router.get('/', authenticateToken, async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
     const { category, isActive, limit, offset } = req.query;
@@ -157,52 +142,96 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 // @route   GET /api/videos/:id
 // @desc    Get video by ID
 // @access  Private
-router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.user!.id;
     const videoId = req.params.id;
-
-    const video = await videoModel.findById(videoId);
-
-    if (!video || video.userId !== userId) {
-      return res.status(404).json({ error: 'Video not found' });
+    
+    if (!videoId) {
+      res.status(400).json({ error: 'Video ID is required' });
+      return;
     }
-
+    
+    const video = await videoModel.findById(videoId);
+    if (!video) {
+      res.status(404).json({ error: 'Video not found' });
+      return;
+    }
+    
+    // Check if user owns the video
+    if (video.userId !== userId) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+    
     res.json(video);
+    return;
   } catch (error) {
-    logger.error('Get video error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Get video error:', error);
+    res.status(500).json({ error: 'Failed to fetch video' });
+    return;
   }
 });
 
 // @route   GET /api/videos/:id/stream
 // @desc    Stream video file
 // @access  Private
-router.get('/:id/stream', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const videoId = req.params.id;
+  router.get('/:id/stream', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const videoId = req.params.id;
 
-    const video = await videoModel.findById(videoId);
+      if (!videoId) {
+        res.status(400).json({ error: 'Video ID is required' });
+        return;
+      }
+
+      const video = await videoModel.findById(videoId);
 
     if (!video || video.userId !== userId) {
-      return res.status(404).json({ error: 'Video not found' });
+      res.status(404).json({ error: 'Video not found' });
+      return;
     }
 
     const filePath = video.filePath;
     
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Video file not found' });
+      res.status(404).json({ error: 'Video file not found' });
+      return;
     }
 
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
     const range = req.headers.range;
 
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    if (!range) {
+      res.status(400).json({ error: 'Range header is required' });
+      return;
+    }
+
+    const parts = range.replace(/bytes=/, "").split("-");
+    const firstPart = parts[0];
+
+    if (!firstPart) {
+      res.status(400).json({ error: 'Invalid range header' });
+      return;
+    }
+
+    const start = parseInt(firstPart, 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : undefined;
+
+    if (end === undefined) {
+      const chunksize = (fileSize - start) + 1;
+      const file = fs.createReadStream(filePath, { start, end: fileSize - 1 });
+      const head = {
+        'Content-Range': `bytes ${start}-${fileSize - 1}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
       const chunksize = (end - start) + 1;
       const file = fs.createReadStream(filePath, { start, end });
       const head = {
@@ -213,13 +242,6 @@ router.get('/:id/stream', authenticateToken, async (req: Request, res: Response)
       };
       res.writeHead(206, head);
       file.pipe(res);
-    } else {
-      const head = {
-        'Content-Length': fileSize,
-        'Content-Type': 'video/mp4',
-      };
-      res.writeHead(200, head);
-      fs.createReadStream(filePath).pipe(res);
     }
   } catch (error) {
     logger.error('Video stream error:', error);
@@ -230,15 +252,21 @@ router.get('/:id/stream', authenticateToken, async (req: Request, res: Response)
 // @route   PUT /api/videos/:id
 // @desc    Update video
 // @access  Private
-router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const videoId = req.params.id;
+  router.put('/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const videoId = req.params.id;
 
-    const video = await videoModel.findById(videoId);
+      if (!videoId) {
+        res.status(400).json({ error: 'Video ID is required' });
+        return;
+      }
+
+      const video = await videoModel.findById(videoId);
 
     if (!video || video.userId !== userId) {
-      return res.status(404).json({ error: 'Video not found' });
+      res.status(404).json({ error: 'Video not found' });
+      return;
     }
 
     const {
@@ -262,7 +290,8 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     });
 
     if (!updatedVideo) {
-      return res.status(404).json({ error: 'Video not found' });
+      res.status(404).json({ error: 'Video not found' });
+      return;
     }
 
     logger.info(`Video updated: ${updatedVideo.title} by user ${userId}`);
@@ -280,15 +309,21 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
 // @route   DELETE /api/videos/:id
 // @desc    Delete video
 // @access  Private
-router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const videoId = req.params.id;
+  router.delete('/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const videoId = req.params.id;
 
-    const video = await videoModel.findById(videoId);
+      if (!videoId) {
+        res.status(400).json({ error: 'Video ID is required' });
+        return;
+      }
+
+      const video = await videoModel.findById(videoId);
 
     if (!video || video.userId !== userId) {
-      return res.status(404).json({ error: 'Video not found' });
+      res.status(404).json({ error: 'Video not found' });
+      return;
     }
 
     // Delete file from filesystem
@@ -305,7 +340,8 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
     const deleted = await videoModel.delete(videoId);
 
     if (!deleted) {
-      return res.status(404).json({ error: 'Video not found' });
+      res.status(404).json({ error: 'Video not found' });
+      return;
     }
 
     logger.info(`Video deleted: ${video.title} by user ${userId}`);
@@ -320,22 +356,24 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
 // @route   GET /api/videos/next/:category
 // @desc    Get next video for posting
 // @access  Private
-router.get('/next/:category', authenticateToken, async (req: Request, res: Response) => {
+router.get('/next/:category', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
     const category = req.params.category as 'real-estate' | 'cartoon';
 
     if (!['real-estate', 'cartoon'].includes(category)) {
-      return res.status(400).json({ error: 'Invalid category' });
+      res.status(400).json({ error: 'Invalid category' });
+      return;
     }
 
     const video = await videoModel.getNextVideoForPosting(userId, category);
 
     if (!video) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'No videos available for posting',
         message: 'All videos have been posted recently. Add more videos or wait for the cool-off period.',
       });
+      return;
     }
 
     res.json({
@@ -359,21 +397,28 @@ router.get('/next/:category', authenticateToken, async (req: Request, res: Respo
 // @route   POST /api/videos/:id/mark-posted
 // @desc    Mark video as posted
 // @access  Private
-router.post('/:id/mark-posted', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const videoId = req.params.id;
+  router.post('/:id/mark-posted', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const videoId = req.params.id;
 
-    const video = await videoModel.findById(videoId);
+      if (!videoId) {
+        res.status(400).json({ error: 'Video ID is required' });
+        return;
+      }
+
+      const video = await videoModel.findById(videoId);
 
     if (!video || video.userId !== userId) {
-      return res.status(404).json({ error: 'Video not found' });
+      res.status(404).json({ error: 'Video not found' });
+      return;
     }
 
     const updatedVideo = await videoModel.markAsPosted(videoId);
 
     if (!updatedVideo) {
-      return res.status(404).json({ error: 'Video not found' });
+      res.status(404).json({ error: 'Video not found' });
+      return;
     }
 
     logger.info(`Video marked as posted: ${updatedVideo.title} by user ${userId}`);
@@ -396,7 +441,7 @@ router.post('/:id/mark-posted', authenticateToken, async (req: Request, res: Res
 // @route   GET /api/videos/stats
 // @desc    Get video statistics
 // @access  Private
-router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
+router.get('/stats', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
 

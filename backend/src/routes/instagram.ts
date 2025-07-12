@@ -1,38 +1,24 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserModel } from '../models/User';
 import { PostModel } from '../models/Post';
+import { VideoModel } from '../models/Video';
 import { pool } from '../config/database';
 import { logger } from '../utils/logger';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 const userModel = new UserModel(pool);
 const postModel = new PostModel(pool);
+const videoModel = new VideoModel(pool);
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-// Authentication middleware
-const authenticateToken = (req: Request, res: Response, next: Function) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    (req as any).userId = decoded.userId;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
 // @route   POST /api/instagram/post
 // @desc    Post to Instagram
 // @access  Private
-router.post('/post', authenticateToken, async (req: Request, res: Response) => {
+router.post('/post', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
     const {
@@ -47,13 +33,15 @@ router.post('/post', authenticateToken, async (req: Request, res: Response) => {
     // Get user's Instagram credentials
     const user = await userModel.findById(userId);
     if (!user || !user.instagramAccessToken) {
-      return res.status(400).json({ error: 'Instagram not connected' });
+      res.status(400).json({ error: 'Instagram not connected' });
+      return;
     }
 
     // Get video details
-    const video = await postModel.getVideoById(videoId);
+    const video = await videoModel.findById(videoId);
     if (!video || video.userId !== userId) {
-      return res.status(404).json({ error: 'Video not found' });
+      res.status(404).json({ error: 'Video not found' });
+      return;
     }
 
     // Create post record
@@ -86,9 +74,6 @@ router.post('/post', authenticateToken, async (req: Request, res: Response) => {
       views: 0,
       reach: 0,
       impressions: 0,
-      engagementRate: 0,
-      instagramPostId: instagramResponse.id,
-      instagramPermalink: instagramResponse.permalink,
     });
 
     logger.info(`Posted to Instagram: ${post.id} for user ${userId}`);
@@ -96,10 +81,10 @@ router.post('/post', authenticateToken, async (req: Request, res: Response) => {
     res.json({
       message: 'Posted to Instagram successfully',
       post: {
-        id: updatedPost.id,
+        id: updatedPost?.id,
         instagramPostId: instagramResponse.id,
         permalink: instagramResponse.permalink,
-        status: updatedPost.status,
+        status: updatedPost?.status,
       }
     });
   } catch (error) {
@@ -111,20 +96,22 @@ router.post('/post', authenticateToken, async (req: Request, res: Response) => {
 // @route   GET /api/instagram/connect
 // @desc    Get Instagram authorization URL
 // @access  Private
-router.get('/connect', authenticateToken, async (req: Request, res: Response) => {
+router.get('/connect', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
     const { redirectUri } = req.query;
 
     if (!redirectUri) {
-      return res.status(400).json({ error: 'Redirect URI is required' });
+      res.status(400).json({ error: 'Redirect URI is required' });
+      return;
     }
 
     const instagramAppId = process.env.INSTAGRAM_APP_ID;
     const instagramRedirectUri = process.env.INSTAGRAM_REDIRECT_URI;
 
     if (!instagramAppId) {
-      return res.status(500).json({ error: 'Instagram app not configured' });
+      res.status(500).json({ error: 'Instagram app not configured' });
+      return;
     }
 
     const authUrl = `https://api.instagram.com/oauth/authorize?client_id=${instagramAppId}&redirect_uri=${instagramRedirectUri}&scope=user_profile,user_media&response_type=code&state=${userId}`;
@@ -142,12 +129,13 @@ router.get('/connect', authenticateToken, async (req: Request, res: Response) =>
 // @route   POST /api/instagram/callback
 // @desc    Handle Instagram authorization callback
 // @access  Public
-router.post('/callback', async (req: Request, res: Response) => {
+router.post('/callback', async (req: Request, res: Response): Promise<void> => {
   try {
     const { code, state } = req.body;
 
     if (!code || !state) {
-      return res.status(400).json({ error: 'Authorization code and state are required' });
+      res.status(400).json({ error: 'Authorization code and state are required' });
+      return;
     }
 
     const userId = state;
@@ -156,7 +144,8 @@ router.post('/callback', async (req: Request, res: Response) => {
     const instagramRedirectUri = process.env.INSTAGRAM_REDIRECT_URI;
 
     if (!instagramAppId || !instagramAppSecret) {
-      return res.status(500).json({ error: 'Instagram app not configured' });
+      res.status(500).json({ error: 'Instagram app not configured' });
+      return;
     }
 
     // Exchange code for access token
@@ -169,26 +158,31 @@ router.post('/callback', async (req: Request, res: Response) => {
         client_id: instagramAppId,
         client_secret: instagramAppSecret,
         grant_type: 'authorization_code',
-        redirect_uri: instagramRedirectUri,
+        redirect_uri: instagramRedirectUri || '',
         code,
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await tokenResponse.json() as { access_token?: string };
 
     if (!tokenData.access_token) {
-      return res.status(400).json({ error: 'Failed to get access token' });
+      res.status(400).json({ error: 'Failed to get access token' });
+      return;
     }
 
     // Get user info
     const userResponse = await fetch(`https://graph.instagram.com/me?fields=id,username&access_token=${tokenData.access_token}`);
-    const userData = await userResponse.json();
+    const userData = await userResponse.json() as { id: string; username: string };
 
     // Update user's Instagram credentials
-    await userModel.updateInstagramCredentials(userId, {
-      instagramUsername: userData.username,
+    await userModel.updateSocialTokens(userId, {
       instagramAccessToken: tokenData.access_token,
       instagramUserId: userData.id,
+    });
+
+    // Also update the username using the regular update method
+    await userModel.update(userId, {
+      instagramUsername: userData.username,
     });
 
     logger.info(`Instagram connected for user: ${userId}`);
@@ -209,18 +203,24 @@ router.post('/callback', async (req: Request, res: Response) => {
 // @route   GET /api/instagram/account
 // @desc    Get Instagram account info
 // @access  Private
-router.get('/account', authenticateToken, async (req: Request, res: Response) => {
+router.get('/account', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
 
     const user = await userModel.findById(userId);
     if (!user || !user.instagramAccessToken) {
-      return res.status(400).json({ error: 'Instagram not connected' });
+      res.status(400).json({ error: 'Instagram not connected' });
+      return;
     }
 
     // Get account info from Instagram API
     const accountResponse = await fetch(`https://graph.instagram.com/me?fields=id,username,account_type,media_count&access_token=${user.instagramAccessToken}`);
-    const accountData = await accountResponse.json();
+    const accountData = await accountResponse.json() as {
+      id: string;
+      username: string;
+      account_type: string;
+      media_count: number;
+    };
 
     res.json({
       account: {
@@ -240,14 +240,15 @@ router.get('/account', authenticateToken, async (req: Request, res: Response) =>
 // @route   GET /api/instagram/media
 // @desc    Get Instagram media
 // @access  Private
-router.get('/media', authenticateToken, async (req: Request, res: Response) => {
+router.get('/media', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
     const { limit = 20, after } = req.query;
 
     const user = await userModel.findById(userId);
     if (!user || !user.instagramAccessToken) {
-      return res.status(400).json({ error: 'Instagram not connected' });
+      res.status(400).json({ error: 'Instagram not connected' });
+      return;
     }
 
     // Get media from Instagram API
@@ -258,7 +259,10 @@ router.get('/media', authenticateToken, async (req: Request, res: Response) => {
     }
 
     const mediaResponse = await fetch(url);
-    const mediaData = await mediaResponse.json();
+    const mediaData = await mediaResponse.json() as {
+      data: any[];
+      paging?: any;
+    };
 
     res.json({
       media: mediaData.data,
@@ -273,42 +277,42 @@ router.get('/media', authenticateToken, async (req: Request, res: Response) => {
 // @route   POST /api/instagram/refresh-token
 // @desc    Refresh Instagram access token
 // @access  Private
-router.post('/refresh-token', authenticateToken, async (req: Request, res: Response) => {
+router.post('/refresh-token', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
 
     const user = await userModel.findById(userId);
     if (!user || !user.instagramAccessToken) {
-      return res.status(400).json({ error: 'Instagram not connected' });
+      res.status(400).json({ error: 'Instagram not connected' });
+      return;
     }
 
     const instagramAppSecret = process.env.INSTAGRAM_APP_SECRET;
 
     if (!instagramAppSecret) {
-      return res.status(500).json({ error: 'Instagram app not configured' });
+      res.status(500).json({ error: 'Instagram app not configured' });
+      return;
     }
 
     // Exchange current token for long-lived token
-    const tokenResponse = await fetch('https://graph.instagram.com/access_token', {
+    const tokenUrl = `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${instagramAppSecret}&access_token=${user.instagramAccessToken}`;
+    
+    const tokenResponse = await fetch(tokenUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        grant_type: 'ig_exchange_token',
-        client_secret: instagramAppSecret,
-        access_token: user.instagramAccessToken,
-      }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await tokenResponse.json() as {
+      access_token?: string;
+      expires_in?: number;
+    };
 
     if (!tokenData.access_token) {
-      return res.status(400).json({ error: 'Failed to refresh token' });
+      res.status(400).json({ error: 'Failed to refresh token' });
+      return;
     }
 
     // Update user's token
-    await userModel.updateInstagramCredentials(userId, {
+    await userModel.updateSocialTokens(userId, {
       instagramAccessToken: tokenData.access_token,
     });
 
@@ -327,16 +331,19 @@ router.post('/refresh-token', authenticateToken, async (req: Request, res: Respo
 // @route   DELETE /api/instagram/disconnect
 // @desc    Disconnect Instagram account
 // @access  Private
-router.delete('/disconnect', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/disconnect', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
 
     // Clear Instagram credentials
-    await userModel.updateInstagramCredentials(userId, {
-      instagramUsername: null,
+    await userModel.updateSocialTokens(userId, {
       instagramAccessToken: null,
-      instagramRefreshToken: null,
       instagramUserId: null,
+    });
+
+    // Also clear username using the regular update method
+    await userModel.update(userId, {
+      instagramUsername: undefined,
     });
 
     logger.info(`Instagram disconnected for user: ${userId}`);
@@ -351,19 +358,22 @@ router.delete('/disconnect', authenticateToken, async (req: Request, res: Respon
 // @route   GET /api/instagram/insights
 // @desc    Get Instagram insights
 // @access  Private
-router.get('/insights', authenticateToken, async (req: Request, res: Response) => {
+router.get('/insights', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).userId;
     const { days = 30 } = req.query;
 
     const user = await userModel.findById(userId);
     if (!user || !user.instagramAccessToken) {
-      return res.status(400).json({ error: 'Instagram not connected' });
+      res.status(400).json({ error: 'Instagram not connected' });
+      return;
     }
 
     // Get insights from Instagram API
     const insightsResponse = await fetch(`https://graph.instagram.com/me/insights?metric=impressions,reach,profile_views&period=day&access_token=${user.instagramAccessToken}`);
-    const insightsData = await insightsResponse.json();
+    const insightsData = await insightsResponse.json() as {
+      data: any[];
+    };
 
     res.json({
       insights: insightsData.data,

@@ -249,4 +249,3 @@ function optimizeCaption(options) {
     return optimized;
 }
 exports.default = router;
-//# sourceMappingURL=captions.js.map

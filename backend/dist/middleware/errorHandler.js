@@ -22,4 +22,3 @@ const createError = (message, statusCode = 500) => {
     return error;
 };
 exports.createError = createError;
-//# sourceMappingURL=errorHandler.js.map

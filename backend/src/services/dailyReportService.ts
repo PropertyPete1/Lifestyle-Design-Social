@@ -152,7 +152,7 @@ class DailyReportService {
         },
         engagement: mockEngagement,
         topPerformingPosts: posts.slice(0, 3).map(post => ({
-          id: post._id.toString(),
+          id: String(post._id),
           platform: post.platform,
           content: post.content.substring(0, 100) + '...',
           views: Math.floor(Math.random() * 500) + 50,
@@ -431,7 +431,7 @@ class DailyReportService {
           },
           engagement: mockEngagement,
           topPerformingPosts: posts.slice(0, 2).map(post => ({
-            id: post._id.toString(),
+            id: String(post._id),
             platform: post.platform,
             content: post.content.substring(0, 100) + '...',
             views: Math.floor(Math.random() * 400) + 50,

@@ -10,4 +10,3 @@ const notFoundHandler = (req, res) => {
     });
 };
 exports.notFoundHandler = notFoundHandler;
-//# sourceMappingURL=notFoundHandler.js.map

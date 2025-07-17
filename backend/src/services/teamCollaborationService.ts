@@ -98,7 +98,7 @@ export class TeamCollaborationService {
       
       // Add owner as admin member
       const teamMember = new TeamMember({
-        teamId: savedTeam._id.toString(),
+        teamId: String(savedTeam._id),
         userId: userId,
         role: 'admin',
         permissions: { all: true },
@@ -109,7 +109,7 @@ export class TeamCollaborationService {
       await teamMember.save();
       
       return {
-        id: savedTeam._id.toString(),
+        id: String(savedTeam._id),
         name: savedTeam.name,
         description: savedTeam.description,
         ownerId: savedTeam.ownerId,
@@ -138,7 +138,7 @@ export class TeamCollaborationService {
       const teams = await Team.find({ _id: { $in: teamIds } });
 
       return teamMembers.map(tm => {
-        const team = teams.find(t => t._id.toString() === tm.teamId);
+        const team = teams.find(t => String(t._id) === tm.teamId);
         return this.mapTeamFromDB({
           ...team?.toObject(),
           role: tm.role,
@@ -207,7 +207,7 @@ export class TeamCollaborationService {
         throw new Error('User not found');
       }
 
-      const userId = user._id.toString();
+      const userId = String(user._id);
 
       // Check if user is already a member
       const existingMember = await TeamMember.findOne({ teamId: teamId, userId: userId });
@@ -303,7 +303,7 @@ export class TeamCollaborationService {
       const users = await User.find({ _id: { $in: userIds } }).select('email name');
 
       return teamMembers.map(tm => {
-        const user = users.find(u => u._id.toString() === tm.userId);
+        const user = users.find(u => String(u._id) === tm.userId);
         return this.mapTeamMemberFromDB({
           ...tm.toObject(),
           user: user ? {

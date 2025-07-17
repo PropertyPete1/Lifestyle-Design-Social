@@ -373,4 +373,3 @@ class AutoPostingService {
 exports.AutoPostingService = AutoPostingService;
 exports.autoPostingService = new AutoPostingService();
 exports.default = AutoPostingService;
-//# sourceMappingURL=autoPostingService.js.map

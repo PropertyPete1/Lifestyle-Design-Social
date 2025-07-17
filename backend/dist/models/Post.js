@@ -100,4 +100,3 @@ postSchema.index({ status: 1 });
 postSchema.index({ scheduledTime: 1 });
 exports.Post = mongoose_1.default.model('Post', postSchema);
 exports.PostModel = exports.Post;
-//# sourceMappingURL=Post.js.map

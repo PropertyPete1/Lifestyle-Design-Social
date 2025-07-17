@@ -112,4 +112,3 @@ exports.config = {
     },
 };
 exports.default = exports.config;
-//# sourceMappingURL=index.js.map

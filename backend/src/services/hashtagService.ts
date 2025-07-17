@@ -399,7 +399,7 @@ class HashtagService {
       }).sort({ category: 1 });
 
       return libraries.map(lib => ({
-        id: lib._id.toString(),
+        id: String(lib._id),
         userId: lib.userId,
         category: lib.category,
         hashtags: lib.hashtags,

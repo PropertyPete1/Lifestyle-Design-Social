@@ -399,4 +399,3 @@ class AnalyticsService {
 exports.AnalyticsService = AnalyticsService;
 exports.analyticsService = new AnalyticsService();
 exports.default = AnalyticsService;
-//# sourceMappingURL=analyticsService.js.map

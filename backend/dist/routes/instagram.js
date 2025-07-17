@@ -243,4 +243,3 @@ router.get('/insights', auth_1.authenticateToken, async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=instagram.js.map

@@ -28,11 +28,15 @@ export interface IVideo extends Document {
     createdAt: Date;
     updatedAt: Date;
 }
-export declare const Video: mongoose.Model<IVideo, {}, {}, {}, mongoose.Document<unknown, {}, IVideo> & IVideo & {
-    _id: mongoose.Types.ObjectId;
+export declare const Video: mongoose.Model<IVideo, {}, {}, {}, mongoose.Document<unknown, {}, IVideo, {}> & IVideo & Required<{
+    _id: unknown;
+}> & {
+    __v: number;
 }, any>;
-export declare const VideoModel: mongoose.Model<IVideo, {}, {}, {}, mongoose.Document<unknown, {}, IVideo> & IVideo & {
-    _id: mongoose.Types.ObjectId;
+export declare const VideoModel: mongoose.Model<IVideo, {}, {}, {}, mongoose.Document<unknown, {}, IVideo, {}> & IVideo & Required<{
+    _id: unknown;
+}> & {
+    __v: number;
 }, any>;
 export interface VideoCreateInput {
     userId: string;

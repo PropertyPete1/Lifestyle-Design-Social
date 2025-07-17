@@ -81,7 +81,7 @@ export declare class AnalyticsService {
         posts: IPost[];
     }>;
     getPostAnalytics(postId: string): Promise<{
-        id: any;
+        id: unknown;
         userId: string;
         platform: "instagram" | "tiktok" | "facebook" | "youtube";
         content: string;

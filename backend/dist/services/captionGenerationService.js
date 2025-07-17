@@ -402,4 +402,3 @@ class CaptionGenerationService {
 exports.CaptionGenerationService = CaptionGenerationService;
 exports.captionGenerationService = new CaptionGenerationService();
 exports.default = CaptionGenerationService;
-//# sourceMappingURL=captionGenerationService.js.map

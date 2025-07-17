@@ -131,4 +131,3 @@ router.delete('/instagram', async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=oauth.js.map

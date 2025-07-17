@@ -120,4 +120,3 @@ userSchema.index({ email: 1 });
 userSchema.index({ username: 1 });
 exports.User = mongoose_1.default.model('User', userSchema);
 exports.UserModel = exports.User;
-//# sourceMappingURL=User.js.map

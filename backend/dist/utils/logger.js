@@ -41,4 +41,3 @@ exports.logger = new Logger({
 });
 const createLogger = (config) => new Logger(config);
 exports.createLogger = createLogger;
-//# sourceMappingURL=logger.js.map

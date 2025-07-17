@@ -106,4 +106,3 @@ videoSchema.index({ starred: 1 });
 videoSchema.index({ nextPostDate: 1 });
 exports.Video = mongoose_1.default.model('Video', videoSchema);
 exports.VideoModel = exports.Video;
-//# sourceMappingURL=Video.js.map

@@ -293,4 +293,3 @@ router.get('/compliance', (_req, res) => {
     });
 });
 exports.default = router;
-//# sourceMappingURL=legal.js.map

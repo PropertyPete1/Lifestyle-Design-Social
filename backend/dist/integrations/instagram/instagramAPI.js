@@ -447,7 +447,7 @@ class InstagramAPI {
         const hashtags = new Set();
         topPosts.forEach(post => {
             const postHashtags = post.caption.match(/#\w+/g) || [];
-            postHashtags.forEach(hashtag => hashtags.add(hashtag.toLowerCase()));
+            postHashtags.forEach(hashtag => hashtags.add(String(hashtag).toLowerCase()));
         });
         const contentHashtags = this.generateContentHashtags(contentDescription);
         contentHashtags.forEach(hashtag => hashtags.add(hashtag));
@@ -474,4 +474,3 @@ class InstagramAPI {
     }
 }
 exports.InstagramAPI = InstagramAPI;
-//# sourceMappingURL=instagramAPI.js.map

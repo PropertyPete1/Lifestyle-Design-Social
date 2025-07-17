@@ -31,11 +31,15 @@ export interface IUser extends Document {
     createdAt: Date;
     updatedAt: Date;
 }
-export declare const User: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser> & IUser & {
-    _id: mongoose.Types.ObjectId;
+export declare const User: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser, {}> & IUser & Required<{
+    _id: unknown;
+}> & {
+    __v: number;
 }, any>;
-export declare const UserModel: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser> & IUser & {
-    _id: mongoose.Types.ObjectId;
+export declare const UserModel: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser, {}> & IUser & Required<{
+    _id: unknown;
+}> & {
+    __v: number;
 }, any>;
 export interface UserCreateInput {
     email: string;

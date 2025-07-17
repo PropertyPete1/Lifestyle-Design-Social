@@ -92,4 +92,3 @@ class CameraRollService {
 }
 exports.CameraRollService = CameraRollService;
 exports.default = CameraRollService;
-//# sourceMappingURL=cameraRollService.js.map

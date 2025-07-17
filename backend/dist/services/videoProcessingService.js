@@ -188,4 +188,3 @@ class VideoProcessingService {
 }
 exports.VideoProcessingService = VideoProcessingService;
 exports.default = VideoProcessingService;
-//# sourceMappingURL=videoProcessingService.js.map

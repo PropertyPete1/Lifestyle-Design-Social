@@ -294,4 +294,3 @@ router.get('/cartoons/download/:filename', async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=autoPost.js.map

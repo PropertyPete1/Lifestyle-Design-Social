@@ -25,11 +25,15 @@ export interface IPost extends Document {
     createdAt: Date;
     updatedAt: Date;
 }
-export declare const Post: mongoose.Model<IPost, {}, {}, {}, mongoose.Document<unknown, {}, IPost> & IPost & {
-    _id: mongoose.Types.ObjectId;
+export declare const Post: mongoose.Model<IPost, {}, {}, {}, mongoose.Document<unknown, {}, IPost, {}> & IPost & Required<{
+    _id: unknown;
+}> & {
+    __v: number;
 }, any>;
-export declare const PostModel: mongoose.Model<IPost, {}, {}, {}, mongoose.Document<unknown, {}, IPost> & IPost & {
-    _id: mongoose.Types.ObjectId;
+export declare const PostModel: mongoose.Model<IPost, {}, {}, {}, mongoose.Document<unknown, {}, IPost, {}> & IPost & Required<{
+    _id: unknown;
+}> & {
+    __v: number;
 }, any>;
 export interface PostCreateInput {
     userId: string;

@@ -58,4 +58,3 @@ exports.default = {
     connectToDatabase: exports.connectToDatabase,
     disconnectFromDatabase: exports.disconnectFromDatabase
 };
-//# sourceMappingURL=database.js.map

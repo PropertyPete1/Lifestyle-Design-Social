@@ -35,4 +35,3 @@ router.get('/', async (_req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=health.js.map

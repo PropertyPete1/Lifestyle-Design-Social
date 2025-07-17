@@ -666,7 +666,7 @@ export class InstagramAPI {
     
     topPosts.forEach(post => {
       const postHashtags = post.caption!.match(/#\w+/g) || [];
-      postHashtags.forEach(hashtag => hashtags.add(hashtag.toLowerCase()));
+      postHashtags.forEach(hashtag => hashtags.add(String(hashtag).toLowerCase()));
     });
 
     // Add content-specific hashtags

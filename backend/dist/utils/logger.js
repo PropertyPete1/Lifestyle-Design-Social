@@ -1,43 +1,44 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logger = void 0;
-const winston_1 = __importDefault(require("winston"));
-const levels = {
-    error: 0,
-    warn: 1,
-    info: 2,
-    http: 3,
-    debug: 4,
-};
-const colors = {
-    error: 'red',
-    warn: 'yellow',
-    info: 'green',
-    http: 'magenta',
-    debug: 'white',
-};
-winston_1.default.addColors(colors);
-const level = () => {
-    const env = process.env.NODE_ENV || 'development';
-    const isDevelopment = env === 'development';
-    return isDevelopment ? 'debug' : 'warn';
-};
-const logFormat = winston_1.default.format.combine(winston_1.default.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }), winston_1.default.format.colorize({ all: true }), winston_1.default.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`));
-const transports = [
-    new winston_1.default.transports.Console(),
-    new winston_1.default.transports.File({
-        filename: 'logs/error.log',
-        level: 'error',
-    }),
-    new winston_1.default.transports.File({ filename: 'logs/all.log' }),
-];
-exports.logger = winston_1.default.createLogger({
-    level: level(),
-    levels,
-    format: logFormat,
-    transports,
+exports.createLogger = exports.logger = void 0;
+class Logger {
+    constructor(config) {
+        this.config = config;
+    }
+    shouldLog(level) {
+        const levels = {
+            debug: 0,
+            info: 1,
+            warn: 2,
+            error: 3,
+        };
+        return levels[level] >= levels[this.config.level];
+    }
+    formatMessage(level, message, data) {
+        const timestamp = new Date().toISOString();
+        const context = this.config.context ? `[${this.config.context}]` : '';
+        const dataStr = data ? ` ${JSON.stringify(data)}` : '';
+        return `${timestamp} ${level.toUpperCase()} ${context} ${message}${dataStr}`;
+    }
+    log(level, message, data) {
+        if (!this.shouldLog(level))
+            return;
+        if (this.config.enableConsole) {
+            const formattedMessage = this.formatMessage(level, message, data);
+            console.log(formattedMessage);
+        }
+    }
+    debug(message, data) { this.log('debug', message, data); }
+    info(message, data) { this.log('info', message, data); }
+    warn(message, data) { this.log('warn', message, data); }
+    error(message, data) { this.log('error', message, data); }
+}
+exports.logger = new Logger({
+    level: 'info',
+    enableConsole: true,
+    context: 'Backend',
+    colors: true,
 });
+const createLogger = (config) => new Logger(config);
+exports.createLogger = createLogger;
 //# sourceMappingURL=logger.js.map

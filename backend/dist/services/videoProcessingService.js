@@ -9,14 +9,13 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const logger_1 = require("../utils/logger");
 const Video_1 = require("../models/Video");
-const database_1 = require("../config/database");
 const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
 if (ffmpeg_static_1.default) {
     fluent_ffmpeg_1.default.setFfmpegPath(ffmpeg_static_1.default);
 }
 class VideoProcessingService {
     constructor() {
-        this.videoModel = new Video_1.VideoModel(database_1.pool);
+        this.videoModel = Video_1.VideoModel;
     }
     async processVideo(filePath, userId, options = {}) {
         try {
@@ -146,7 +145,7 @@ class VideoProcessingService {
     }
     async updateVideoMetadata(videoId, metadata, thumbnailPath) {
         try {
-            await this.videoModel.update(videoId, {
+            await this.videoModel.findByIdAndUpdate(videoId, {
                 thumbnailPath,
             });
             logger_1.logger.info(`Updated video metadata for video: ${videoId}`);
@@ -171,9 +170,11 @@ class VideoProcessingService {
     }
     async getProcessingStats() {
         try {
-            const result = await this.videoModel.getVideoStats('system');
+            const result = await this.videoModel.aggregate([
+                { $group: { _id: null, count: { $sum: 1 }, totalSize: { $sum: '$fileSize' } } }
+            ]);
             return {
-                totalProcessed: result.totalVideos || 0,
+                totalProcessed: result[0]?.count || 0,
                 averageProcessingTime: 0,
                 successRate: 1.0,
                 totalSize: 0,

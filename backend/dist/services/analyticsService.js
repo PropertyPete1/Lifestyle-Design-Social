@@ -1,22 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AnalyticsService = void 0;
+exports.analyticsService = exports.AnalyticsService = void 0;
 const logger_1 = require("../utils/logger");
 const Post_1 = require("../models/Post");
 const Video_1 = require("../models/Video");
-const User_1 = require("../models/User");
-const database_1 = require("../config/database");
 class AnalyticsService {
     constructor() {
-        this.postModel = new Post_1.PostModel(database_1.pool);
-        this.videoModel = new Video_1.VideoModel(database_1.pool);
-        this.userModel = new User_1.UserModel(database_1.pool);
+        this.postModel = Post_1.Post;
+        this.videoModel = Video_1.Video;
     }
     async recordPostEngagement(postId, metrics) {
         try {
             logger_1.logger.info(`Recording engagement for post ${postId}`);
             const engagementRate = this.calculateEngagementRate(metrics);
-            await this.postModel.update(postId, {
+            await this.postModel.findByIdAndUpdate(postId, {
                 engagementMetrics: {
                     likes: metrics.likes,
                     comments: metrics.comments,
@@ -43,10 +40,10 @@ class AnalyticsService {
             logger_1.logger.info(`Getting analytics for user ${userId} (${days} days)`);
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
-            const posts = await this.postModel.findByUser(userId, {
+            const posts = await this.postModel.find({
+                userId,
                 status: 'posted',
-                startDate,
-                endDate: new Date(),
+                postedTime: { $gte: startDate, $lte: new Date() }
             });
             const totalPosts = posts.length;
             const totalEngagement = posts.reduce((sum, post) => {
@@ -64,7 +61,7 @@ class AnalyticsService {
                 }, 0) / posts.length
                 : 0;
             const bestPerformingPosts = posts
-                .filter(post => post.engagementMetrics)
+                .filter((post) => post.engagementMetrics)
                 .sort((a, b) => {
                 const aRate = this.calculatePostEngagementRate(a);
                 const bRate = this.calculatePostEngagementRate(b);
@@ -127,10 +124,13 @@ class AnalyticsService {
     }
     async analyzeCategoryPerformance(userId, startDate) {
         try {
-            const videos = await this.videoModel.findByUser(userId);
-            const posts = await this.postModel.findByUser(userId, { startDate });
+            const videos = await this.videoModel.find({ userId });
+            const posts = await this.postModel.find({
+                userId,
+                postedTime: { $gte: startDate }
+            });
             const categoryStats = {};
-            videos.forEach(video => {
+            videos.forEach((video) => {
                 const category = video.category;
                 if (!categoryStats[category]) {
                     categoryStats[category] = {
@@ -142,8 +142,8 @@ class AnalyticsService {
                 }
                 categoryStats[category].totalVideos++;
             });
-            posts.forEach(post => {
-                const video = videos.find(v => v.id === post.videoId);
+            posts.forEach((post) => {
+                const video = videos.find((v) => v.id === post.videoId);
                 if (video) {
                     const category = video.category;
                     const categoryData = categoryStats[category];
@@ -166,7 +166,20 @@ class AnalyticsService {
         }
         catch (error) {
             logger_1.logger.error('Failed to analyze category performance:', error);
-            return {};
+            return {
+                'real-estate': {
+                    totalVideos: 0,
+                    totalPosts: 0,
+                    totalEngagement: 0,
+                    averageEngagementRate: 0,
+                },
+                'cartoon': {
+                    totalVideos: 0,
+                    totalPosts: 0,
+                    totalEngagement: 0,
+                    averageEngagementRate: 0,
+                }
+            };
         }
     }
     analyzePostingTimes(posts) {
@@ -193,10 +206,10 @@ class AnalyticsService {
         try {
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
-            const posts = await this.postModel.findByUser(userId, {
+            const posts = await this.postModel.find({
+                userId,
                 status: 'posted',
-                startDate,
-                endDate: new Date(),
+                postedTime: { $gte: startDate, $lte: new Date() }
             });
             const timeAnalysis = this.analyzePostingTimes(posts);
             const bestTimes = timeAnalysis
@@ -287,8 +300,7 @@ class AnalyticsService {
     }
     async getVideoPerformance(videoId) {
         try {
-            const allPosts = await this.postModel.findByUser('', {});
-            const posts = allPosts.filter(post => post.videoId === videoId);
+            const posts = await this.postModel.find({ videoId });
             if (posts.length === 0) {
                 return {
                     totalPosts: 0,
@@ -350,7 +362,41 @@ class AnalyticsService {
         });
         return csvRows.map(row => row.join(',')).join('\n');
     }
+    async getVideoAnalytics(videoId) {
+        return this.getVideoPerformance(videoId);
+    }
+    async getPostAnalytics(postId) {
+        try {
+            const post = await this.postModel.findById(postId);
+            if (!post) {
+                return null;
+            }
+            return {
+                id: post._id,
+                userId: post.userId,
+                platform: post.platform,
+                content: post.content,
+                status: post.status,
+                engagementMetrics: post.engagementMetrics || {
+                    likes: 0,
+                    comments: 0,
+                    shares: 0,
+                    views: 0,
+                    reach: 0,
+                    impressions: 0
+                },
+                engagementRate: this.calculatePostEngagementRate(post),
+                postedTime: post.postedTime,
+                scheduledTime: post.scheduledTime
+            };
+        }
+        catch (error) {
+            logger_1.logger.error('Error getting post analytics:', error);
+            throw error;
+        }
+    }
 }
 exports.AnalyticsService = AnalyticsService;
+exports.analyticsService = new AnalyticsService();
 exports.default = AnalyticsService;
 //# sourceMappingURL=analyticsService.js.map

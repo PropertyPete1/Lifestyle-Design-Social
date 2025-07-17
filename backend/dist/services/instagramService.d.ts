@@ -33,10 +33,10 @@ export declare class InstagramService {
     constructor();
     postVideo(options: InstagramPostOptions): Promise<InstagramPostResult>;
     private simulateInstagramPost;
-    getAccountInfo(accessToken: string): Promise<InstagramAccountInfo>;
-    refreshAccessToken(userId: string, currentToken: string): Promise<string>;
+    getAccountInfo(accessToken: string): Promise<any>;
+    refreshAccessToken(refreshToken: string): Promise<string | null>;
     getMedia(accessToken: string, limit?: number): Promise<any[]>;
-    getInsights(accessToken: string, days?: number): Promise<any>;
+    getInsights(accessToken: string, postId: string): Promise<any>;
     validateCredentials(accessToken: string): Promise<boolean>;
     getOptimalPostingTimes(accessToken: string): Promise<string[]>;
     checkApiStatus(): Promise<boolean>;

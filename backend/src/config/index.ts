@@ -1,7 +1,9 @@
 import dotenv from 'dotenv';
 
-// Load environment variables from root directory
-dotenv.config({ path: '../../.env' });
+// Load environment variables - in production, env vars are set by platform
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 // Simple configuration object
 export const config = {

@@ -1,4 +1,4 @@
-import { Post } from '../models/Post';
+import { IPost } from '../models/Post';
 export interface EngagementMetrics {
     likes: number;
     comments: number;
@@ -12,7 +12,7 @@ export interface AnalyticsData {
     totalPosts: number;
     totalEngagement: number;
     averageEngagementRate: number;
-    bestPerformingPosts: Post[];
+    bestPerformingPosts: IPost[];
     postingTrends: PostingTrend[];
     categoryPerformance: Record<string, CategoryStats>;
     timeAnalysis: PostingTimeAnalysis[];
@@ -37,7 +37,6 @@ export interface PostingTimeAnalysis {
 export declare class AnalyticsService {
     private postModel;
     private videoModel;
-    private userModel;
     constructor();
     recordPostEngagement(postId: string, metrics: EngagementMetrics): Promise<void>;
     private calculateEngagementRate;
@@ -58,7 +57,7 @@ export declare class AnalyticsService {
             averageEngagementRate: number;
             trend: string;
         };
-        topPerformers: Post[];
+        topPerformers: IPost[];
         categoryInsights: Record<string, CategoryStats>;
         timeInsights: PostingTimeAnalysis[];
         recommendations: string[];
@@ -69,11 +68,37 @@ export declare class AnalyticsService {
         totalPosts: number;
         totalEngagement: number;
         averageEngagementRate: number;
-        bestPost: Post | null;
-        posts: Post[];
+        bestPost: IPost | null;
+        posts: IPost[];
     }>;
     exportAnalytics(userId: string, format?: 'csv' | 'json'): Promise<string>;
     private convertToCSV;
+    getVideoAnalytics(videoId: string): Promise<{
+        totalPosts: number;
+        totalEngagement: number;
+        averageEngagementRate: number;
+        bestPost: IPost | null;
+        posts: IPost[];
+    }>;
+    getPostAnalytics(postId: string): Promise<{
+        id: any;
+        userId: string;
+        platform: "instagram" | "tiktok" | "facebook" | "youtube";
+        content: string;
+        status: "scheduled" | "posted" | "failed" | "cancelled";
+        engagementMetrics: {
+            likes: number;
+            comments: number;
+            shares: number;
+            views: number;
+            reach: number;
+            impressions: number;
+        };
+        engagementRate: number;
+        postedTime: Date | undefined;
+        scheduledTime: Date;
+    } | null>;
 }
+export declare const analyticsService: AnalyticsService;
 export default AnalyticsService;
 //# sourceMappingURL=analyticsService.d.ts.map

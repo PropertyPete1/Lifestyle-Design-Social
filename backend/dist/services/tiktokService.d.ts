@@ -42,7 +42,7 @@ export declare class TikTokService {
     getInsights(accessToken: string, days?: number): Promise<any>;
     validateCredentials(accessToken: string): Promise<boolean>;
     getOptimalPostingTimes(accessToken: string): Promise<string[]>;
-    checkApiStatus(): Promise<boolean>;
+    validateApiStatus(): Promise<boolean>;
     getVideoRequirements(): {
         maxDuration: number;
         maxFileSize: number;

@@ -8,7 +8,6 @@ const youtubeService_1 = require("./youtubeService");
 const captionGenerationService_1 = require("./captionGenerationService");
 const videoProcessingService_1 = require("./videoProcessingService");
 const User_1 = require("../models/User");
-const database_1 = require("../config/database");
 class MultiPlatformService {
     constructor() {
         this.instagramService = new instagramService_1.InstagramService();
@@ -16,7 +15,7 @@ class MultiPlatformService {
         this.youtubeService = new youtubeService_1.YouTubeService();
         this.captionService = new captionGenerationService_1.CaptionGenerationService();
         this.videoService = new videoProcessingService_1.VideoProcessingService();
-        this.userModel = new User_1.UserModel(database_1.pool);
+        this.userModel = User_1.UserModel;
     }
     async postToMultiplePlatforms(options) {
         try {
@@ -272,7 +271,11 @@ class MultiPlatformService {
         }
         catch (error) {
             logger_1.logger.error('Failed to validate platform credentials:', error);
-            return {};
+            return {
+                instagram: false,
+                tiktok: false,
+                youtube: false
+            };
         }
     }
     async getOptimalPostingTimes(userId) {
@@ -295,7 +298,11 @@ class MultiPlatformService {
         }
         catch (error) {
             logger_1.logger.error('Failed to get optimal posting times:', error);
-            return {};
+            return {
+                instagram: ['9:00 AM', '12:00 PM', '6:00 PM'],
+                tiktok: ['6:00 AM', '10:00 AM', '7:00 PM'],
+                youtube: ['2:00 PM', '4:00 PM', '8:00 PM']
+            };
         }
     }
     async getPlatformStats(userId) {
@@ -336,7 +343,11 @@ class MultiPlatformService {
         }
         catch (error) {
             logger_1.logger.error('Failed to get platform stats:', error);
-            return {};
+            return {
+                instagram: { followers: 0, posts: 0, engagement: 0 },
+                tiktok: { followers: 0, posts: 0, engagement: 0 },
+                youtube: { subscribers: 0, videos: 0, views: 0 }
+            };
         }
     }
 }

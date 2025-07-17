@@ -15,21 +15,6 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
         hasPrev: boolean;
     };
 }
-export interface User {
-    id: string;
-    email: string;
-    name: string;
-    avatar?: string;
-    role: 'admin' | 'user' | 'premium';
-    subscription: SubscriptionPlan;
-    isEmailVerified: boolean;
-    twoFactorEnabled: boolean;
-    timezone: string;
-    preferences: UserPreferences;
-    createdAt: Date;
-    updatedAt: Date;
-    lastLoginAt?: Date;
-}
 export interface UserPreferences {
     autoPostingEnabled: boolean;
     postingTimes: string[];
@@ -84,45 +69,10 @@ export interface SubscriptionLimits {
     teamMembers: number;
     apiCallsPerMonth: number;
 }
-export interface Video {
-    id: string;
-    userId: string;
-    title: string;
-    description?: string;
-    filename: string;
-    filePath: string;
-    fileSize: number;
-    duration: number;
-    resolution: VideoResolution;
-    thumbnailPath?: string;
-    hasAudio: boolean;
-    category: VideoCategory;
-    tags: string[];
-    metadata: VideoMetadata;
-    processingStatus: ProcessingStatus;
-    aiAnalysis?: AIAnalysis;
-    postCount: number;
-    lastPostedAt?: Date;
-    nextPostDate?: Date;
-    isActive: boolean;
-    coolOffDays: number;
-    createdAt: Date;
-    updatedAt: Date;
-}
 export interface VideoResolution {
     width: number;
     height: number;
     aspectRatio: string;
-}
-export interface VideoMetadata {
-    codec: string;
-    bitrate: number;
-    fps: number;
-    colorSpace: string;
-    audioCodec?: string;
-    audioBitrate?: number;
-    audioChannels?: number;
-    audioSampleRate?: number;
 }
 export interface AIAnalysis {
     viralScore: number;
@@ -142,31 +92,6 @@ export interface ThumbnailSuggestion {
 }
 export type VideoCategory = 'real-estate' | 'cartoon' | 'educational' | 'promotional' | 'testimonial';
 export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
-export interface Post {
-    id: string;
-    userId: string;
-    videoId: string;
-    platform: SocialPlatform;
-    content: PostContent;
-    status: PostStatus;
-    scheduledTime: Date;
-    postedTime?: Date;
-    engagementMetrics?: EngagementMetrics;
-    errorMessage?: string;
-    retryCount: number;
-    maxRetries: number;
-    createdAt: Date;
-    updatedAt: Date;
-}
-export interface PostContent {
-    caption: string;
-    hashtags: string[];
-    mentions: string[];
-    location?: Location;
-    music?: Music;
-    thumbnail?: string;
-    customFields?: Record<string, any>;
-}
 export interface Location {
     id: string;
     name: string;
@@ -422,7 +347,7 @@ export interface AppError extends Error {
     context?: Record<string, any>;
 }
 export interface AuthenticatedRequest extends Request {
-    user: User;
+    user: any;
     userId: string;
 }
 export interface FileUpload {

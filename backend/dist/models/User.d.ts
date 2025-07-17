@@ -1,10 +1,9 @@
-import { Pool } from 'pg';
-export interface User {
-    id: string;
+import mongoose, { Document } from 'mongoose';
+export interface IUser extends Document {
     email: string;
     name: string;
-    passwordHash: string;
-    instagramUsername?: string;
+    password: string;
+    username?: string;
     instagramAccessToken?: string;
     instagramRefreshToken?: string;
     instagramUserId?: string;
@@ -19,10 +18,25 @@ export interface User {
     excludedHours?: string[];
     timezone: string;
     testMode: boolean;
+    lastLoginAt?: Date;
+    twoFactorEnabled?: boolean;
+    twoFactorSecret?: string;
+    twoFactorSetupAt?: Date;
+    backupCodes?: string[];
+    watermarkEnabled?: boolean;
+    watermarkLogoPath?: string;
+    watermarkPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
+    watermarkOpacity?: number;
+    watermarkSizePercent?: number;
     createdAt: Date;
     updatedAt: Date;
-    lastLoginAt?: Date;
 }
+export declare const User: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser> & IUser & {
+    _id: mongoose.Types.ObjectId;
+}, any>;
+export declare const UserModel: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser> & IUser & {
+    _id: mongoose.Types.ObjectId;
+}, any>;
 export interface UserCreateInput {
     email: string;
     name: string;
@@ -31,7 +45,7 @@ export interface UserCreateInput {
 }
 export interface UserUpdateInput {
     name?: string;
-    instagramUsername?: string;
+    username?: string;
     instagramAccessToken?: string;
     instagramRefreshToken?: string;
     instagramUserId?: string;
@@ -41,39 +55,5 @@ export interface UserUpdateInput {
     excludedHours?: string[];
     timezone?: string;
     testMode?: boolean;
-}
-export declare class UserModel {
-    private pool;
-    constructor(pool: Pool);
-    create(input: UserCreateInput): Promise<User>;
-    findById(id: string): Promise<User | null>;
-    findByEmail(email: string): Promise<User | null>;
-    update(id: string, input: UserUpdateInput): Promise<User | null>;
-    updateInstagramCredentials(id: string, credentials: {
-        instagramUsername?: string;
-        instagramAccessToken?: string;
-        instagramRefreshToken?: string;
-        instagramUserId?: string;
-    }): Promise<User | null>;
-    updatePostingSettings(id: string, settings: {
-        autoPostingEnabled?: boolean;
-        postingTimes?: string[];
-        pinnedHours?: string[];
-        excludedHours?: string[];
-        timezone?: string;
-        testMode?: boolean;
-    }): Promise<User | null>;
-    updateLastLogin(id: string): Promise<void>;
-    updateSocialTokens(id: string, tokens: {
-        instagramAccessToken?: string | null;
-        instagramUserId?: string | null;
-        tiktokAccessToken?: string | null;
-        tiktokUserId?: string | null;
-        youtubeAccessToken?: string | null;
-        youtubeRefreshToken?: string | null;
-        youtubeChannelId?: string | null;
-    }): Promise<User | null>;
-    private mapRowToUser;
-    private camelToSnake;
 }
 //# sourceMappingURL=User.d.ts.map

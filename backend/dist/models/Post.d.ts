@@ -1,9 +1,8 @@
-import { Pool } from 'pg';
-export interface Post {
-    id: string;
+import mongoose, { Document } from 'mongoose';
+export interface IPost extends Document {
     userId: string;
     videoId: string;
-    platform: 'instagram' | 'tiktok' | 'facebook';
+    platform: 'instagram' | 'tiktok' | 'facebook' | 'youtube';
     content: string;
     hashtags: string[];
     status: 'scheduled' | 'posted' | 'failed' | 'cancelled';
@@ -26,6 +25,12 @@ export interface Post {
     createdAt: Date;
     updatedAt: Date;
 }
+export declare const Post: mongoose.Model<IPost, {}, {}, {}, mongoose.Document<unknown, {}, IPost> & IPost & {
+    _id: mongoose.Types.ObjectId;
+}, any>;
+export declare const PostModel: mongoose.Model<IPost, {}, {}, {}, mongoose.Document<unknown, {}, IPost> & IPost & {
+    _id: mongoose.Types.ObjectId;
+}, any>;
 export interface PostCreateInput {
     userId: string;
     videoId: string;
@@ -45,71 +50,16 @@ export interface PostUpdateInput {
     scheduledTime?: Date;
     postedTime?: Date;
     engagementMetrics?: {
-        likes: number;
-        comments: number;
-        shares: number;
-        views: number;
-        reach: number;
-        impressions: number;
+        likes?: number;
+        comments?: number;
+        shares?: number;
+        views?: number;
+        reach?: number;
+        impressions?: number;
     };
     errorMessage?: string;
     retryCount?: number;
     musicUsed?: string;
     thumbnailUsed?: string;
-}
-export declare class PostModel {
-    private pool;
-    constructor(pool: Pool);
-    create(input: PostCreateInput): Promise<Post>;
-    findById(id: string): Promise<Post | null>;
-    findByUser(userId: string, options?: {
-        status?: 'scheduled' | 'posted' | 'failed' | 'cancelled';
-        platform?: 'instagram' | 'tiktok' | 'facebook';
-        limit?: number;
-        offset?: number;
-        startDate?: Date;
-        endDate?: Date;
-    }): Promise<Post[]>;
-    getScheduledPosts(userId: string, startDate: Date, endDate: Date): Promise<Post[]>;
-    markAsPosted(id: string, engagementMetrics?: {
-        likes: number;
-        comments: number;
-        shares: number;
-        views: number;
-        reach: number;
-        impressions: number;
-    }): Promise<Post | null>;
-    markAsFailed(id: string, errorMessage: string): Promise<Post | null>;
-    update(id: string, input: PostUpdateInput): Promise<Post | null>;
-    getPostingStats(userId: string, days?: number): Promise<{
-        totalPosts: number;
-        successfulPosts: number;
-        failedPosts: number;
-        scheduledPosts: number;
-        totalEngagement: {
-            likes: number;
-            comments: number;
-            shares: number;
-            views: number;
-            reach: number;
-            impressions: number;
-        };
-        avgEngagement: {
-            likes: number;
-            comments: number;
-            shares: number;
-            views: number;
-            reach: number;
-            impressions: number;
-        };
-        byPlatform: {
-            instagram: number;
-            tiktok: number;
-            facebook: number;
-        };
-    }>;
-    getFailedPostsForRetry(userId: string, maxRetries?: number): Promise<Post[]>;
-    private mapRowToPost;
-    private camelToSnake;
 }
 //# sourceMappingURL=Post.d.ts.map

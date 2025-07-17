@@ -220,7 +220,7 @@ const Dashboard: React.FC = () => {
         <div className="w-full max-w-2xl mt-12">
           <h2 className="text-xl font-light text-white mb-6 text-center tracking-wide">Recent Posts</h2>
           <div className="space-y-3">
-            {recentPosts.length > 0 ? recentPosts.map((post, index) => (
+            {recentPosts.length > 0 ? recentPosts.map((post) => (
               <div key={post.id} className="glass-card p-4">
                 <div className="flex items-center justify-between">
                   <div>

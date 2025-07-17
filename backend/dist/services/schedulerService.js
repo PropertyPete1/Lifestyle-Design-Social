@@ -4,13 +4,12 @@ exports.SchedulerService = void 0;
 const logger_1 = require("../utils/logger");
 const User_1 = require("../models/User");
 const Post_1 = require("../models/Post");
-const database_1 = require("../config/database");
 const autoPostingService_1 = require("./autoPostingService");
 const analyticsService_1 = require("./analyticsService");
 class SchedulerService {
     constructor() {
-        this.userModel = new User_1.UserModel(database_1.pool);
-        this.postModel = new Post_1.PostModel(database_1.pool);
+        this.userModel = User_1.UserModel;
+        this.postModel = Post_1.PostModel;
         this.autoPostingService = new autoPostingService_1.AutoPostingService();
         this.analyticsService = new analyticsService_1.AnalyticsService();
     }
@@ -65,9 +64,10 @@ class SchedulerService {
         try {
             logger_1.logger.info('Executing scheduled posts...');
             const now = new Date();
-            const scheduledPosts = await this.postModel.findByUser('', {
+            const scheduledPosts = await this.postModel.find({
+                userId: '',
                 status: 'scheduled',
-                limit: 100,
+                scheduledTime: { $gte: new Date() }
             });
             if (scheduledPosts.length === 0) {
                 logger_1.logger.info('No scheduled posts to execute');
@@ -118,8 +118,9 @@ class SchedulerService {
                 timezone: user.timezone || 'America/Chicago',
             };
             if (JSON.stringify(bestTimes) !== JSON.stringify(user.postingTimes)) {
-                await this.userModel.updatePostingSettings(userId, {
+                await this.userModel.findByIdAndUpdate(userId, {
                     postingTimes: bestTimes,
+                    updatedAt: new Date()
                 });
                 logger_1.logger.info(`Updated posting times for user ${userId}: ${bestTimes.join(', ')}`);
             }
@@ -153,7 +154,8 @@ class SchedulerService {
             if (!user) {
                 throw new Error('User not found');
             }
-            const scheduledPosts = await this.postModel.findByUser(userId, {
+            const scheduledPosts = await this.postModel.find({
+                userId,
                 status: 'scheduled',
                 limit: 10,
             });
@@ -184,8 +186,9 @@ class SchedulerService {
     }
     async pauseScheduling(userId) {
         try {
-            await this.userModel.updatePostingSettings(userId, {
+            await this.userModel.findByIdAndUpdate(userId, {
                 autoPostingEnabled: false,
+                updatedAt: new Date()
             });
             logger_1.logger.info(`Paused scheduling for user ${userId}`);
         }
@@ -196,8 +199,9 @@ class SchedulerService {
     }
     async resumeScheduling(userId) {
         try {
-            await this.userModel.updatePostingSettings(userId, {
+            await this.userModel.findByIdAndUpdate(userId, {
                 autoPostingEnabled: true,
+                updatedAt: new Date()
             });
             logger_1.logger.info(`Resumed scheduling for user ${userId}`);
         }
@@ -221,7 +225,7 @@ class SchedulerService {
             if (config.enabled !== undefined) {
                 updateData.autoPostingEnabled = config.enabled;
             }
-            await this.userModel.updatePostingSettings(userId, updateData);
+            await this.userModel.findByIdAndUpdate(userId, updateData);
             logger_1.logger.info(`Updated schedule config for user ${userId}`);
         }
         catch (error) {
@@ -253,37 +257,51 @@ class SchedulerService {
     }
     async getSchedulerStats() {
         try {
-            const enabledUsers = [];
-            const scheduledPosts = await this.postModel.findByUser('', { status: 'scheduled' });
-            const postedToday = await this.postModel.findByUser('', {
+            const enabledUsers = await this.userModel.find({
+                autoPostingEnabled: true,
+                isActive: { $ne: false }
+            }).select('_id autoPostingEnabled').lean();
+            const scheduledPosts = await this.postModel.find({ status: 'scheduled' });
+            const postedToday = await this.postModel.find({
                 status: 'posted',
-                limit: 100,
+                postedTime: {
+                    $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+                    $lte: new Date(new Date().setHours(23, 59, 59, 999))
+                }
             });
             return {
-                totalUsers: 0,
                 enabledUsers: enabledUsers.length,
                 scheduledPosts: scheduledPosts.length,
                 postedToday: postedToday.length,
-                nextExecution: this.calculateNextExecutionTime(),
+                totalUsers: await this.userModel.countDocuments(),
+                lastUpdated: new Date()
             };
         }
         catch (error) {
             logger_1.logger.error('Failed to get scheduler stats:', error);
-            throw error;
+            return {
+                enabledUsers: 0,
+                scheduledPosts: 0,
+                postedToday: 0,
+                totalUsers: 0,
+                lastUpdated: new Date(),
+                error: 'Failed to retrieve scheduler statistics'
+            };
         }
     }
     async cleanupOldScheduledPosts(daysOld = 30) {
         try {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-            const oldPosts = await this.postModel.findByUser('', {
+            const oldPosts = await this.postModel.find({
+                userId: '',
                 status: 'scheduled',
                 limit: 100,
             });
             let deletedCount = 0;
             for (const post of oldPosts) {
                 try {
-                    await this.postModel.update(post.id, { status: 'cancelled' });
+                    await this.postModel.findByIdAndUpdate(post.id, { status: 'cancelled' });
                     deletedCount++;
                 }
                 catch (error) {

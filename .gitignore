@@ -33,3 +33,15 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Secure environment files
+.env
+.env.*
+backend/.env
+client/.env
+frontend/.env
+
+# Sensitive API tokens
+ghp_*
+**/secrets/
+**/config/production.json

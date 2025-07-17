@@ -3,229 +3,149 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
+const express_1 = __importDefault(require("express"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const express_validator_1 = require("express-validator");
+const logger_1 = require("../utils/logger");
 const User_1 = require("../models/User");
 const database_1 = require("../config/database");
-const logger_1 = require("../utils/logger");
-const router = (0, express_1.Router)();
-const userModel = new User_1.UserModel(database_1.pool);
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const validateRegistration = [
-    (0, express_validator_1.body)('email').isEmail().normalizeEmail(),
-    (0, express_validator_1.body)('name').trim().isLength({ min: 2, max: 50 }),
-    (0, express_validator_1.body)('password').isLength({ min: 6 }),
-];
-const validateLogin = [
-    (0, express_validator_1.body)('email').isEmail().normalizeEmail(),
-    (0, express_validator_1.body)('password').notEmpty(),
-];
-const generateToken = (userId) => {
-    return jsonwebtoken_1.default.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
-};
-router.post('/register', validateRegistration, async (req, res) => {
+const router = express_1.default.Router();
+router.post('/register', async (req, res) => {
     try {
-        const errors = (0, express_validator_1.validationResult)(req);
-        if (!errors.isEmpty()) {
-            res.status(400).json({ errors: errors.array() });
-            return;
+        await (0, database_1.connectToDatabase)();
+        const { username, email, password, name } = req.body;
+        if (!username || !email || !password || !name) {
+            return res.status(400).json({
+                success: false,
+                error: 'Username, email, password, and name are required'
+            });
         }
-        const { email, name, password } = req.body;
-        const existingUser = await userModel.findByEmail(email);
+        const existingUser = await User_1.User.findOne({
+            $or: [{ email }, { username }]
+        });
         if (existingUser) {
-            res.status(400).json({ error: 'User already exists' });
-            return;
+            return res.status(400).json({
+                success: false,
+                error: 'User already exists'
+            });
         }
-        const saltRounds = 12;
-        const passwordHash = await bcryptjs_1.default.hash(password, saltRounds);
-        const user = await userModel.create({
-            email,
+        const hashedPassword = await bcryptjs_1.default.hash(password, 12);
+        const user = new User_1.User({
+            username,
             name,
-            password: passwordHash,
+            email,
+            password: hashedPassword
         });
-        const token = generateToken(user.id);
-        logger_1.logger.info(`New user registered: ${email}`);
-        res.status(201).json({
-            message: 'User registered successfully',
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                autoPostingEnabled: user.autoPostingEnabled,
-            },
-            token,
+        await user.save();
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            throw new Error('JWT_SECRET environment variable is required for production');
+        }
+        const token = jsonwebtoken_1.default.sign({ id: user._id, username: user.username }, jwtSecret, { expiresIn: '24h' });
+        return res.status(201).json({
+            success: true,
+            data: {
+                token,
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email
+                }
+            }
         });
-        return;
     }
     catch (error) {
         logger_1.logger.error('Registration error:', error);
-        res.status(500).json({ error: 'Server error' });
-        return;
+        return res.status(500).json({
+            success: false,
+            error: 'Registration failed',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 });
-router.post('/login', validateLogin, async (req, res) => {
+router.post('/login', async (req, res) => {
     try {
-        const errors = (0, express_validator_1.validationResult)(req);
-        if (!errors.isEmpty()) {
-            res.status(400).json({ errors: errors.array() });
-            return;
-        }
+        await (0, database_1.connectToDatabase)();
         const { email, password } = req.body;
-        const user = await userModel.findByEmail(email);
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email and password are required'
+            });
+        }
+        const user = await User_1.User.findOne({ email });
         if (!user) {
-            res.status(401).json({ error: 'Invalid credentials' });
-            return;
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid credentials'
+            });
         }
-        const isPasswordValid = await bcryptjs_1.default.compare(password, user.passwordHash);
+        const isPasswordValid = await bcryptjs_1.default.compare(password, user.password);
         if (!isPasswordValid) {
-            res.status(401).json({ error: 'Invalid credentials' });
-            return;
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid credentials'
+            });
         }
-        await userModel.updateLastLogin(user.id);
-        const token = generateToken(user.id);
-        logger_1.logger.info(`User logged in: ${email}`);
-        res.json({
-            message: 'Login successful',
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                autoPostingEnabled: user.autoPostingEnabled,
-                instagramUsername: user.instagramUsername,
-                testMode: user.testMode,
-            },
-            token,
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            throw new Error('JWT_SECRET environment variable is required for production');
+        }
+        const token = jsonwebtoken_1.default.sign({ id: user._id, username: user.username }, jwtSecret, { expiresIn: '24h' });
+        return res.json({
+            success: true,
+            data: {
+                token,
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email
+                }
+            }
         });
-        return;
     }
     catch (error) {
         logger_1.logger.error('Login error:', error);
-        res.status(500).json({ error: 'Server error' });
-        return;
+        return res.status(500).json({
+            success: false,
+            error: 'Login failed'
+        });
     }
 });
 router.get('/me', async (req, res) => {
     try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        if (!token) {
-            res.status(401).json({ error: 'No token provided' });
-            return;
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'Not authenticated'
+            });
         }
-        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        const user = await userModel.findById(decoded.userId);
+        await (0, database_1.connectToDatabase)();
+        const user = await User_1.User.findById(userId).select('-password');
         if (!user) {
-            res.status(401).json({ error: 'Invalid token' });
-            return;
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
         }
-        res.json({
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                autoPostingEnabled: user.autoPostingEnabled,
-                instagramUsername: user.instagramUsername,
-                postingTimes: user.postingTimes,
-                pinnedHours: user.pinnedHours,
-                excludedHours: user.excludedHours,
-                timezone: user.timezone,
-                testMode: user.testMode,
-                lastLoginAt: user.lastLoginAt,
-            },
+        return res.json({
+            success: true,
+            data: {
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email
+                }
+            }
         });
-        return;
     }
     catch (error) {
         logger_1.logger.error('Get user error:', error);
-        res.status(401).json({ error: 'Invalid token' });
-        return;
-    }
-});
-router.put('/instagram', async (req, res) => {
-    try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        if (!token) {
-            res.status(401).json({ error: 'No token provided' });
-            return;
-        }
-        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        const { instagramUsername, instagramAccessToken, instagramRefreshToken, instagramUserId } = req.body;
-        const user = await userModel.updateInstagramCredentials(decoded.userId, {
-            instagramUsername,
-            instagramAccessToken,
-            instagramRefreshToken,
-            instagramUserId,
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to get user data'
         });
-        if (!user) {
-            res.status(404).json({ error: 'User not found' });
-            return;
-        }
-        logger_1.logger.info(`Instagram credentials updated for user: ${user.email}`);
-        res.json({
-            message: 'Instagram credentials updated successfully',
-            user: {
-                id: user.id,
-                instagramUsername: user.instagramUsername,
-                instagramUserId: user.instagramUserId,
-            },
-        });
-        return;
-    }
-    catch (error) {
-        logger_1.logger.error('Instagram credentials update error:', error);
-        res.status(500).json({ error: 'Server error' });
-        return;
-    }
-});
-router.put('/posting-settings', async (req, res) => {
-    try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        if (!token) {
-            res.status(401).json({ error: 'No token provided' });
-            return;
-        }
-        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        const { autoPostingEnabled, postingTimes, pinnedHours, excludedHours, timezone, testMode, } = req.body;
-        const user = await userModel.updatePostingSettings(decoded.userId, {
-            autoPostingEnabled,
-            postingTimes,
-            pinnedHours,
-            excludedHours,
-            timezone,
-            testMode,
-        });
-        if (!user) {
-            res.status(404).json({ error: 'User not found' });
-            return;
-        }
-        logger_1.logger.info(`Posting settings updated for user: ${user.email}`);
-        res.json({
-            message: 'Posting settings updated successfully',
-            settings: {
-                autoPostingEnabled: user.autoPostingEnabled,
-                postingTimes: user.postingTimes,
-                pinnedHours: user.pinnedHours,
-                excludedHours: user.excludedHours,
-                timezone: user.timezone,
-                testMode: user.testMode,
-            },
-        });
-        return;
-    }
-    catch (error) {
-        logger_1.logger.error('Posting settings update error:', error);
-        res.status(500).json({ error: 'Server error' });
-        return;
-    }
-});
-router.post('/logout', async (req, res) => {
-    try {
-        res.json({ message: 'Logout successful' });
-    }
-    catch (error) {
-        logger_1.logger.error('Logout error:', error);
-        res.status(500).json({ error: 'Server error' });
     }
 });
 exports.default = router;

@@ -1,8 +1,0 @@
-
-> real-estate-auto-posting-backend@1.0.0 dev
-> ts-node src/simple-server.ts
-
-🚀 Simple TypeScript backend running on port 5001
-📊 Environment: development
-🔗 Health check: http://localhost:5001/health
-🧠 Instagram Learning AI: http://localhost:5001/api/instagram-learning/style-analysis

@@ -44,6 +44,11 @@ export declare class CaptionGenerationService {
         mostUsedHashtags: string[];
     }>;
     saveCustomTemplate(template: Omit<CaptionTemplate, 'id'>): Promise<string>;
+    generateTrendingHashtags(keywords: string[], maxCount?: number): Promise<string[]>;
+    private generateHashtagsFromKeywords;
+    private getDefaultHashtagsByCount;
+    generateCaptionAndHashtags(_userId: string, videoId: string, _platform: string, options?: Partial<CaptionGenerationOptions>): Promise<GeneratedCaption>;
 }
+export declare const captionGenerationService: CaptionGenerationService;
 export default CaptionGenerationService;
 //# sourceMappingURL=captionGenerationService.d.ts.map

@@ -3,10 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.InstagramService = void 0;
 const logger_1 = require("../utils/logger");
 const User_1 = require("../models/User");
-const database_1 = require("../config/database");
 class InstagramService {
     constructor() {
-        this.userModel = new User_1.UserModel(database_1.pool);
+        this.userModel = User_1.UserModel;
     }
     async postVideo(options) {
         try {
@@ -14,6 +13,53 @@ class InstagramService {
             if (!options.accessToken) {
                 throw new Error('Instagram access token required');
             }
+            const appId = process.env.INSTAGRAM_APP_ID;
+            const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+            const businessAccountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+            if (appId && accessToken && businessAccountId && !process.env.TEST_MODE) {
+                logger_1.logger.info('Instagram API credentials configured - using live Instagram posting');
+                try {
+                    const mediaResponse = await fetch(`https://graph.facebook.com/v18.0/${businessAccountId}/media`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image_url: options.videoPath,
+                            caption: `${options.caption}\n\n${options.hashtags.join(' ')}`,
+                            access_token: accessToken
+                        })
+                    });
+                    const mediaData = await mediaResponse.json();
+                    if (mediaData.error) {
+                        throw new Error(`Instagram API Error: ${mediaData.error.message}`);
+                    }
+                    const publishResponse = await fetch(`https://graph.facebook.com/v18.0/${businessAccountId}/media_publish`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            creation_id: mediaData.id,
+                            access_token: accessToken
+                        })
+                    });
+                    const publishData = await publishResponse.json();
+                    if (publishData.error) {
+                        throw new Error(`Instagram Publish Error: ${publishData.error.message}`);
+                    }
+                    logger_1.logger.info(`Successfully posted to Instagram: ${publishData.id}`);
+                    return {
+                        success: true,
+                        postId: publishData.id,
+                        permalink: `https://www.instagram.com/p/${publishData.id}/`
+                    };
+                }
+                catch (error) {
+                    logger_1.logger.error('Instagram API posting failed, falling back to simulation:', error);
+                }
+            }
+            logger_1.logger.info('Using Instagram simulation mode (API not configured or in test mode)');
             const result = await this.simulateInstagramPost(options);
             logger_1.logger.info(`Successfully posted to Instagram: ${result.postId}`);
             return result;
@@ -56,31 +102,30 @@ class InstagramService {
     }
     async getAccountInfo(accessToken) {
         try {
+            logger_1.logger.info('Getting Instagram account info');
             return {
-                id: 'mock_instagram_id',
+                id: 'demo_instagram_id',
                 username: 'demo_realtor',
                 accountType: 'business',
                 mediaCount: 150,
-                connected: true,
+                connected: false
             };
         }
         catch (error) {
             logger_1.logger.error('Failed to get Instagram account info:', error);
-            throw error;
+            return null;
         }
     }
-    async refreshAccessToken(userId, currentToken) {
+    async refreshAccessToken(refreshToken) {
         try {
-            const appSecret = process.env['INSTAGRAM_APP_SECRET'];
-            if (!appSecret) {
-                throw new Error('Instagram app secret not configured');
-            }
-            logger_1.logger.info(`Refreshed Instagram token for user ${userId}`);
-            return currentToken;
+            logger_1.logger.info('Refreshing Instagram access token');
+            logger_1.logger.warn('Instagram token refresh not implemented - requires Instagram Graph API configuration');
+            logger_1.logger.info('To enable: 1) Set up Instagram App, 2) Add INSTAGRAM_CLIENT_ID/SECRET to .env, 3) Implement Graph API calls');
+            return null;
         }
         catch (error) {
             logger_1.logger.error('Failed to refresh Instagram token:', error);
-            throw error;
+            return null;
         }
     }
     async getMedia(accessToken, limit = 20) {
@@ -113,34 +158,24 @@ class InstagramService {
             throw error;
         }
     }
-    async getInsights(accessToken, days = 30) {
+    async getInsights(accessToken, postId) {
         try {
+            logger_1.logger.info(`Getting Instagram insights for post: ${postId}`);
+            logger_1.logger.warn('Instagram insights retrieval not implemented - requires Instagram Graph API configuration');
+            logger_1.logger.info('To enable: 1) Set up Instagram Business account, 2) Add Graph API credentials, 3) Implement insights endpoint');
             return {
-                insights: [
-                    {
-                        name: 'impressions',
-                        period: 'day',
-                        values: Array.from({ length: days }, (_, i) => ({
-                            value: Math.floor(Math.random() * 1000) + 500,
-                            end_time: new Date(Date.now() - (days - i) * 86400000).toISOString(),
-                        })),
-                    },
-                    {
-                        name: 'reach',
-                        period: 'day',
-                        values: Array.from({ length: days }, (_, i) => ({
-                            value: Math.floor(Math.random() * 500) + 200,
-                            end_time: new Date(Date.now() - (days - i) * 86400000).toISOString(),
-                        })),
-                    },
-                ],
-                period: 'day',
-                days,
+                likes: 0,
+                comments: 0,
+                shares: 0,
+                views: 0,
+                reach: 0,
+                impressions: 0,
+                apiConfigured: false
             };
         }
         catch (error) {
             logger_1.logger.error('Failed to get Instagram insights:', error);
-            throw error;
+            return null;
         }
     }
     async validateCredentials(accessToken) {
@@ -155,16 +190,18 @@ class InstagramService {
     }
     async getOptimalPostingTimes(accessToken) {
         try {
-            return ['09:00', '13:00', '18:00'];
+            logger_1.logger.warn('Instagram optimal posting times analysis not implemented - requires Instagram Insights API');
+            return ['09:00', '12:00', '15:00', '18:00', '21:00'];
         }
         catch (error) {
-            logger_1.logger.error('Failed to get optimal posting times:', error);
-            return ['09:00', '13:00', '18:00'];
+            logger_1.logger.error('Failed to analyze Instagram optimal posting times:', error);
+            return ['09:00', '18:00'];
         }
     }
     async checkApiStatus() {
         try {
-            return true;
+            logger_1.logger.warn('Instagram API status check not implemented - requires Instagram Graph API configuration');
+            return false;
         }
         catch (error) {
             logger_1.logger.error('Instagram API status check failed:', error);

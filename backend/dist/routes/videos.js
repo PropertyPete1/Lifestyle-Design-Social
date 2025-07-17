@@ -3,37 +3,32 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
+const express_1 = __importDefault(require("express"));
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const logger_1 = require("../utils/logger");
 const Video_1 = require("../models/Video");
 const database_1 = require("../config/database");
-const logger_1 = require("../utils/logger");
-const auth_1 = require("../middleware/auth");
-const router = (0, express_1.Router)();
-const videoModel = new Video_1.VideoModel(database_1.pool);
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const router = express_1.default.Router();
 const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
+    destination: (_req, _file, cb) => {
         const uploadPath = path_1.default.join(__dirname, '../../uploads/videos');
         if (!fs_1.default.existsSync(uploadPath)) {
             fs_1.default.mkdirSync(uploadPath, { recursive: true });
         }
         cb(null, uploadPath);
     },
-    filename: (req, file, cb) => {
+    filename: (_req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path_1.default.extname(file.originalname));
+        cb(null, 'video-' + uniqueSuffix + path_1.default.extname(file.originalname));
     }
 });
 const upload = (0, multer_1.default)({
-    storage: storage,
-    limits: {
-        fileSize: parseInt(process.env.MAX_FILE_SIZE || '100') * 1024 * 1024
-    },
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = /mp4|mov|avi|wmv|flv|webm/;
+    storage,
+    limits: { fileSize: 100 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        const allowedTypes = /mp4|avi|mov|wmv|flv|webm|mkv/;
         const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
         const mimetype = allowedTypes.test(file.mimetype);
         if (mimetype && extname) {
@@ -44,306 +39,170 @@ const upload = (0, multer_1.default)({
         }
     }
 });
-router.post('/upload', auth_1.authenticateToken, upload.single('video'), async (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        if (!req.file) {
-            res.status(400).json({ error: 'No video file uploaded' });
-            return;
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated'
+            });
         }
-        const userId = req.userId;
-        const { title, description, category = 'real-estate', propertyType, location, price, tags, preferredCaption, preferredHashtags, preferredMusic, coolOffDays, } = req.body;
-        const videoData = {
+        await (0, database_1.connectToDatabase)();
+        const videos = await Video_1.Video.find({ userId }).sort({ createdAt: -1 });
+        return res.json({
+            success: true,
+            data: videos
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Error getting videos:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to get videos'
+        });
+    }
+});
+router.post('/upload', upload.single('video'), async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated'
+            });
+        }
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: 'No video file provided'
+            });
+        }
+        await (0, database_1.connectToDatabase)();
+        const { title, description, category = 'real-estate' } = req.body;
+        const video = new Video_1.Video({
             userId,
-            title: title || req.file.originalname.replace(/\.[^/.]+$/, ""),
-            description: description || '',
-            filename: req.file.originalname,
+            filename: req.file.filename,
+            originalName: req.file.originalname,
             filePath: req.file.path,
             fileSize: req.file.size,
-            category: category,
-            propertyType: propertyType || 'house',
-            location: location || '',
-            price: price ? parseFloat(price) : undefined,
-            tags: tags ? tags.split(',').map((tag) => tag.trim()) : [],
-            preferredCaption,
-            preferredHashtags: preferredHashtags ? preferredHashtags.split(',').map((tag) => tag.trim()) : [],
-            preferredMusic,
-            coolOffDays: coolOffDays ? parseInt(coolOffDays) : undefined,
-        };
-        const video = await videoModel.create(videoData);
-        logger_1.logger.info(`Video uploaded: ${video.title} by user ${userId}`);
-        res.status(201).json({
-            message: 'Video uploaded successfully',
-            video: {
-                id: video.id,
-                title: video.title,
-                filename: video.filename,
-                category: video.category,
-                fileSize: video.fileSize,
-            }
+            title: title || req.file.originalname,
+            description: description || '',
+            category,
+            status: 'uploaded'
+        });
+        await video.save();
+        return res.status(201).json({
+            success: true,
+            data: video,
+            message: 'Video uploaded successfully'
         });
     }
     catch (error) {
-        logger_1.logger.error('Video upload error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-router.get('/', auth_1.authenticateToken, async (req, res) => {
-    try {
-        const userId = req.userId;
-        const { category, isActive, limit, offset } = req.query;
-        const videos = await videoModel.findByUser(userId, {
-            category: category,
-            isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
-            limit: limit ? parseInt(limit) : undefined,
-            offset: offset ? parseInt(offset) : undefined,
-        });
-        const stats = await videoModel.getVideoStats(userId);
-        res.json({
-            videos,
-            stats,
+        logger_1.logger.error('Error uploading video:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to upload video'
         });
     }
-    catch (error) {
-        logger_1.logger.error('Get videos error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
 });
-router.get('/:id', auth_1.authenticateToken, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
-        const userId = req.user.id;
-        const videoId = req.params.id;
-        if (!videoId) {
-            res.status(400).json({ error: 'Video ID is required' });
-            return;
+        const { id } = req.params;
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated'
+            });
         }
-        const video = await videoModel.findById(videoId);
+        await (0, database_1.connectToDatabase)();
+        const video = await Video_1.Video.findOne({ _id: id, userId });
         if (!video) {
-            res.status(404).json({ error: 'Video not found' });
-            return;
+            return res.status(404).json({
+                success: false,
+                error: 'Video not found'
+            });
         }
-        if (video.userId !== userId) {
-            res.status(403).json({ error: 'Access denied' });
-            return;
-        }
-        res.json(video);
-        return;
-    }
-    catch (error) {
-        console.error('Get video error:', error);
-        res.status(500).json({ error: 'Failed to fetch video' });
-        return;
-    }
-});
-router.get('/:id/stream', auth_1.authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const videoId = req.params.id;
-        if (!videoId) {
-            res.status(400).json({ error: 'Video ID is required' });
-            return;
-        }
-        const video = await videoModel.findById(videoId);
-        if (!video || video.userId !== userId) {
-            res.status(404).json({ error: 'Video not found' });
-            return;
-        }
-        const filePath = video.filePath;
-        if (!fs_1.default.existsSync(filePath)) {
-            res.status(404).json({ error: 'Video file not found' });
-            return;
-        }
-        const stat = fs_1.default.statSync(filePath);
-        const fileSize = stat.size;
-        const range = req.headers.range;
-        if (!range) {
-            res.status(400).json({ error: 'Range header is required' });
-            return;
-        }
-        const parts = range.replace(/bytes=/, "").split("-");
-        const firstPart = parts[0];
-        if (!firstPart) {
-            res.status(400).json({ error: 'Invalid range header' });
-            return;
-        }
-        const start = parseInt(firstPart, 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : undefined;
-        if (end === undefined) {
-            const chunksize = (fileSize - start) + 1;
-            const file = fs_1.default.createReadStream(filePath, { start, end: fileSize - 1 });
-            const head = {
-                'Content-Range': `bytes ${start}-${fileSize - 1}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': 'video/mp4',
-            };
-            res.writeHead(206, head);
-            file.pipe(res);
-        }
-        else {
-            const chunksize = (end - start) + 1;
-            const file = fs_1.default.createReadStream(filePath, { start, end });
-            const head = {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': 'video/mp4',
-            };
-            res.writeHead(206, head);
-            file.pipe(res);
-        }
-    }
-    catch (error) {
-        logger_1.logger.error('Video stream error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-router.put('/:id', auth_1.authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const videoId = req.params.id;
-        if (!videoId) {
-            res.status(400).json({ error: 'Video ID is required' });
-            return;
-        }
-        const video = await videoModel.findById(videoId);
-        if (!video || video.userId !== userId) {
-            res.status(404).json({ error: 'Video not found' });
-            return;
-        }
-        const { title, description, preferredCaption, preferredHashtags, preferredMusic, coolOffDays, isActive, } = req.body;
-        const updatedVideo = await videoModel.update(videoId, {
-            title,
-            description,
-            preferredCaption,
-            preferredHashtags: preferredHashtags ? preferredHashtags.split(',').map((tag) => tag.trim()) : undefined,
-            preferredMusic,
-            coolOffDays: coolOffDays ? parseInt(coolOffDays) : undefined,
-            isActive,
-        });
-        if (!updatedVideo) {
-            res.status(404).json({ error: 'Video not found' });
-            return;
-        }
-        logger_1.logger.info(`Video updated: ${updatedVideo.title} by user ${userId}`);
-        res.json({
-            message: 'Video updated successfully',
-            video: updatedVideo,
+        return res.json({
+            success: true,
+            data: video
         });
     }
     catch (error) {
-        logger_1.logger.error('Update video error:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger_1.logger.error('Error getting video:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to get video'
+        });
     }
 });
-router.delete('/:id', auth_1.authenticateToken, async (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
-        const userId = req.user.id;
-        const videoId = req.params.id;
-        if (!videoId) {
-            res.status(400).json({ error: 'Video ID is required' });
-            return;
+        const { id } = req.params;
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated'
+            });
         }
-        const video = await videoModel.findById(videoId);
-        if (!video || video.userId !== userId) {
-            res.status(404).json({ error: 'Video not found' });
-            return;
+        await (0, database_1.connectToDatabase)();
+        const { title, description, category } = req.body;
+        const video = await Video_1.Video.findOneAndUpdate({ _id: id, userId }, { title, description, category, updatedAt: new Date() }, { new: true });
+        if (!video) {
+            return res.status(404).json({
+                success: false,
+                error: 'Video not found'
+            });
         }
-        if (fs_1.default.existsSync(video.filePath)) {
+        return res.json({
+            success: true,
+            data: video,
+            message: 'Video updated successfully'
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Error updating video:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to update video'
+        });
+    }
+});
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated'
+            });
+        }
+        await (0, database_1.connectToDatabase)();
+        const video = await Video_1.Video.findOne({ _id: id, userId });
+        if (!video) {
+            return res.status(404).json({
+                success: false,
+                error: 'Video not found'
+            });
+        }
+        if (video.filePath && fs_1.default.existsSync(video.filePath)) {
             fs_1.default.unlinkSync(video.filePath);
         }
-        if (video.thumbnailPath && fs_1.default.existsSync(video.thumbnailPath)) {
-            fs_1.default.unlinkSync(video.thumbnailPath);
-        }
-        const deleted = await videoModel.delete(videoId);
-        if (!deleted) {
-            res.status(404).json({ error: 'Video not found' });
-            return;
-        }
-        logger_1.logger.info(`Video deleted: ${video.title} by user ${userId}`);
-        res.json({ message: 'Video deleted successfully' });
-    }
-    catch (error) {
-        logger_1.logger.error('Delete video error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-router.get('/next/:category', auth_1.authenticateToken, async (req, res) => {
-    try {
-        const userId = req.userId;
-        const category = req.params.category;
-        if (!['real-estate', 'cartoon'].includes(category)) {
-            res.status(400).json({ error: 'Invalid category' });
-            return;
-        }
-        const video = await videoModel.getNextVideoForPosting(userId, category);
-        if (!video) {
-            res.status(404).json({
-                error: 'No videos available for posting',
-                message: 'All videos have been posted recently. Add more videos or wait for the cool-off period.',
-            });
-            return;
-        }
-        res.json({
-            video: {
-                id: video.id,
-                title: video.title,
-                description: video.description,
-                duration: video.duration,
-                postCount: video.postCount,
-                lastPostedAt: video.lastPostedAt,
-                filename: video.filename,
-                category: video.category,
-            }
+        await Video_1.Video.findByIdAndDelete(id);
+        return res.json({
+            success: true,
+            message: 'Video deleted successfully'
         });
     }
     catch (error) {
-        logger_1.logger.error('Get next video error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-router.post('/:id/mark-posted', auth_1.authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const videoId = req.params.id;
-        if (!videoId) {
-            res.status(400).json({ error: 'Video ID is required' });
-            return;
-        }
-        const video = await videoModel.findById(videoId);
-        if (!video || video.userId !== userId) {
-            res.status(404).json({ error: 'Video not found' });
-            return;
-        }
-        const updatedVideo = await videoModel.markAsPosted(videoId);
-        if (!updatedVideo) {
-            res.status(404).json({ error: 'Video not found' });
-            return;
-        }
-        logger_1.logger.info(`Video marked as posted: ${updatedVideo.title} by user ${userId}`);
-        res.json({
-            message: 'Video marked as posted successfully',
-            video: {
-                id: updatedVideo.id,
-                title: updatedVideo.title,
-                postCount: updatedVideo.postCount,
-                lastPostedAt: updatedVideo.lastPostedAt,
-            }
+        logger_1.logger.error('Error deleting video:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to delete video'
         });
-    }
-    catch (error) {
-        logger_1.logger.error('Mark video posted error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-router.get('/stats', auth_1.authenticateToken, async (req, res) => {
-    try {
-        const userId = req.userId;
-        const stats = await videoModel.getVideoStats(userId);
-        res.json({ stats });
-    }
-    catch (error) {
-        logger_1.logger.error('Get video stats error:', error);
-        res.status(500).json({ error: 'Server error' });
     }
 });
 exports.default = router;

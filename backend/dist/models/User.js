@@ -1,191 +1,123 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserModel = void 0;
-class UserModel {
-    constructor(pool) {
-        this.pool = pool;
+exports.UserModel = exports.User = void 0;
+const mongoose_1 = __importStar(require("mongoose"));
+const userSchema = new mongoose_1.Schema({
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true
+    },
+    name: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    password: {
+        type: String,
+        required: true
+    },
+    username: {
+        type: String,
+        trim: true,
+        sparse: true
+    },
+    instagramAccessToken: String,
+    instagramRefreshToken: String,
+    instagramUserId: String,
+    tiktokAccessToken: String,
+    tiktokUserId: String,
+    youtubeAccessToken: String,
+    youtubeRefreshToken: String,
+    youtubeChannelId: String,
+    autoPostingEnabled: {
+        type: Boolean,
+        default: false
+    },
+    postingTimes: {
+        type: [String],
+        default: ['09:00', '13:00', '18:00']
+    },
+    pinnedHours: [String],
+    excludedHours: [String],
+    timezone: {
+        type: String,
+        default: 'UTC'
+    },
+    testMode: {
+        type: Boolean,
+        default: false
+    },
+    lastLoginAt: Date,
+    twoFactorEnabled: {
+        type: Boolean,
+        default: false
+    },
+    twoFactorSecret: String,
+    twoFactorSetupAt: Date,
+    backupCodes: [String],
+    watermarkEnabled: {
+        type: Boolean,
+        default: false
+    },
+    watermarkLogoPath: String,
+    watermarkPosition: {
+        type: String,
+        enum: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'],
+        default: 'bottom-right'
+    },
+    watermarkOpacity: {
+        type: Number,
+        min: 0.1,
+        max: 1.0,
+        default: 0.70
+    },
+    watermarkSizePercent: {
+        type: Number,
+        min: 5.0,
+        max: 50.0,
+        default: 10.0
     }
-    async create(input) {
-        const query = `
-      INSERT INTO users (email, name, password_hash, timezone, auto_posting_enabled, posting_times, test_mode, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-      RETURNING *
-    `;
-        const values = [
-            input.email,
-            input.name,
-            input.password,
-            input.timezone || 'UTC',
-            false,
-            JSON.stringify(['09:00', '13:00', '18:00']),
-            false
-        ];
-        const result = await this.pool.query(query, values);
-        return this.mapRowToUser(result.rows[0]);
-    }
-    async findById(id) {
-        const query = 'SELECT * FROM users WHERE id = $1';
-        const result = await this.pool.query(query, [id]);
-        if (result.rows.length === 0)
-            return null;
-        return this.mapRowToUser(result.rows[0]);
-    }
-    async findByEmail(email) {
-        const query = 'SELECT * FROM users WHERE email = $1';
-        const result = await this.pool.query(query, [email]);
-        if (result.rows.length === 0)
-            return null;
-        return this.mapRowToUser(result.rows[0]);
-    }
-    async update(id, input) {
-        const fields = [];
-        const values = [];
-        let paramCount = 1;
-        Object.entries(input).forEach(([key, value]) => {
-            if (value !== undefined) {
-                fields.push(`${this.camelToSnake(key)} = $${paramCount}`);
-                values.push(value);
-                paramCount++;
-            }
-        });
-        if (fields.length === 0)
-            return this.findById(id);
-        fields.push(`updated_at = NOW()`);
-        values.push(id);
-        const query = `
-      UPDATE users 
-      SET ${fields.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING *
-    `;
-        const result = await this.pool.query(query, values);
-        if (result.rows.length === 0)
-            return null;
-        return this.mapRowToUser(result.rows[0]);
-    }
-    async updateInstagramCredentials(id, credentials) {
-        const query = `
-      UPDATE users 
-      SET 
-        instagram_username = $1,
-        instagram_access_token = $2,
-        instagram_refresh_token = $3,
-        instagram_user_id = $4,
-        updated_at = NOW()
-      WHERE id = $5
-      RETURNING *
-    `;
-        const values = [
-            credentials.instagramUsername,
-            credentials.instagramAccessToken,
-            credentials.instagramRefreshToken,
-            credentials.instagramUserId,
-            id
-        ];
-        const result = await this.pool.query(query, values);
-        if (result.rows.length === 0)
-            return null;
-        return this.mapRowToUser(result.rows[0]);
-    }
-    async updatePostingSettings(id, settings) {
-        const query = `
-      UPDATE users 
-      SET 
-        auto_posting_enabled = $1,
-        posting_times = $2,
-        pinned_hours = $3,
-        excluded_hours = $4,
-        timezone = $5,
-        test_mode = $6,
-        updated_at = NOW()
-      WHERE id = $7
-      RETURNING *
-    `;
-        const values = [
-            settings.autoPostingEnabled,
-            JSON.stringify(settings.postingTimes || []),
-            JSON.stringify(settings.pinnedHours || []),
-            JSON.stringify(settings.excludedHours || []),
-            settings.timezone,
-            settings.testMode,
-            id
-        ];
-        const result = await this.pool.query(query, values);
-        if (result.rows.length === 0)
-            return null;
-        return this.mapRowToUser(result.rows[0]);
-    }
-    async updateLastLogin(id) {
-        const query = 'UPDATE users SET last_login_at = NOW() WHERE id = $1';
-        await this.pool.query(query, [id]);
-    }
-    async updateSocialTokens(id, tokens) {
-        const fields = [];
-        const values = [];
-        let paramCount = 1;
-        const fieldMap = {
-            instagramAccessToken: 'instagram_access_token',
-            instagramUserId: 'instagram_user_id',
-            tiktokAccessToken: 'tiktok_access_token',
-            tiktokUserId: 'tiktok_user_id',
-            youtubeAccessToken: 'youtube_access_token',
-            youtubeRefreshToken: 'youtube_refresh_token',
-            youtubeChannelId: 'youtube_channel_id',
-        };
-        Object.entries(tokens).forEach(([key, value]) => {
-            if (value !== undefined) {
-                const dbField = fieldMap[key];
-                if (dbField) {
-                    fields.push(`${dbField} = $${paramCount}`);
-                    values.push(value);
-                    paramCount++;
-                }
-            }
-        });
-        if (fields.length === 0)
-            return this.findById(id);
-        fields.push(`updated_at = NOW()`);
-        values.push(id);
-        const query = `
-      UPDATE users 
-      SET ${fields.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING *
-    `;
-        const result = await this.pool.query(query, values);
-        if (result.rows.length === 0)
-            return null;
-        return this.mapRowToUser(result.rows[0]);
-    }
-    mapRowToUser(row) {
-        return {
-            id: row.id,
-            email: row.email,
-            name: row.name,
-            passwordHash: row.password_hash,
-            instagramUsername: row.instagram_username,
-            instagramAccessToken: row.instagram_access_token,
-            instagramRefreshToken: row.instagram_refresh_token,
-            instagramUserId: row.instagram_user_id,
-            tiktokAccessToken: row.tiktok_access_token,
-            tiktokUserId: row.tiktok_user_id,
-            youtubeAccessToken: row.youtube_access_token,
-            youtubeRefreshToken: row.youtube_refresh_token,
-            youtubeChannelId: row.youtube_channel_id,
-            autoPostingEnabled: row.auto_posting_enabled,
-            postingTimes: JSON.parse(row.posting_times || '[]'),
-            pinnedHours: row.pinned_hours ? JSON.parse(row.pinned_hours) : undefined,
-            excludedHours: row.excluded_hours ? JSON.parse(row.excluded_hours) : undefined,
-            timezone: row.timezone,
-            testMode: row.test_mode,
-            createdAt: new Date(row.created_at),
-            updatedAt: new Date(row.updated_at),
-            lastLoginAt: row.last_login_at ? new Date(row.last_login_at) : undefined
-        };
-    }
-    camelToSnake(str) {
-        return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    }
-}
-exports.UserModel = UserModel;
+}, {
+    timestamps: true
+});
+userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
+exports.User = mongoose_1.default.model('User', userSchema);
+exports.UserModel = exports.User;
 //# sourceMappingURL=User.js.map

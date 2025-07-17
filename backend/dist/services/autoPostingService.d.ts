@@ -34,11 +34,13 @@ export declare class AutoPostingService {
     executeScheduledPosts(): Promise<PostingResult[]>;
     private executePost;
     getOptimalPostingTimes(userId: string): Promise<string[]>;
-    selectNextVideo(userId: string, category: string, options?: SmartPostingOptions): Promise<any>;
-    getPostingStats(userId: string, days?: number): Promise<any>;
+    selectNextVideo(userId: string, _category: string, options?: SmartPostingOptions): Promise<any>;
+    getPostingStats(userId: string, _days?: number): Promise<any>;
     private getNextScheduledPost;
     pauseAutoPosting(userId: string): Promise<void>;
     resumeAutoPosting(userId: string): Promise<void>;
+    manualPost(userId: string): Promise<PostingResult>;
 }
+export declare const autoPostingService: AutoPostingService;
 export default AutoPostingService;
 //# sourceMappingURL=autoPostingService.d.ts.map

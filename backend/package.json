@@ -4,7 +4,7 @@
   "description": "Complete TypeScript SaaS Backend for Real Estate Auto-Posting App",
   "main": "src/app.ts",
   "scripts": {
-    "start": "ts-node src/app.ts",
+    "start": "node dist/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc",
     "build:watch": "tsc --watch",

@@ -6,8 +6,8 @@
 ```
 NODE_ENV=production
 PORT=5001
-JWT_SECRET=128e292d3c403a6f0d235db65647fe360c6e9b6a781b5f69cc69ad518d02ae51
-MONGODB_URI=mongodb+srv://peter:xX9Rqal8fY4Ts2NA@cluster0.wpjcz1.mongodb.net/?retryWrites=true&w=majority
+JWT_SECRET=your-production-jwt-secret-minimum-32-characters
+MONGODB_URI=mongodb+srv://username:password@cluster0.mongodb.net/auto_posting_app?retryWrites=true&w=majority
 ```
 
 ### **CORS Configuration (PRODUCTION-ONLY):**

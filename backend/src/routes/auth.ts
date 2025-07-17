@@ -1,300 +1,183 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { body, validationResult } from 'express-validator';
-import { UserModel } from '../models/User';
-import { pool } from '../config/database';
 import { logger } from '../utils/logger';
-import { createError } from '../middleware/errorHandler';
+import { User } from '../models/User';
+import { connectToDatabase } from '../config/database';
 
-const router = Router();
-const userModel = new UserModel(pool);
+const router = express.Router();
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-// Validation middleware
-const validateRegistration = [
-  body('email').isEmail().normalizeEmail(),
-  body('name').trim().isLength({ min: 2, max: 50 }),
-  body('password').isLength({ min: 6 }),
-];
-
-const validateLogin = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').notEmpty(),
-];
-
-// Generate JWT token
-const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
-};
-
-// @route   POST /api/auth/register
-// @desc    Register a new user
-// @access  Public
-router.post('/register', validateRegistration, async (req: Request, res: Response): Promise<void> => {
+// Register
+router.post('/register', async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-      return;
+    await connectToDatabase();
+    
+    const { username, email, password, name } = req.body;
+
+    if (!username || !email || !password || !name) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username, email, password, and name are required'
+      });
     }
 
-    const { email, name, password } = req.body;
-
     // Check if user already exists
-    const existingUser = await userModel.findByEmail(email);
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }]
+    });
+
     if (existingUser) {
-      res.status(400).json({ error: 'User already exists' });
-      return;
+      return res.status(400).json({
+        success: false,
+        error: 'User already exists'
+      });
     }
 
     // Hash password
-    const saltRounds = 12;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const user = await userModel.create({
-      email,
+    const user = new User({
+      username,
       name,
-      password: passwordHash,
+      email,
+      password: hashedPassword
     });
 
-    // Generate token
-    const token = generateToken(user.id);
+    await user.save();
 
-    logger.info(`New user registered: ${email}`);
+    // Generate JWT
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET environment variable is required for production');
+    }
+    const token = jwt.sign(
+      { id: user._id, username: user.username },
+      jwtSecret,
+      { expiresIn: '24h' }
+    );
 
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        autoPostingEnabled: user.autoPostingEnabled,
-      },
-      token,
+    return res.status(201).json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email
+        }
+      }
     });
-    return;
   } catch (error) {
     logger.error('Registration error:', error);
-    res.status(500).json({ error: 'Server error' });
-    return;
+    return res.status(500).json({
+      success: false,
+      error: 'Registration failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
-// @route   POST /api/auth/login
-// @desc    Login user
-// @access  Public
-router.post('/login', validateLogin, async (req: Request, res: Response): Promise<void> => {
+// Login
+router.post('/login', async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-      return;
-    }
-
+    await connectToDatabase();
+    
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
+      });
+    }
+
     // Find user
-    const user = await userModel.findByEmail(email);
+    const user = await User.findOne({ email });
     if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
     }
 
     // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
     }
 
-    // Update last login
-    await userModel.updateLastLogin(user.id);
+    // Generate JWT
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET environment variable is required for production');
+    }
+    const token = jwt.sign(
+      { id: user._id, username: user.username },
+      jwtSecret,
+      { expiresIn: '24h' }
+    );
 
-    // Generate token
-    const token = generateToken(user.id);
-
-    logger.info(`User logged in: ${email}`);
-
-    res.json({
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        autoPostingEnabled: user.autoPostingEnabled,
-        instagramUsername: user.instagramUsername,
-        testMode: user.testMode,
-      },
-      token,
+    return res.json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email
+        }
+      }
     });
-    return;
   } catch (error) {
     logger.error('Login error:', error);
-    res.status(500).json({ error: 'Server error' });
-    return;
+    return res.status(500).json({
+      success: false,
+      error: 'Login failed'
+    });
   }
 });
 
-// @route   GET /api/auth/me
-// @desc    Get current user
-// @access  Private
-router.get('/me', async (req: Request, res: Response): Promise<void> => {
+// Get current user
+router.get('/me', async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authenticated'
+      });
+    }
+
+    await connectToDatabase();
     
-    if (!token) {
-      res.status(401).json({ error: 'No token provided' });
-      return;
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const user = await userModel.findById(decoded.userId);
-
+    const user = await User.findById(userId).select('-password');
     if (!user) {
-      res.status(401).json({ error: 'Invalid token' });
-      return;
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
     }
 
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        autoPostingEnabled: user.autoPostingEnabled,
-        instagramUsername: user.instagramUsername,
-        postingTimes: user.postingTimes,
-        pinnedHours: user.pinnedHours,
-        excludedHours: user.excludedHours,
-        timezone: user.timezone,
-        testMode: user.testMode,
-        lastLoginAt: user.lastLoginAt,
-      },
+    return res.json({
+      success: true,
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email
+        }
+      }
     });
-    return;
   } catch (error) {
     logger.error('Get user error:', error);
-    res.status(401).json({ error: 'Invalid token' });
-    return;
-  }
-});
-
-// @route   PUT /api/auth/instagram
-// @desc    Update Instagram credentials
-// @access  Private
-router.put('/instagram', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      res.status(401).json({ error: 'No token provided' });
-      return;
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const { instagramUsername, instagramAccessToken, instagramRefreshToken, instagramUserId } = req.body;
-
-    const user = await userModel.updateInstagramCredentials(decoded.userId, {
-      instagramUsername,
-      instagramAccessToken,
-      instagramRefreshToken,
-      instagramUserId,
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get user data'
     });
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    logger.info(`Instagram credentials updated for user: ${user.email}`);
-
-    res.json({
-      message: 'Instagram credentials updated successfully',
-      user: {
-        id: user.id,
-        instagramUsername: user.instagramUsername,
-        instagramUserId: user.instagramUserId,
-      },
-    });
-    return;
-  } catch (error) {
-    logger.error('Instagram credentials update error:', error);
-    res.status(500).json({ error: 'Server error' });
-    return;
-  }
-});
-
-// @route   PUT /api/auth/posting-settings
-// @desc    Update posting settings
-// @access  Private
-router.put('/posting-settings', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      res.status(401).json({ error: 'No token provided' });
-      return;
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const {
-      autoPostingEnabled,
-      postingTimes,
-      pinnedHours,
-      excludedHours,
-      timezone,
-      testMode,
-    } = req.body;
-
-    const user = await userModel.updatePostingSettings(decoded.userId, {
-      autoPostingEnabled,
-      postingTimes,
-      pinnedHours,
-      excludedHours,
-      timezone,
-      testMode,
-    });
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    logger.info(`Posting settings updated for user: ${user.email}`);
-
-    res.json({
-      message: 'Posting settings updated successfully',
-      settings: {
-        autoPostingEnabled: user.autoPostingEnabled,
-        postingTimes: user.postingTimes,
-        pinnedHours: user.pinnedHours,
-        excludedHours: user.excludedHours,
-        timezone: user.timezone,
-        testMode: user.testMode,
-      },
-    });
-    return;
-  } catch (error) {
-    logger.error('Posting settings update error:', error);
-    res.status(500).json({ error: 'Server error' });
-    return;
-  }
-});
-
-// @route   POST /api/auth/logout
-// @desc    Logout user (client-side token removal)
-// @access  Private
-router.post('/logout', async (req: Request, res: Response) => {
-  try {
-    // In a stateless JWT system, logout is handled client-side
-    // by removing the token from storage
-    res.json({ message: 'Logout successful' });
-  } catch (error) {
-    logger.error('Logout error:', error);
-    res.status(500).json({ error: 'Server error' });
   }
 });
 

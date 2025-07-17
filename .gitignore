@@ -1,1 +1,35 @@
 node_modules
+
+# Build and temporary files
+backend/dist/
+backend/*.log
+backend/logs/
+client/build/
+client/*.log
+frontend/build.log
+frontend.log
+backend.log
+server.log
+*.pid
+data/
+cartoons/
+logs/
+dist/
+packages/shared/dist/
+packages/shared/tsconfig.tsbuildinfo
+backend/tsconfig.tsbuildinfo
+backend/typescript_errors.txt
+backend/typescript_final_errors.txt
+
+# Environment files
+.env
+.env.backup.*
+client/.env
+backend/.env
+
+# Dependencies
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

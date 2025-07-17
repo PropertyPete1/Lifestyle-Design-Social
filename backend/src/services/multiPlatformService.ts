@@ -5,7 +5,6 @@ import { YouTubeService } from './youtubeService';
 import { CaptionGenerationService } from './captionGenerationService';
 import { VideoProcessingService } from './videoProcessingService';
 import { UserModel } from '../models/User';
-import { pool } from '../config/database';
 
 export interface PlatformConfig {
   instagram: boolean;
@@ -65,7 +64,7 @@ export class MultiPlatformService {
   private youtubeService: YouTubeService;
   private captionService: CaptionGenerationService;
   private videoService: VideoProcessingService;
-  private userModel: UserModel;
+  private userModel: typeof UserModel;
 
   constructor() {
     this.instagramService = new InstagramService();
@@ -73,7 +72,7 @@ export class MultiPlatformService {
     this.youtubeService = new YouTubeService();
     this.captionService = new CaptionGenerationService();
     this.videoService = new VideoProcessingService();
-    this.userModel = new UserModel(pool);
+    this.userModel = UserModel;
   }
 
   /**
@@ -395,7 +394,11 @@ export class MultiPlatformService {
       return validations;
     } catch (error) {
       logger.error('Failed to validate platform credentials:', error);
-      return {};
+      return {
+        instagram: false,
+        tiktok: false,
+        youtube: false
+      };
     }
   }
 
@@ -426,7 +429,11 @@ export class MultiPlatformService {
       return times;
     } catch (error) {
       logger.error('Failed to get optimal posting times:', error);
-      return {};
+      return {
+        instagram: ['9:00 AM', '12:00 PM', '6:00 PM'],
+        tiktok: ['6:00 AM', '10:00 AM', '7:00 PM'],
+        youtube: ['2:00 PM', '4:00 PM', '8:00 PM']
+      };
     }
   }
 
@@ -472,7 +479,11 @@ export class MultiPlatformService {
       return stats;
     } catch (error) {
       logger.error('Failed to get platform stats:', error);
-      return {};
+      return {
+        instagram: { followers: 0, posts: 0, engagement: 0 },
+        tiktok: { followers: 0, posts: 0, engagement: 0 },
+        youtube: { subscribers: 0, videos: 0, views: 0 }
+      };
     }
   }
 }

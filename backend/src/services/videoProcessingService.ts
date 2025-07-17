@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/logger';
 import { VideoModel } from '../models/Video';
-import { pool } from '../config/database';
 
 // Configure ffmpeg path
 import ffmpegStatic from 'ffmpeg-static';
@@ -30,10 +29,10 @@ export interface ProcessingOptions {
 }
 
 export class VideoProcessingService {
-  private videoModel: VideoModel;
+  private videoModel: typeof VideoModel;
 
   constructor() {
-    this.videoModel = new VideoModel(pool);
+    this.videoModel = VideoModel;
   }
 
   /**
@@ -229,7 +228,7 @@ export class VideoProcessingService {
    */
   async updateVideoMetadata(videoId: string, metadata: VideoMetadata, thumbnailPath?: string): Promise<void> {
     try {
-      await this.videoModel.update(videoId, {
+      await this.videoModel.findByIdAndUpdate(videoId, {
         thumbnailPath,
       });
       logger.info(`Updated video metadata for video: ${videoId}`);
@@ -265,9 +264,11 @@ export class VideoProcessingService {
     totalSize: number;
   }> {
     try {
-      const result = await this.videoModel.getVideoStats('system');
-      return {
-        totalProcessed: result.totalVideos || 0,
+      const result = await this.videoModel.aggregate([
+        { $group: { _id: null, count: { $sum: 1 }, totalSize: { $sum: '$fileSize' } } }
+      ]);
+              return {
+          totalProcessed: result[0]?.count || 0,
         averageProcessingTime: 0, // Would need to track processing times
         successRate: 1.0, // Would need to track failures
         totalSize: 0, // result.totalSize || 0,

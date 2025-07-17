@@ -1,34 +1,25 @@
-import React from 'react'
+import React from 'react';
 
 interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl'
-  color?: 'blue' | 'gray' | 'white' | 'indigo'
-  className?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
   size = 'md', 
-  color = 'indigo',
   className = '' 
 }) => {
   const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6', 
-    lg: 'h-8 w-8',
-    xl: 'h-12 w-12'
-  }
-
-  const colorClasses = {
-    blue: 'text-blue-600',
-    gray: 'text-gray-600',
-    white: 'text-white',
-    indigo: 'text-indigo-600'
-  }
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8',
+    xl: 'w-12 h-12',
+  };
 
   return (
-    <div className={`flex items-center justify-center ${className}`}>
+    <div className={`${sizeClasses[size]} ${className}`}>
       <svg
-        className={`animate-spin ${sizeClasses[size]} ${colorClasses[color]}`}
+        className="animate-spin text-blue-600"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
@@ -48,7 +39,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         ></path>
       </svg>
     </div>
-  )
-}
+  );
+};
 
-export default LoadingSpinner 
+export default LoadingSpinner; 

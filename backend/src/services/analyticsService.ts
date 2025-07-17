@@ -1,8 +1,6 @@
 import { logger } from '../utils/logger';
-import { PostModel, Post } from '../models/Post';
-import { VideoModel, Video } from '../models/Video';
-import { UserModel } from '../models/User';
-import { pool } from '../config/database';
+import { Post, IPost } from '../models/Post';
+import { Video } from '../models/Video';
 
 export interface EngagementMetrics {
   likes: number;
@@ -18,7 +16,7 @@ export interface AnalyticsData {
   totalPosts: number;
   totalEngagement: number;
   averageEngagementRate: number;
-  bestPerformingPosts: Post[];
+  bestPerformingPosts: IPost[];
   postingTrends: PostingTrend[];
   categoryPerformance: Record<string, CategoryStats>;
   timeAnalysis: PostingTimeAnalysis[];
@@ -45,14 +43,12 @@ export interface PostingTimeAnalysis {
 }
 
 export class AnalyticsService {
-  private postModel: PostModel;
-  private videoModel: VideoModel;
-  private userModel: UserModel;
+  private postModel: typeof Post;
+  private videoModel: typeof Video;
 
   constructor() {
-    this.postModel = new PostModel(pool);
-    this.videoModel = new VideoModel(pool);
-    this.userModel = new UserModel(pool);
+    this.postModel = Post;
+    this.videoModel = Video;
   }
 
   /**
@@ -66,7 +62,7 @@ export class AnalyticsService {
       const engagementRate = this.calculateEngagementRate(metrics);
 
       // Update post with engagement data
-      await this.postModel.update(postId, {
+      await this.postModel.findByIdAndUpdate(postId, {
         engagementMetrics: {
           likes: metrics.likes,
           comments: metrics.comments,
@@ -105,21 +101,21 @@ export class AnalyticsService {
       startDate.setDate(startDate.getDate() - days);
 
       // Get posts for the period
-      const posts = await this.postModel.findByUser(userId, {
+      const posts = await this.postModel.find({
+        userId,
         status: 'posted',
-        startDate,
-        endDate: new Date(),
+        postedTime: { $gte: startDate, $lte: new Date() }
       });
 
       // Calculate analytics
       const totalPosts = posts.length;
-      const totalEngagement = posts.reduce((sum, post) => {
+      const totalEngagement = posts.reduce((sum: number, post: any) => {
         const metrics = post.engagementMetrics;
         return sum + (metrics?.likes || 0) + (metrics?.comments || 0) + (metrics?.shares || 0);
       }, 0);
 
       const averageEngagementRate = posts.length > 0 
-        ? posts.reduce((sum, post) => {
+        ? posts.reduce((sum: number, post: any) => {
             const metrics = post.engagementMetrics;
             if (!metrics) return sum;
             const engagement = metrics.likes + metrics.comments + metrics.shares;
@@ -130,8 +126,8 @@ export class AnalyticsService {
 
       // Get best performing posts
       const bestPerformingPosts = posts
-        .filter(post => post.engagementMetrics)
-        .sort((a, b) => {
+        .filter((post: any) => post.engagementMetrics)
+        .sort((a: any, b: any) => {
           const aRate = this.calculatePostEngagementRate(a);
           const bRate = this.calculatePostEngagementRate(b);
           return bRate - aRate;
@@ -165,7 +161,7 @@ export class AnalyticsService {
   /**
    * Calculate engagement rate for a post
    */
-  private calculatePostEngagementRate(post: Post): number {
+  private calculatePostEngagementRate(post: IPost): number {
     const metrics = post.engagementMetrics;
     if (!metrics) return 0;
     
@@ -178,7 +174,7 @@ export class AnalyticsService {
   /**
    * Analyze posting trends
    */
-  private analyzePostingTrends(posts: Post[]): PostingTrend[] {
+  private analyzePostingTrends(posts: IPost[]): PostingTrend[] {
     const trends: PostingTrend[] = [];
     const dailyStats: Record<string, { posts: number; engagement: number }> = {};
 
@@ -218,13 +214,16 @@ export class AnalyticsService {
    */
   private async analyzeCategoryPerformance(userId: string, startDate: Date): Promise<Record<string, CategoryStats>> {
     try {
-      const videos = await this.videoModel.findByUser(userId);
-      const posts = await this.postModel.findByUser(userId, { startDate });
+      const videos = await this.videoModel.find({ userId });
+      const posts = await this.postModel.find({ 
+        userId, 
+        postedTime: { $gte: startDate } 
+      });
 
       const categoryStats: Record<string, CategoryStats> = {};
 
       // Group by category
-      videos.forEach(video => {
+      videos.forEach((video: any) => {
         const category = video.category;
         if (!categoryStats[category]) {
           categoryStats[category] = {
@@ -238,8 +237,8 @@ export class AnalyticsService {
       });
 
       // Add post data
-      posts.forEach(post => {
-        const video = videos.find(v => v.id === post.videoId);
+      posts.forEach((post: any) => {
+        const video = videos.find((v: any) => v.id === post.videoId);
         if (video) {
           const category = video.category;
           const categoryData = categoryStats[category];
@@ -264,14 +263,28 @@ export class AnalyticsService {
       return categoryStats;
     } catch (error) {
       logger.error('Failed to analyze category performance:', error);
-      return {};
+      // Return default category stats structure instead of empty object
+      return {
+        'real-estate': {
+          totalVideos: 0,
+          totalPosts: 0,
+          totalEngagement: 0,
+          averageEngagementRate: 0,
+        },
+        'cartoon': {
+          totalVideos: 0,
+          totalPosts: 0,
+          totalEngagement: 0,
+          averageEngagementRate: 0,
+        }
+      };
     }
   }
 
   /**
    * Analyze posting times
    */
-  private analyzePostingTimes(posts: Post[]): PostingTimeAnalysis[] {
+  private analyzePostingTimes(posts: IPost[]): PostingTimeAnalysis[] {
     const hourlyStats: Record<number, { engagement: number; count: number }> = {};
 
     // Initialize hourly stats
@@ -311,10 +324,10 @@ export class AnalyticsService {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      const posts = await this.postModel.findByUser(userId, {
+      const posts = await this.postModel.find({
+        userId,
         status: 'posted',
-        startDate,
-        endDate: new Date(),
+        postedTime: { $gte: startDate, $lte: new Date() }
       });
 
       const timeAnalysis = this.analyzePostingTimes(posts);
@@ -351,7 +364,7 @@ export class AnalyticsService {
       averageEngagementRate: number;
       trend: string;
     };
-    topPerformers: Post[];
+    topPerformers: IPost[];
     categoryInsights: Record<string, CategoryStats>;
     timeInsights: PostingTimeAnalysis[];
     recommendations: string[];
@@ -450,14 +463,13 @@ export class AnalyticsService {
     totalPosts: number;
     totalEngagement: number;
     averageEngagementRate: number;
-    bestPost: Post | null;
-    posts: Post[];
+    bestPost: IPost | null;
+    posts: IPost[];
   }> {
     try {
       // Get all posts for this video - we'll need to implement this differently
       // For now, we'll get all posts and filter by videoId
-      const allPosts = await this.postModel.findByUser('', {});
-      const posts = allPosts.filter(post => post.videoId === videoId);
+      const posts = await this.postModel.find({ videoId });
       
       if (posts.length === 0) {
         return {
@@ -470,15 +482,15 @@ export class AnalyticsService {
       }
 
       const totalPosts = posts.length;
-      const totalEngagement = posts.reduce((sum, post) => {
+      const totalEngagement = posts.reduce((sum: any, post: any) => {
         const metrics = post.engagementMetrics;
         return sum + (metrics ? metrics.likes + metrics.comments + metrics.shares : 0);
       }, 0);
 
-      const averageEngagementRate = posts.reduce((sum, post) => 
+      const averageEngagementRate = posts.reduce((sum: any, post: any) => 
         sum + this.calculatePostEngagementRate(post), 0) / posts.length;
 
-      const bestPost = posts.reduce((best, current) => 
+      const bestPost = posts.reduce((best: any, current: any) => 
         this.calculatePostEngagementRate(current) > this.calculatePostEngagementRate(best) ? current : best
       );
 
@@ -538,6 +550,50 @@ export class AnalyticsService {
 
     return csvRows.map(row => row.join(',')).join('\n');
   }
+
+  /**
+   * Alias for getVideoPerformance method for backward compatibility
+   */
+  async getVideoAnalytics(videoId: string) {
+    return this.getVideoPerformance(videoId);
+  }
+
+  /**
+   * Get analytics for a specific post
+   */
+  async getPostAnalytics(postId: string) {
+    try {
+      const post = await this.postModel.findById(postId);
+      if (!post) {
+        return null;
+      }
+
+      return {
+        id: post._id,
+        userId: post.userId,
+        platform: post.platform,
+        content: post.content,
+        status: post.status,
+        engagementMetrics: post.engagementMetrics || {
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          views: 0,
+          reach: 0,
+          impressions: 0
+        },
+        engagementRate: this.calculatePostEngagementRate(post as any),
+        postedTime: post.postedTime,
+        scheduledTime: post.scheduledTime
+      };
+    } catch (error) {
+      logger.error('Error getting post analytics:', error);
+      throw error;
+    }
+  }
 }
+
+// Export singleton instance for backwards compatibility
+export const analyticsService = new AnalyticsService();
 
 export default AnalyticsService; 

@@ -1,17 +1,14 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import Dashboard from '@/components/Dashboard'
+import { useRouter } from 'next/navigation'
+import Layout from '@/components/Layout'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 const PostsContent = () => {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Posts Management</h1>
-        <p className="text-gray-600">Manage your scheduled and published posts across all platforms</p>
-      </div>
       
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -108,6 +105,13 @@ const PostsContent = () => {
 
 export default function PostsPage() {
   const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login')
+    }
+  }, [user, loading, router])
 
   if (loading) {
     return (
@@ -118,18 +122,12 @@ export default function PostsPage() {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Please log in to access posts.</p>
-        </div>
-      </div>
-    )
+    return null // Will redirect to login
   }
 
   return (
-    <Dashboard>
+    <Layout title="Posts Management">
       <PostsContent />
-    </Dashboard>
+    </Layout>
   )
 } 

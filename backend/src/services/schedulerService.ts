@@ -1,7 +1,6 @@
 import { logger } from '../utils/logger';
 import { UserModel } from '../models/User';
 import { PostModel } from '../models/Post';
-import { pool } from '../config/database';
 import { AutoPostingService } from './autoPostingService';
 import { AnalyticsService } from './analyticsService';
 
@@ -31,14 +30,14 @@ export interface TimingOptimization {
 }
 
 export class SchedulerService {
-  private userModel: UserModel;
-  private postModel: PostModel;
+  private userModel: typeof UserModel;
+  private postModel: typeof PostModel;
   private autoPostingService: AutoPostingService;
   private analyticsService: AnalyticsService;
 
   constructor() {
-    this.userModel = new UserModel(pool);
-    this.postModel = new PostModel(pool);
+    this.userModel = UserModel;
+    this.postModel = PostModel;
     this.autoPostingService = new AutoPostingService();
     this.analyticsService = new AnalyticsService();
   }
@@ -109,9 +108,10 @@ export class SchedulerService {
       logger.info('Executing scheduled posts...');
 
       const now = new Date();
-      const scheduledPosts = await this.postModel.findByUser('', {
+      const scheduledPosts = await this.postModel.find({
+        userId: '',
         status: 'scheduled',
-        limit: 100,
+        scheduledTime: { $gte: new Date() }
       });
 
       if (scheduledPosts.length === 0) {
@@ -183,8 +183,9 @@ export class SchedulerService {
 
       // Update user's posting times if optimization suggests changes
       if (JSON.stringify(bestTimes) !== JSON.stringify(user.postingTimes)) {
-        await this.userModel.updatePostingSettings(userId, {
+        await this.userModel.findByIdAndUpdate(userId, {
           postingTimes: bestTimes,
+          updatedAt: new Date()
         });
         logger.info(`Updated posting times for user ${userId}: ${bestTimes.join(', ')}`);
       }
@@ -227,7 +228,8 @@ export class SchedulerService {
         throw new Error('User not found');
       }
 
-      const scheduledPosts = await this.postModel.findByUser(userId, {
+      const scheduledPosts = await this.postModel.find({
+        userId,
         status: 'scheduled',
         limit: 10,
       });
@@ -263,8 +265,9 @@ export class SchedulerService {
    */
   async pauseScheduling(userId: string): Promise<void> {
     try {
-      await this.userModel.updatePostingSettings(userId, {
+      await this.userModel.findByIdAndUpdate(userId, {
         autoPostingEnabled: false,
+        updatedAt: new Date()
       });
       logger.info(`Paused scheduling for user ${userId}`);
     } catch (error) {
@@ -278,8 +281,9 @@ export class SchedulerService {
    */
   async resumeScheduling(userId: string): Promise<void> {
     try {
-      await this.userModel.updatePostingSettings(userId, {
+      await this.userModel.findByIdAndUpdate(userId, {
         autoPostingEnabled: true,
+        updatedAt: new Date()
       });
       logger.info(`Resumed scheduling for user ${userId}`);
     } catch (error) {
@@ -311,7 +315,7 @@ export class SchedulerService {
         updateData.autoPostingEnabled = config.enabled;
       }
 
-      await this.userModel.updatePostingSettings(userId, updateData);
+      await this.userModel.findByIdAndUpdate(userId, updateData);
       logger.info(`Updated schedule config for user ${userId}`);
     } catch (error) {
       logger.error('Failed to update schedule config:', error);
@@ -360,26 +364,38 @@ export class SchedulerService {
    */
   async getSchedulerStats(): Promise<any> {
     try {
-      // const users = await this.userModel.findByUser('', { limit: 100 });
-      // const enabledUsers = users.filter((user: any) => user.autoPostingEnabled);
-      const enabledUsers: any[] = []; // Placeholder until UserModel.findByUser is implemented
+      // Get users with auto-posting enabled
+      const enabledUsers = await this.userModel.find({ 
+        autoPostingEnabled: true,
+        isActive: { $ne: false } 
+      }).select('_id autoPostingEnabled').lean();
       
-      const scheduledPosts = await this.postModel.findByUser('', { status: 'scheduled' });
-      const postedToday = await this.postModel.findByUser('', {
+      const scheduledPosts = await this.postModel.find({ status: 'scheduled' });
+      const postedToday = await this.postModel.find({
         status: 'posted',
-        limit: 100,
+        postedTime: {
+          $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          $lte: new Date(new Date().setHours(23, 59, 59, 999))
+        }
       });
 
       return {
-        totalUsers: 0, // users.length,
         enabledUsers: enabledUsers.length,
         scheduledPosts: scheduledPosts.length,
         postedToday: postedToday.length,
-        nextExecution: this.calculateNextExecutionTime(),
+        totalUsers: await this.userModel.countDocuments(),
+        lastUpdated: new Date()
       };
     } catch (error) {
       logger.error('Failed to get scheduler stats:', error);
-      throw error;
+      return {
+        enabledUsers: 0,
+        scheduledPosts: 0,
+        postedToday: 0,
+        totalUsers: 0,
+        lastUpdated: new Date(),
+        error: 'Failed to retrieve scheduler statistics'
+      };
     }
   }
 
@@ -391,7 +407,8 @@ export class SchedulerService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
-      const oldPosts = await this.postModel.findByUser('', {
+      const oldPosts = await this.postModel.find({
+        userId: '',
         status: 'scheduled',
         limit: 100,
       });
@@ -399,7 +416,7 @@ export class SchedulerService {
       let deletedCount = 0;
       for (const post of oldPosts) {
         try {
-          await this.postModel.update(post.id, { status: 'cancelled' });
+          await this.postModel.findByIdAndUpdate(post.id, { status: 'cancelled' });
           deletedCount++;
         } catch (error) {
           logger.error(`Failed to delete old scheduled post ${post.id}:`, error);

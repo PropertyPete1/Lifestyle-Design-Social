@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
 // Extend Express Request interface to include user
 declare global {
   namespace Express {
     interface Request {
+      userId?: string;
       user?: {
         id: string;
         userId: string;
@@ -26,6 +27,21 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+// Generate JWT token
+export const generateToken = (userId: string, email?: string): string => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET environment variable is required for production');
+  }
+  const payload = {
+    userId,
+    id: userId,
+    email,
+  };
+  
+  return jwt.sign(payload, jwtSecret, { expiresIn: '7d' });
+};
+
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   // Get token from header (support both x-auth-token and Authorization: Bearer)
   let token = req.header('x-auth-token');
@@ -44,7 +60,11 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
   try {
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET environment variable is required for production');
+    }
+    const decoded = jwt.verify(token, jwtSecret) as any;
     req.user = {
       id: decoded.userId || decoded.id,
       userId: decoded.userId || decoded.id,
@@ -60,7 +80,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 };
 
 // Optional auth - doesn't fail if no token
-export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
+export const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
   let token = req.header('x-auth-token');
   if (!token && req.header('authorization')) {
     const authHeader = req.header('authorization');
@@ -71,7 +91,11 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction): v
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        throw new Error('JWT_SECRET environment variable is required for production');
+      }
+      const decoded = jwt.verify(token, jwtSecret) as any;
       req.user = {
         id: decoded.userId || decoded.id,
         userId: decoded.userId || decoded.id,

@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 # Function to cleanup on exit
 cleanup() {
     echo -e "\n${YELLOW}🛑 Shutting down servers...${NC}"
-    pkill -f "node server/index.js" 2>/dev/null
+    pkill -f "node.*server" 2>/dev/null
     pkill -f "npm.*start" 2>/dev/null
     pkill -f "react-scripts start" 2>/dev/null
     exit 0
@@ -24,7 +24,7 @@ trap cleanup SIGINT SIGTERM
 
 # Kill any existing processes
 echo -e "${YELLOW}🔄 Cleaning up existing processes...${NC}"
-pkill -f "node server/index.js" 2>/dev/null || true
+pkill -f "node.*server" 2>/dev/null || true
 pkill -f "npm.*start" 2>/dev/null || true
 pkill -f "react-scripts start" 2>/dev/null || true
 sleep 2
@@ -56,12 +56,12 @@ fi
 
 # Run database migrations
 echo -e "${BLUE}🗄️  Running database migrations...${NC}"
-node -e "const { runMigrations } = require('./server/config/migrations'); runMigrations();" 2>/dev/null || echo -e "${YELLOW}⚠️  Migration warnings (this is normal)${NC}"
+echo -e "${YELLOW}⚠️  Database migrations will be handled by backend startup${NC}"
 
 # Start backend server
 echo -e "${BLUE}🚀 Starting backend server on port 5001...${NC}"
 cd "$(dirname "$0")"
-node server/index.js &
+cd backend && npm run dev &
 BACKEND_PID=$!
 
 # Wait for backend to start
@@ -83,7 +83,7 @@ done
 # Start frontend server
 echo -e "${BLUE}🎨 Starting frontend server on port 3000...${NC}"
 cd client
-npm start &
+npm run dev &
 FRONTEND_PID=$!
 
 # Wait for frontend to start
@@ -114,7 +114,7 @@ while true; do
     if ! kill -0 $BACKEND_PID 2>/dev/null; then
         echo -e "${RED}❌ Backend server crashed! Restarting...${NC}"
         cd "$(dirname "$0")"
-        node server/index.js &
+        cd backend && npm run dev &
         BACKEND_PID=$!
     fi
     

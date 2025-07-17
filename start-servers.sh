@@ -5,7 +5,7 @@ echo "🏠 Starting Real Estate Auto-Posting SaaS..."
 
 # Kill any existing processes
 echo "🔄 Cleaning up existing processes..."
-pkill -f "node server/index.js" 2>/dev/null || true
+pkill -f "node.*server" 2>/dev/null || true
 pkill -f "next dev" 2>/dev/null || true
 lsof -ti:3000,3001,5001 | xargs kill -9 2>/dev/null || true
 
@@ -14,7 +14,7 @@ sleep 2
 
 # Start backend server
 echo "🚀 Starting backend server on port 5001..."
-JWT_SECRET=your-secret-key-change-this-in-production NODE_ENV=development PORT=5001 node server/index.js &
+cd backend && npm run dev &
 BACKEND_PID=$!
 
 # Wait for backend to start

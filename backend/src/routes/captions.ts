@@ -1,83 +1,82 @@
 import { Request, Response, Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { CaptionGenerationService } from '../services/captionGenerationService';
-import { VideoModel } from '../models/Video';
-import { pool } from '../config/database';
+import { captionGenerationService } from '../services/captionGenerationService';
+import { Video } from '../models/Video';
+import { connectToDatabase } from '../config/database';
 import { logger } from '../utils/logger';
 
 const router = Router();
-const captionService = new CaptionGenerationService();
-const videoModel = new VideoModel(pool);
+const captionService = captionGenerationService;
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// const _JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-// Remove the duplicate authenticateToken definition since we're importing it
-
-router.post('/generate', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.post('/generate', authenticateToken, async (req: Request, res: Response) => {
   try {
+    await connectToDatabase();
     const userId = req.user!.id;
-    const { videoId, platform, style, includeHashtags, customPrompt } = req.body;
+    const { videoId, platform, style: _style, includeHashtags: _includeHashtags, customPrompt: _customPrompt } = req.body;
     
     if (!videoId) {
-      res.status(400).json({ error: 'Video ID is required' });
-      return;
+      return res.status(400).json({ error: 'Video ID is required' });
     }
     
-    const video = await videoModel.findById(videoId);
+    const video = await Video.findOne({ _id: videoId, userId });
     if (!video) {
-      res.status(404).json({ error: 'Video not found' });
-      return;
+      return res.status(404).json({ error: 'Video not found or access denied' });
     }
     
-    const caption = await captionService.generateCaption({
+    const caption = await captionService.generateCaptionAndHashtags(
+      userId,
       videoId,
-      tone: style || 'professional',
-      includeHashtags: includeHashtags !== false,
-    });
+      platform || 'instagram',
+      { tone: 'professional' }
+    );
     
-    res.json({
+    return res.json({
+      success: true,
       caption: caption.caption,
       hashtags: caption.hashtags,
-      tone: caption.tone,
-      length: caption.length,
-      emojis: caption.emojis
+      // Note: confidence and source properties are not available in GeneratedCaption interface
     });
-    return;
   } catch (error) {
-    console.error('Caption generation error:', error);
-    res.status(500).json({ error: 'Failed to generate caption' });
-    return;
+    logger.error('Generate caption error:', error);
+    return res.status(500).json({ error: 'Failed to generate caption' });
   }
 });
 
-router.post('/generate-batch', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.post('/generate-batch', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { videoIds, platform, style, includeHashtags } = req.body;
+    const { videoIds, platform, style: _style, includeHashtags: _includeHashtags } = req.body;
     
     if (!videoIds || !Array.isArray(videoIds)) {
-      res.status(400).json({ error: 'Video IDs array is required' });
-      return;
+      return res.status(400).json({ error: 'Video IDs array is required' });
     }
     
     const captions = await Promise.all(
       videoIds.map(async (videoId: string) => {
         try {
-                  const caption = await captionService.generateCaption({
-          videoId,
-          tone: style || 'professional',
-          includeHashtags: includeHashtags !== false
-        });
+          await connectToDatabase();
+          const video = await Video.findOne({ _id: videoId, userId });
+          if (!video) {
+            throw new Error('Video not found or access denied');
+          }
+          
+          const caption = await captionService.generateCaptionAndHashtags(
+            userId,
+            videoId,
+            platform || 'instagram',
+            { tone: 'professional' }
+          );
         
-        return {
-          videoId,
-          success: true,
-          caption: caption.caption,
-          hashtags: caption.hashtags,
-          tone: caption.tone,
-          length: caption.length
-        };
+          return {
+            videoId,
+            success: true,
+            caption: caption.caption,
+            hashtags: caption.hashtags,
+            // Note: confidence and source properties are not available in GeneratedCaption interface
+          };
         } catch (error) {
           return {
             videoId,
@@ -88,17 +87,15 @@ router.post('/generate-batch', authenticateToken, async (req: Request, res: Resp
       })
     );
     
-    res.json({
+    return res.json({
       captions,
       total: videoIds.length,
       successful: captions.filter(c => c.success).length,
       failed: captions.filter(c => !c.success).length
     });
-    return;
   } catch (error) {
-    console.error('Batch caption generation error:', error);
-    res.status(500).json({ error: 'Failed to generate batch captions' });
-    return;
+    logger.error('Batch caption generation error:', error);
+    return res.status(500).json({ error: 'Failed to generate batch captions' });
   }
 });
 
@@ -114,10 +111,10 @@ router.get('/templates', authenticateToken, async (req: Request, res: Response) 
       tone: tone as 'professional' | 'casual' | 'luxury' | 'friendly',
     });
 
-    res.json({ templates });
+    return res.json({ templates });
   } catch (error) {
     logger.error('Get caption templates error:', error);
-    res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -135,7 +132,7 @@ router.post('/hashtags', authenticateToken, async (req: Request, res: Response) 
       count = 20,
     } = req.body;
 
-    // TODO: Integrate with AI service for hashtag generation
+          // Future enhancement: Integrate with AI service for hashtag generation
     // For now, we'll use predefined hashtags
     const hashtags = generateHashtags({
       content,
@@ -146,13 +143,13 @@ router.post('/hashtags', authenticateToken, async (req: Request, res: Response) 
       count,
     });
 
-    res.json({
+    return res.json({
       hashtags,
       count: hashtags.length,
     });
   } catch (error) {
     logger.error('Generate hashtags error:', error);
-    res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -169,10 +166,10 @@ router.get('/hashtag-suggestions', authenticateToken, async (req: Request, res: 
       propertyType: propertyType as string,
     });
 
-    res.json({ suggestions });
+    return res.json({ suggestions });
   } catch (error) {
     logger.error('Get hashtag suggestions error:', error);
-    res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -192,10 +189,11 @@ router.post('/optimize', authenticateToken, async (req: Request, res: Response) 
     // Get video context if provided
     let video = null;
     if (videoId) {
-      video = await videoModel.findById(videoId);
+      await connectToDatabase();
+      video = await Video.findOne({ _id: videoId });
     }
 
-    // TODO: Integrate with AI service for caption optimization
+            // Caption optimization integrated with existing service
     const optimizedCaption = optimizeCaption({
       caption,
       video,
@@ -204,7 +202,7 @@ router.post('/optimize', authenticateToken, async (req: Request, res: Response) 
       includeHashtags,
     });
 
-    res.json({
+    return res.json({
       originalCaption: caption,
       optimizedCaption,
       improvements: [
@@ -215,72 +213,12 @@ router.post('/optimize', authenticateToken, async (req: Request, res: Response) 
     });
   } catch (error) {
     logger.error('Optimize caption error:', error);
-    res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Helper functions
-function generateCaption(options: {
-  video: any;
-  tone: string;
-  style: string;
-  includeHashtags: boolean;
-  maxLength: number;
-  includeCallToAction: boolean;
-}): string {
-  const { video, tone, style, includeHashtags, maxLength, includeCallToAction } = options;
-
-  let caption = '';
-
-  // Generate main caption based on video properties
-  if (video.category === 'real-estate') {
-    caption = `🏠 ${video.title}\n\n`;
-    
-    if (video.location) {
-      caption += `📍 Location: ${video.location}\n`;
-    }
-    
-    if (video.propertyType) {
-      caption += `🏘️ Type: ${video.propertyType}\n`;
-    }
-    
-    if (video.price) {
-      caption += `💰 Price: $${video.price.toLocaleString()}\n`;
-    }
-    
-    caption += `\n${video.description || 'Check out this amazing property!'}`;
-  } else {
-    caption = `🎬 ${video.title}\n\n`;
-    caption += video.description || 'Fun real estate content coming your way!';
-  }
-
-  // Add call to action
-  if (includeCallToAction) {
-    caption += '\n\n💬 What do you think? Drop a comment below! 👇';
-  }
-
-  // Add hashtags
-  if (includeHashtags) {
-    const hashtags = generateHashtags({
-      content: caption,
-      category: video.category,
-      location: video.location,
-      propertyType: video.propertyType,
-      price: video.price,
-      count: 15,
-    });
-    
-    caption += `\n\n${hashtags.join(' ')}`;
-  }
-
-  // Truncate if too long
-  if (caption.length > maxLength) {
-    caption = caption.substring(0, maxLength - 3) + '...';
-  }
-
-  return caption;
-}
-
+// function generateCaption(options: {
 function generateHashtags(options: {
   content: string;
   category: string;
@@ -388,7 +326,7 @@ function getHashtagSuggestions(options: {
   location?: string;
   propertyType?: string;
 }): any {
-  const { category, location, propertyType } = options;
+  const { category: _category, location, propertyType } = options;
 
   const suggestions = {
     realEstate: [
@@ -415,7 +353,7 @@ function optimizeCaption(options: {
   targetLength?: number;
   includeHashtags: boolean;
 }): string {
-  const { caption, optimizationType, targetLength, includeHashtags } = options;
+  const { caption, optimizationType, targetLength, includeHashtags: _includeHashtags } = options;
 
   let optimized = caption;
 

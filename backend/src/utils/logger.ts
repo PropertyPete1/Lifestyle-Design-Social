@@ -1,59 +1,72 @@
-import winston from 'winston';
+// Backend logger - consolidated implementation (duplicate removed)
+// Note: Shared logger exists in packages/shared but import constraints prevent direct usage
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-// Define log levels
-const levels = {
-  error: 0,
-  warn: 1,
-  info: 2,
-  http: 3,
-  debug: 4,
-};
+export interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  data?: any;
+  context?: string;
+}
 
-// Define colors for each level
-const colors = {
-  error: 'red',
-  warn: 'yellow',
-  info: 'green',
-  http: 'magenta',
-  debug: 'white',
-};
+export interface LoggerConfig {
+  level: LogLevel;
+  enableConsole: boolean;
+  enableFile?: boolean;
+  context?: string;
+  colors?: boolean;
+}
 
-// Tell winston that you want to link the colors
-winston.addColors(colors);
+class Logger {
+  private config: LoggerConfig;
 
-// Define which level to log based on environment
-const level = () => {
-  const env = process.env.NODE_ENV || 'development';
-  const isDevelopment = env === 'development';
-  return isDevelopment ? 'debug' : 'warn';
-};
+  constructor(config: LoggerConfig) {
+    this.config = config;
+  }
 
-// Define different log formats
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-  winston.format.colorize({ all: true }),
-  winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`,
-  ),
-);
+  private shouldLog(level: LogLevel): boolean {
+    const levels: Record<LogLevel, number> = {
+      debug: 0,
+      info: 1,
+      warn: 2,
+      error: 3,
+    };
+    return levels[level] >= levels[this.config.level];
+  }
 
-// Define transports
-const transports = [
-  // Console transport
-  new winston.transports.Console(),
-  // File transport for errors
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-  }),
-  // File transport for all logs
-  new winston.transports.File({ filename: 'logs/all.log' }),
-];
+  // DUPLICATE of packages/shared/src/utils/logger.ts formatMessage method
+  // Import constraints prevent using shared logger directly
+  private formatMessage(level: LogLevel, message: string, data?: any): string {
+    const timestamp = new Date().toISOString();
+    const context = this.config.context ? `[${this.config.context}]` : '';
+    const dataStr = data ? ` ${JSON.stringify(data)}` : '';
+    return `${timestamp} ${level.toUpperCase()} ${context} ${message}${dataStr}`;
+  }
 
-// Create the logger
-export const logger = winston.createLogger({
-  level: level(),
-  levels,
-  format: logFormat,
-  transports,
-}); 
+  private log(level: LogLevel, message: string, data?: any): void {
+    if (!this.shouldLog(level)) return;
+
+    // Console output only (simplified to reduce duplication)
+    if (this.config.enableConsole) {
+      const formattedMessage = this.formatMessage(level, message, data);
+      console.log(formattedMessage);
+    }
+  }
+
+  debug(message: string, data?: any): void { this.log('debug', message, data); }
+  info(message: string, data?: any): void { this.log('info', message, data); }
+  warn(message: string, data?: any): void { this.log('warn', message, data); }
+  error(message: string, data?: any): void { this.log('error', message, data); }
+}
+
+// Export backend logger instance
+export const logger = new Logger({
+  level: 'info',
+  enableConsole: true,
+  context: 'Backend',
+  colors: true,
+});
+
+// Export logger factory
+export const createLogger = (config: LoggerConfig): Logger => new Logger(config); 

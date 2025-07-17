@@ -1,3 +1,5 @@
+// Request types are extended in middleware/auth.ts
+
 // Core Application Types
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -18,22 +20,9 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   };
 }
 
-// User Types
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatar?: string;
-  role: 'admin' | 'user' | 'premium';
-  subscription: SubscriptionPlan;
-  isEmailVerified: boolean;
-  twoFactorEnabled: boolean;
-  timezone: string;
-  preferences: UserPreferences;
-  createdAt: Date;
-  updatedAt: Date;
-  lastLoginAt?: Date;
-}
+// User Types - Use unified types from shared package
+// User interface removed to avoid duplication with shared package types
+// Use UnifiedUser from packages/shared/src/types/unified.ts instead
 
 export interface UserPreferences {
   autoPostingEnabled: boolean;
@@ -96,32 +85,8 @@ export interface SubscriptionLimits {
   apiCallsPerMonth: number;
 }
 
-// Video Types
-export interface Video {
-  id: string;
-  userId: string;
-  title: string;
-  description?: string;
-  filename: string;
-  filePath: string;
-  fileSize: number;
-  duration: number;
-  resolution: VideoResolution;
-  thumbnailPath?: string;
-  hasAudio: boolean;
-  category: VideoCategory;
-  tags: string[];
-  metadata: VideoMetadata;
-  processingStatus: ProcessingStatus;
-  aiAnalysis?: AIAnalysis;
-  postCount: number;
-  lastPostedAt?: Date;
-  nextPostDate?: Date;
-  isActive: boolean;
-  coolOffDays: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Video Types - Use unified types from shared package
+// Video interface removed to avoid duplication with shared package types
 
 export interface VideoResolution {
   width: number;
@@ -129,16 +94,7 @@ export interface VideoResolution {
   aspectRatio: string;
 }
 
-export interface VideoMetadata {
-  codec: string;
-  bitrate: number;
-  fps: number;
-  colorSpace: string;
-  audioCodec?: string;
-  audioBitrate?: number;
-  audioChannels?: number;
-  audioSampleRate?: number;
-}
+// VideoMetadata interface removed to avoid duplication with shared package types
 
 export interface AIAnalysis {
   viralScore: number;
@@ -161,33 +117,10 @@ export interface ThumbnailSuggestion {
 export type VideoCategory = 'real-estate' | 'cartoon' | 'educational' | 'promotional' | 'testimonial';
 export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
-// Post Types
-export interface Post {
-  id: string;
-  userId: string;
-  videoId: string;
-  platform: SocialPlatform;
-  content: PostContent;
-  status: PostStatus;
-  scheduledTime: Date;
-  postedTime?: Date;
-  engagementMetrics?: EngagementMetrics;
-  errorMessage?: string;
-  retryCount: number;
-  maxRetries: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Post Types - Use unified types from shared package
+// Post interface removed to avoid duplication with shared package types
 
-export interface PostContent {
-  caption: string;
-  hashtags: string[];
-  mentions: string[];
-  location?: Location;
-  music?: Music;
-  thumbnail?: string;
-  customFields?: Record<string, any>;
-}
+// PostContent interface removed to avoid duplication with shared package types
 
 export interface Location {
   id: string;
@@ -483,7 +416,7 @@ export interface AppError extends Error {
 
 // Request/Response Types
 export interface AuthenticatedRequest extends Request {
-  user: User;
+  user: any; // Use any for now to avoid import complexity, or import UnifiedUser when needed
   userId: string;
 }
 

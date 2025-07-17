@@ -2,28 +2,12 @@
 // Video Types & Interfaces
 // ========================================
 
-export interface Video {
-  id: string;
-  userId: string;
-  title: string;
-  description?: string;
-  filename: string;
-  fileUrl: string;
-  thumbnailUrl?: string;
-  duration: number; // in seconds
-  fileSize: number; // in bytes
-  mimeType: string;
-  category: VideoCategory;
-  tags: string[];
-  isActive: boolean;
-  postCount: number;
-  lastPostedAt?: Date;
-  metadata: VideoMetadata;
-  processing: VideoProcessingStatus;
-  optimization: VideoOptimization;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Video interface removed to avoid duplication with UnifiedVideo
+// Use UnifiedVideo from packages/shared/src/types/unified.ts instead
+import { UnifiedVideo } from './unified';
+
+// Type alias for backwards compatibility
+export type Video = UnifiedVideo;
 
 export interface CreateVideoInput {
   title: string;
@@ -46,8 +30,10 @@ export interface UpdateVideoInput {
 export interface VideoMetadata {
   width: number;
   height: number;
+  duration: number;
   aspectRatio: string; // '16:9', '9:16', '1:1'
   framerate: number;
+  fps: number; // alias for framerate for compatibility
   bitrate: number;
   codec: string;
   hasAudio: boolean;
@@ -55,6 +41,21 @@ export interface VideoMetadata {
   audioBitrate?: number;
   colorSpace?: string;
   format: string;
+  fileSize: number;
+  // Camera roll specific properties
+  orientation?: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  deviceInfo?: {
+    make: string;
+    model: string;
+    os: string;
+  };
+  tags?: string[];
+  isVertical?: boolean;
+  quality?: 'low' | 'medium' | 'high' | 'ultra';
 }
 
 export interface VideoProcessingStatus {

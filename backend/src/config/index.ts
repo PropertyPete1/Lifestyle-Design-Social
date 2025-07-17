@@ -1,39 +1,30 @@
 import dotenv from 'dotenv';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from root directory
+dotenv.config({ path: '../../.env' });
 
 // Simple configuration object
 export const config = {
   // Server configuration
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parseInt(process.env.PORT || '5001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
 
-  // Database configuration
+  // Database configuration (MongoDB)
   database: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    database: process.env.DB_NAME || 'real_estate_auto_posting',
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || '',
-    ssl: process.env.DB_SSL === 'true',
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/auto_posting_app',
     maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '20', 10),
-    connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000', 10),
-  },
-
-  // Redis configuration
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD || undefined,
-    database: parseInt(process.env.REDIS_DB || '0', 10),
-    maxRetriesPerRequest: parseInt(process.env.REDIS_MAX_RETRIES || '3', 10),
-    retryDelayOnFailover: parseInt(process.env.REDIS_RETRY_DELAY || '100', 10),
+    connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '5000', 10),
   },
 
   // JWT configuration
   jwt: {
-    secret: process.env.JWT_SECRET || 'your-secret-key-change-this-in-production',
+    secret: (() => {
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        throw new Error('JWT_SECRET environment variable is required for production');
+      }
+      return secret;
+    })(),
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
     issuer: process.env.JWT_ISSUER || 'real-estate-autopost',
@@ -45,6 +36,7 @@ export const config = {
     origins: process.env.CORS_ORIGINS?.split(',') || [
       'http://localhost:3000',
       'http://localhost:3001',
+      'http://localhost:5001',
       'https://yourdomain.com',
     ],
   },
@@ -53,8 +45,8 @@ export const config = {
   ai: {
     openai: {
       apiKey: process.env.OPENAI_API_KEY || '',
-      model: process.env.OPENAI_MODEL || 'gpt-4',
-      maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '2000', 10),
+      model: process.env.AI_MODEL || 'gpt-4',
+      maxTokens: parseInt(process.env.MAX_TOKENS || '2000', 10),
       temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'),
     },
   },
@@ -62,41 +54,35 @@ export const config = {
   // Social platform configuration
   socialPlatforms: {
     instagram: {
+      graphApiToken: process.env.INSTAGRAM_GRAPH_API_TOKEN_SAN_ANTONIO || '',
+      graphApiTokenAustin: process.env.INSTAGRAM_GRAPH_API_TOKEN_AUSTIN || '',
       clientId: process.env.INSTAGRAM_CLIENT_ID || '',
       clientSecret: process.env.INSTAGRAM_CLIENT_SECRET || '',
-      redirectUri: process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:3001/api/auth/instagram/callback',
-      scopes: process.env.INSTAGRAM_SCOPES?.split(',') || [
-        'user_profile',
-        'user_media',
-        'instagram_basic',
-        'instagram_content_publish',
-      ],
+      redirectUri: process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:5001/api/auth/instagram/callback',
+    },
+    twitter: {
+      apiKey: process.env.TWITTER_API_KEY || '',
+      apiSecret: process.env.TWITTER_API_SECRET || '',
+      accessToken: process.env.TWITTER_ACCESS_TOKEN || '',
+      accessSecret: process.env.TWITTER_ACCESS_SECRET || '',
+      bearerToken: process.env.TWITTER_BEARER_TOKEN || '',
     },
     tiktok: {
       clientId: process.env.TIKTOK_CLIENT_ID || '',
       clientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
-      redirectUri: process.env.TIKTOK_REDIRECT_URI || 'http://localhost:3001/api/auth/tiktok/callback',
-      scopes: process.env.TIKTOK_SCOPES?.split(',') || [
-        'user.info.basic',
-        'video.list',
-        'video.upload',
-        'video.publish',
-      ],
+      redirectUri: process.env.TIKTOK_REDIRECT_URI || 'http://localhost:5001/api/auth/tiktok/callback',
     },
     youtube: {
       clientId: process.env.YOUTUBE_CLIENT_ID || '',
       clientSecret: process.env.YOUTUBE_CLIENT_SECRET || '',
-      redirectUri: process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:3001/api/auth/youtube/callback',
-      scopes: process.env.YOUTUBE_SCOPES?.split(',') || [
-        'https://www.googleapis.com/auth/youtube.upload',
-        'https://www.googleapis.com/auth/youtube',
-      ],
+      redirectUri: process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:5001/api/auth/youtube/callback',
     },
   },
 
   // File upload configuration
   upload: {
-    maxFileSize: parseInt(process.env.UPLOAD_MAX_FILE_SIZE || '104857600', 10), // 100MB
+    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '104857600', 10), // 100MB
+    uploadPath: process.env.UPLOAD_PATH || './uploads',
     allowedMimeTypes: process.env.UPLOAD_ALLOWED_MIME_TYPES?.split(',') || [
       'video/mp4',
       'video/mov',
@@ -108,44 +94,15 @@ export const config = {
       'image/gif',
       'image/webp',
     ],
-    destination: process.env.UPLOAD_DESTINATION || 'uploads',
-    enableVirusScan: process.env.UPLOAD_ENABLE_VIRUS_SCAN === 'true',
   },
 
-  // Email configuration
-  email: {
-    provider: process.env.EMAIL_PROVIDER || 'ses',
-    apiKey: process.env.EMAIL_API_KEY || '',
-    fromEmail: process.env.EMAIL_FROM || 'noreply@yourdomain.com',
-    replyToEmail: process.env.EMAIL_REPLY_TO || 'support@yourdomain.com',
-  },
-
-  // AWS configuration
-  aws: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    region: process.env.AWS_REGION || 'us-east-1',
-    s3: {
-      bucket: process.env.AWS_S3_BUCKET || 'real-estate-autopost-uploads',
-      cloudFrontDomain: process.env.AWS_CLOUDFRONT_DOMAIN || undefined,
+  // Posting configuration
+  posting: {
+    optimalTimes: {
+      twitter: process.env.OPTIMAL_TIMES_TWITTER?.split(',') || ['09:00', '12:00', '15:00', '18:00', '20:00'],
+      instagram: process.env.OPTIMAL_TIMES_INSTAGRAM?.split(',') || ['08:00', '11:00', '14:00', '17:00', '19:00', '21:00'],
     },
-    ses: {
-      fromEmail: process.env.AWS_SES_FROM_EMAIL || 'noreply@yourdomain.com',
-      replyToEmail: process.env.AWS_SES_REPLY_TO_EMAIL || 'support@yourdomain.com',
-    },
-  },
-
-  // Stripe configuration
-  stripe: {
-    publicKey: process.env.STRIPE_PUBLIC_KEY || '',
-    secretKey: process.env.STRIPE_SECRET_KEY || '',
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
-    products: {
-      free: process.env.STRIPE_PRODUCT_FREE || '',
-      basic: process.env.STRIPE_PRODUCT_BASIC || '',
-      pro: process.env.STRIPE_PRODUCT_PRO || '',
-      enterprise: process.env.STRIPE_PRODUCT_ENTERPRISE || '',
-    },
+    timezone: process.env.TIMEZONE || 'America/New_York',
   },
 
   // Feature flags

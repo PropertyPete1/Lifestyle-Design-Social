@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "name": "real-estate-auto-posting",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/next"
+    },
+    {
+      "src": "backend/package.json",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/src/app.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "DATABASE_URL": "@database_url",
+    "JWT_SECRET": "@jwt_secret",
+    "INSTAGRAM_CLIENT_ID": "@instagram_client_id",
+    "INSTAGRAM_CLIENT_SECRET": "@instagram_client_secret",
+    "TIKTOK_CLIENT_ID": "@tiktok_client_id",
+    "TIKTOK_CLIENT_SECRET": "@tiktok_client_secret",
+    "YOUTUBE_CLIENT_ID": "@youtube_client_id",
+    "YOUTUBE_CLIENT_SECRET": "@youtube_client_secret",
+    "OPENAI_API_KEY": "@openai_api_key",
+    "REDIS_URL": "@redis_url"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  },
+  "functions": {
+    "backend/src/app.ts": {
+      "maxDuration": 30
+    }
+  }
+} 

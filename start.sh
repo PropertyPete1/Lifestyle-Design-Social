@@ -153,7 +153,7 @@ sleep 3
 # Start frontend server
 echo "🎨 Starting frontend server..."
 cd ../client
-npm start &
+npm run dev &
 FRONTEND_PID=$!
 
 # Wait for both processes

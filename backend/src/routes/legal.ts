@@ -3,8 +3,8 @@ import express from 'express';
 const router = express.Router();
 
 // Terms of Service
-router.get('/terms', (req, res) => {
-  res.json({
+router.get('/terms', (_req, res) => {
+  return res.json({
     title: 'Terms of Service',
     lastUpdated: '2024-01-15',
     content: `
@@ -103,8 +103,8 @@ These terms are governed by the laws of [Your Jurisdiction].
 });
 
 // Privacy Policy
-router.get('/privacy', (req, res) => {
-  res.json({
+router.get('/privacy', (_req, res) => {
+  return res.json({
     title: 'Privacy Policy',
     lastUpdated: '2024-01-15',
     content: `
@@ -256,8 +256,8 @@ You may file complaints with:
 });
 
 // API Status and Health
-router.get('/api-status', (req, res) => {
-  res.json({
+router.get('/api-status', (_req, res) => {
+  return res.json({
     status: 'operational',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
@@ -276,8 +276,8 @@ router.get('/api-status', (req, res) => {
 });
 
 // Legal Compliance Check
-router.get('/compliance', (req, res) => {
-  res.json({
+router.get('/compliance', (_req, res) => {
+  return res.json({
     compliant: true,
     checks: {
       termsOfService: true,

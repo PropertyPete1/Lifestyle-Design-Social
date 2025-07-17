@@ -45,3 +45,4 @@ frontend/.env
 ghp_*
 **/secrets/
 **/config/production.json
+.env

@@ -1,3 +1,9 @@
+// File path: tsconfig.json
+
+// 🛠️ Instructions:
+// Replace the contents of your root-level tsconfig.json file with the block below.
+// This removes the unused "electron-main.ts" and includes only relevant folders for your app.
+
 {
   "compilerOptions": {
     "target": "es2020",
@@ -16,16 +22,13 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "electron-main.ts"
+    "backend",
+    "frontend",
+    "lib",
+    "scripts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "backend",
-    "client",
-    "frontend",
-    "mobile-app",
-    "packages",
-    "apps"
+    "dist"
   ]
-} 
+}

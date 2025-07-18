@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateCaptionWithHashtags } from '@/lib/openai/captions'
+import { generateCaptionWithHashtags } from '@/lib/openai/caption'
 import { saveCaption } from '@/lib/db/services/captionService'
 import { attachCaptionToVideo } from '@/lib/db/services/videoService'
 

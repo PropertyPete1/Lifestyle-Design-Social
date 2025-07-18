@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/src/lib/mongodb';
+import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { db } = await connectToDatabase();
+    const client = await clientPromise;
+    const db = client.db();
     const videos = db.collection('videos');
 
     const video = await videos.findOne({ _id: new ObjectId(params.id) });

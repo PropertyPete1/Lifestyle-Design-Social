@@ -1,10 +1,21 @@
-import axios from 'axios'
+// 🛠️ Instructions:
+// • Create this file exactly at the path above.
+// • This helper sends video data to the backend endpoint and returns the generated caption.
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
+import { Video } from '@/lib/types';
 
-export default api 
+export async function generateCaptionWithHashtags(video: Video): Promise<{ caption: string }> {
+  const res = await fetch('/api/caption', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(video),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to generate caption');
+  }
+
+  return res.json();
+} 

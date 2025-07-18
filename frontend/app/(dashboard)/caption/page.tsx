@@ -1,56 +1,100 @@
-'use client'
+// 🛠️ Instructions:
+// • Replace the file with this version to enable saving to the database.
+// • Make sure the backend route `/api/caption/save` is working (we'll build that next).
 
-import { useState } from 'react'
+'use client';
+
+import { useState } from 'react';
+import { generateCaption } from '@/lib/actions/generateCaption';
 
 export default function CaptionPage() {
-  const [prompt, setPrompt] = useState('')
-  const [caption, setCaption] = useState('')
-  const [hashtags, setHashtags] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
+  const [caption, setCaption] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const generate = async () => {
-    setLoading(true)
-    const res = await fetch('/api/caption/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    })
-    const data = await res.json()
-    setCaption(data.caption)
-    setHashtags(data.hashtags)
-    setLoading(false)
-  }
+  const handleGenerate = async () => {
+    setLoading(true);
+    const result = await generateCaption({ title, description, location });
+    setCaption(result || 'Failed to generate caption.');
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/caption/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, location, caption }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('✅ Saved successfully!');
+      } else {
+        setMessage('❌ Failed to save.');
+      }
+    } catch (err) {
+      setMessage('❌ Error saving caption.');
+    }
+    setSaving(false);
+  };
 
   return (
-    <div className="p-6 max-w-xl space-y-4">
-      <h1 className="text-2xl font-bold">🧠 AI Caption & Hashtag Generator</h1>
-      <input
-        className="w-full border p-2"
-        placeholder="Describe the scene (e.g. luxury kitchen with gold finishes)"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-      />
-      <button
-        className="bg-black text-white px-4 py-2 rounded"
-        onClick={generate}
-        disabled={loading}
-      >
-        {loading ? 'Generating...' : 'Generate Caption'}
-      </button>
+    <div className="p-8 space-y-6">
+      <h1 className="text-2xl font-bold">Caption Generator</h1>
+
+      <div className="space-y-2">
+        <input
+          type="text"
+          placeholder="Video Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full px-4 py-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Video Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full px-4 py-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Video Location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          className="w-full px-4 py-2 border rounded"
+        />
+        <button
+          onClick={handleGenerate}
+          className="px-4 py-2 bg-black text-white rounded"
+          disabled={loading}
+        >
+          {loading ? 'Generating...' : 'Generate Caption'}
+        </button>
+      </div>
 
       {caption && (
-        <div className="space-y-2">
-          <p className="font-semibold text-sm text-gray-600">Caption</p>
-          <p className="border p-3 rounded text-sm">{caption}</p>
-        </div>
-      )}
-
-      {hashtags.length > 0 && (
-        <div className="space-y-2">
-          <p className="font-semibold text-sm text-gray-600">Hashtags</p>
-          <p className="border p-3 rounded text-sm">{hashtags.join(' ')}</p>
+        <div className="p-4 border rounded bg-gray-100 space-y-2">
+          <div>
+            <h2 className="font-semibold mb-1">Generated Caption:</h2>
+            <p>{caption}</p>
+          </div>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-green-600 text-white rounded"
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save to Database'}
+          </button>
+          {message && <p>{message}</p>}
         </div>
       )}
     </div>
-  )
+  );
 } 

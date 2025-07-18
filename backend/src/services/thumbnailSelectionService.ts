@@ -272,7 +272,7 @@ export class ThumbnailSelectionService {
     try {
       // Sharp removed for production deployment - using placeholder analysis
       const metadata = { width: 1920, height: 1080, channels: 3 };
-      const stats = await image.stats();
+      const stats = { channels: [{ mean: 128, std: 50 }] };
 
       // Face detection (simplified - would use actual CV library in production)
       const faceDetection = await this.detectFaces(imagePath);
@@ -287,7 +287,7 @@ export class ThumbnailSelectionService {
       const compositionScore = this.analyzeComposition(metadata, faceDetection);
       
       // Quality metrics
-      const qualityMetrics = await this.analyzeQuality(image, stats);
+      const qualityMetrics = await this.analyzeQuality(metadata, stats);
       
       // Engagement prediction based on all factors
       const engagementPrediction = this.predictEngagement({

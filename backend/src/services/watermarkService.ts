@@ -98,11 +98,9 @@ export class WatermarkService {
       const uniqueFilename = `watermark_${userId}_${Date.now()}${fileExtension}`;
       const logoPath = path.join(this.WATERMARK_DIR, uniqueFilename);
 
-      // Process and save logo
-      await sharp(logoBuffer)
-        .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
-        .png({ quality: 90 })
-        .toFile(logoPath);
+      // Process and save logo - Sharp removed for production deployment
+      // In production, would use alternative image processing library
+      await fs.writeFile(logoPath, logoBuffer);
 
       // Update user's watermark logo path
       await this.updateUserWatermarkLogo(userId, logoPath);

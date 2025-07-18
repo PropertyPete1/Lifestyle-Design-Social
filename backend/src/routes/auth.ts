@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
 import { User } from '../models/User';
 import { connectToDatabase } from '../config/database';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -78,8 +79,7 @@ router.post('/register', async (req, res) => {
     logger.error('Registration error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Registration failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Registration failed'
     });
   }
 });
@@ -134,6 +134,7 @@ router.post('/login', async (req, res) => {
         user: {
           id: user._id,
           username: user.username,
+          name: user.name,
           email: user.email
         }
       }
@@ -147,8 +148,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get current user
-router.get('/me', async (req, res) => {
+// Get current user (protected route)
+router.get('/me', authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -174,6 +175,7 @@ router.get('/me', async (req, res) => {
         user: {
           id: user._id,
           username: user.username,
+          name: user.name,
           email: user.email
         }
       }

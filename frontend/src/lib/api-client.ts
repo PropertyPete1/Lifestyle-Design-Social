@@ -2,13 +2,9 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 
 
 // Get base URL from environment or default
 const getBaseURL = (): string => {
-  if (typeof window !== 'undefined') {
-    // Client-side: use relative path for Next.js proxy
-    return '/api';
-  } else {
-    // Server-side: use full URL
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
-  }
+  // Always use the backend URL directly in development
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+  return apiUrl;
 };
 
 // Create axios instance with base configuration
@@ -50,7 +46,7 @@ apiClient.interceptors.response.use(
     
     // Handle network errors
     if (!error.response) {
-      // Network error - will be handled by calling component
+      console.error('Network error - check if backend is running on http://localhost:5001');
     }
     
     return Promise.reject(error);

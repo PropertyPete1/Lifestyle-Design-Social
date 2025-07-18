@@ -2,7 +2,7 @@
 import ffmpeg from 'fluent-ffmpeg';
 import { existsSync, mkdirSync } from 'fs';
 import * as path from 'path';
-import sharp from 'sharp';
+// import sharp from 'sharp'; // Removed for production deployment
 // import axios from 'axios';
 import { logger } from '../utils/logger';
 import { connectToDatabase } from '../config/database';
@@ -270,8 +270,8 @@ export class ThumbnailSelectionService {
    */
   private async performThumbnailAnalysis(imagePath: string): Promise<ThumbnailAnalysis> {
     try {
-      const image = sharp(imagePath);
-      const metadata = await image.metadata();
+      // Sharp removed for production deployment - using placeholder analysis
+      const metadata = { width: 1920, height: 1080, channels: 3 };
       const stats = await image.stats();
 
       // Face detection (simplified - would use actual CV library in production)

@@ -12,14 +12,17 @@ router.post('/register', async (req, res) => {
   try {
     await connectToDatabase();
     
-    const { username, email, password, name } = req.body;
+    const { email, password, name, company } = req.body;
 
-    if (!username || !email || !password || !name) {
+    if (!email || !password || !name) {
       return res.status(400).json({
         success: false,
-        error: 'Username, email, password, and name are required'
+        error: 'Name, email, and password are required'
       });
     }
+
+    // Generate username from email (before @ symbol)
+    const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -41,7 +44,8 @@ router.post('/register', async (req, res) => {
       username,
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      company: company || undefined
     });
 
     await user.save();
@@ -64,7 +68,9 @@ router.post('/register', async (req, res) => {
         user: {
           id: user._id,
           username: user.username,
-          email: user.email
+          name: user.name,
+          email: user.email,
+          company: user.company
         }
       }
     });

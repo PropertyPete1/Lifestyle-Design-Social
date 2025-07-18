@@ -37,7 +37,7 @@
 ### 🔐 **5. Security (CRITICAL ISSUE)**
 - **Status:** VIOLATED - REQUIRES IMMEDIATE ATTENTION
 - MongoDB credentials exposed and compromised
-- **Compromised URI:** `mongodb+srv://peter:xX9Rqal8fY4Ts2NA@cluster0.wpjcz1.mongodb.net/`
+- **Compromised URI:** `[REDACTED - CREDENTIALS REMOVED FOR SECURITY]`
 - **Action Required:** MUST rotate before deployment
 
 ---

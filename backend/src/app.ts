@@ -6,6 +6,9 @@ import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
 
+// Load config first to ensure environment variables are available
+import './config';
+
 import mongoose from 'mongoose';
 import { logger } from './utils/logger';
 import { connectToDatabase } from './config/database';
@@ -25,20 +28,26 @@ import instagramRoutes from './routes/instagram';
 import instagramLearningRoutes from './routes/instagramLearning';
 import notificationsRoutes from './routes/notifications';
 import oauthRoutes from './routes/oauth';
+import platformsRoutes from './routes/platforms';
 import postsRoutes from './routes/posts';
 import settingsRoutes from './routes/settings';
 import videosRoutes from './routes/videos';
+import youtubeRoutes from './routes/youtube';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Rate limiting
+// Rate limiting - more permissive for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Much higher limit for dev
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for development and health checks
+    return process.env.NODE_ENV === 'development' || req.path === '/api/health';
+  }
 });
 
 // Security middleware
@@ -52,6 +61,9 @@ app.use(helmet({
     },
   },
 }));
+
+// Set trust proxy before applying rate limiting
+app.set('trust proxy', 1);
 
 // Apply rate limiting to all requests
 app.use(limiter);
@@ -95,9 +107,11 @@ app.use('/api/captions', authMiddleware, captionsRoutes);
 app.use('/api/instagram', authMiddleware, instagramRoutes);
 app.use('/api/instagram-learning', authMiddleware, instagramLearningRoutes);
 app.use('/api/notifications', authMiddleware, notificationsRoutes);
+app.use('/api/platforms', authMiddleware, platformsRoutes);
 app.use('/api/posts', authMiddleware, postsRoutes);
 app.use('/api/settings', authMiddleware, settingsRoutes);
 app.use('/api/videos', authMiddleware, videosRoutes);
+app.use('/api/youtube', authMiddleware, youtubeRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler);

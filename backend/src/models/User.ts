@@ -5,6 +5,7 @@ export interface IUser extends Document {
   name: string;
   password: string;
   username?: string;
+  company?: string;
   instagramAccessToken?: string;
   instagramRefreshToken?: string;
   instagramUserId?: string;
@@ -13,6 +14,40 @@ export interface IUser extends Document {
   youtubeAccessToken?: string;
   youtubeRefreshToken?: string;
   youtubeChannelId?: string;
+  socialMediaTokens?: {
+    instagram?: {
+      accessToken: string;
+      refreshToken?: string;
+      expiresIn?: number;
+      connectedAt?: Date;
+    };
+    youtube?: {
+      accessToken: string;
+      refreshToken?: string;
+      expiresIn?: number;
+      connectedAt?: Date;
+    };
+    tiktok?: {
+      accessToken: string;
+      refreshToken?: string;
+      expiresIn?: number;
+      connectedAt?: Date;
+    };
+  };
+  platforms?: {
+    instagram?: {
+      connected: boolean;
+      connectedAt?: Date;
+    };
+    youtube?: {
+      connected: boolean;
+      connectedAt?: Date;
+    };
+    tiktok?: {
+      connected: boolean;
+      connectedAt?: Date;
+    };
+  };
   autoPostingEnabled: boolean;
   postingTimes: string[];
   pinnedHours?: string[];
@@ -54,6 +89,10 @@ const userSchema = new Schema<IUser>({
     type: String,
     trim: true,
     sparse: true // Allow multiple documents without username
+  },
+  company: {
+    type: String,
+    trim: true
   },
   instagramAccessToken: String,
   instagramRefreshToken: String,

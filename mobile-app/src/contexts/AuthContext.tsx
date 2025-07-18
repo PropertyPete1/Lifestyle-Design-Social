@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       // API call to backend authentication service
-      const response = await fetch('http://localhost:5001/api/auth/login', {
+      const response = await fetch(`${process.env.REACT_NATIVE_API_URL || 'http://localhost:5001'}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, name: string) => {
     try {
       // API call to backend registration service
-      const response = await fetch('http://localhost:5001/api/auth/register', {
+      const response = await fetch(`${process.env.REACT_NATIVE_API_URL || 'http://localhost:5001'}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -24,17 +24,22 @@ const instagram_1 = __importDefault(require("./routes/instagram"));
 const instagramLearning_1 = __importDefault(require("./routes/instagramLearning"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
 const oauth_1 = __importDefault(require("./routes/oauth"));
+const platforms_1 = __importDefault(require("./routes/platforms"));
 const posts_1 = __importDefault(require("./routes/posts"));
 const settings_1 = __importDefault(require("./routes/settings"));
 const videos_1 = __importDefault(require("./routes/videos"));
+const youtube_1 = __importDefault(require("./routes/youtube"));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5001;
 const limiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: process.env.NODE_ENV === 'production' ? 100 : 1000,
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+        return process.env.NODE_ENV === 'development' || req.path === '/api/health';
+    }
 });
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {
@@ -46,6 +51,7 @@ app.use((0, helmet_1.default)({
         },
     },
 }));
+app.set('trust proxy', 1);
 app.use(limiter);
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
@@ -75,9 +81,11 @@ app.use('/api/captions', auth_1.authenticateToken, captions_1.default);
 app.use('/api/instagram', auth_1.authenticateToken, instagram_1.default);
 app.use('/api/instagram-learning', auth_1.authenticateToken, instagramLearning_1.default);
 app.use('/api/notifications', auth_1.authenticateToken, notifications_1.default);
+app.use('/api/platforms', auth_1.authenticateToken, platforms_1.default);
 app.use('/api/posts', auth_1.authenticateToken, posts_1.default);
 app.use('/api/settings', auth_1.authenticateToken, settings_1.default);
 app.use('/api/videos', auth_1.authenticateToken, videos_1.default);
+app.use('/api/youtube', auth_1.authenticateToken, youtube_1.default);
 app.use(notFoundHandler_1.notFoundHandler);
 app.use(errorHandler_1.errorHandler);
 const gracefulShutdown = async (signal) => {

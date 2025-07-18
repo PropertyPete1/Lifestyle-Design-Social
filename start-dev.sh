@@ -15,7 +15,7 @@ cleanup() {
     echo -e "\n${YELLOW}🛑 Shutting down servers...${NC}"
     pkill -f "node.*server" 2>/dev/null
     pkill -f "npm.*start" 2>/dev/null
-    pkill -f "react-scripts start" 2>/dev/null
+    pkill -f "next dev" 2>/dev/null
     exit 0
 }
 
@@ -26,7 +26,7 @@ trap cleanup SIGINT SIGTERM
 echo -e "${YELLOW}🔄 Cleaning up existing processes...${NC}"
 pkill -f "node.*server" 2>/dev/null || true
 pkill -f "npm.*start" 2>/dev/null || true
-pkill -f "react-scripts start" 2>/dev/null || true
+pkill -f "next dev" 2>/dev/null || true
 sleep 2
 
 # Check if ports are free
@@ -82,7 +82,7 @@ done
 
 # Start frontend server
 echo -e "${BLUE}🎨 Starting frontend server on port 3000...${NC}"
-cd client
+cd frontend
 npm run dev &
 FRONTEND_PID=$!
 
@@ -121,8 +121,8 @@ while true; do
     # Check if frontend is still running
     if ! kill -0 $FRONTEND_PID 2>/dev/null; then
         echo -e "${RED}❌ Frontend server crashed! Restarting...${NC}"
-        cd client
-        npm start &
+        cd frontend
+        npm run dev &
         FRONTEND_PID=$!
     fi
     

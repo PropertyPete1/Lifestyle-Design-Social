@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Load environment variables - in production, env vars are set by platform
 if (process.env.NODE_ENV !== 'production') {
-  dotenv.config();
+  dotenv.config({ path: path.join(__dirname, '../../../.env') });
 }
 
 // Simple configuration object

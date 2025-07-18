@@ -73,7 +73,7 @@ Node Version: 18.20.4 (via .nvmrc)
 ### ⚠️ MONGODB CREDENTIALS MUST BE ROTATED
 
 **IMPORTANT:** During the 4th check, exposed MongoDB credentials were discovered and removed:
-- **Compromised URI:** `mongodb+srv://peter:xX9Rqal8fY4Ts2NA@cluster0.wpjcz1.mongodb.net/`
+- **Compromised URI:** `[REDACTED - CREDENTIALS REMOVED FOR SECURITY]`
 - **Status:** These credentials are compromised and cannot be used
 
 ### Required Actions Before Deployment:

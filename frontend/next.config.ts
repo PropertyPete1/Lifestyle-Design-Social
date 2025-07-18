@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    domains: ['localhost', 'yourdomain.com'],
+    domains: ['localhost'],
     formats: ['image/webp', 'image/avif'],
   },
   env: {
@@ -50,6 +50,16 @@ const nextConfig: NextConfig = {
   // Compiler options
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
+  },
+
+  // Server configuration
+  serverRuntimeConfig: {
+    port: process.env.PORT || 3000,
+  },
+  
+  // Public runtime config
+  publicRuntimeConfig: {
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001',
   },
 };
 

@@ -1,56 +1,24 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function HomePage() {
-  const [isClient, setIsClient] = useState(false);
-  const { isAuthenticated, loading, user } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (isClient && !loading) {
-      if (isAuthenticated && user) {
-        router.replace('/dashboard');
-      }
-    }
-  }, [isClient, isAuthenticated, loading, user, router]);
-
-  if (!isClient || loading) {
-    return (
-      <div className="page-container">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (isAuthenticated && user) {
-    return (
-      <div className="page-container">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
 
   return (
     <Layout title="Welcome">
       <div className="page-container animate-fade-in">
         {/* Lifestyle Header with Yellow Lines */}
         <div className="lifestyle-header">
-          Lifestyle
+          Lifestyle Design Social
         </div>
         
         {/* Main Content */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-light text-white mb-4 tracking-wide">
-            Auto-Posting App
+            Real Estate Auto-Posting Platform
           </h1>
           <p className="text-lg text-gray-400 font-light max-w-md mx-auto leading-relaxed">
             Automate your real estate social media with AI-powered content creation

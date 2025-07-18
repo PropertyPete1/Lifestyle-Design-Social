@@ -10,7 +10,7 @@ interface ApiContextType {
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
 
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = `${process.env.REACT_NATIVE_API_URL || 'http://localhost:5001'}/api`;
 
 export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const getToken = async (): Promise<string | null> => {

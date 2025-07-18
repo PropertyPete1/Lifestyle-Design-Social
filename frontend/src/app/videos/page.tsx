@@ -101,7 +101,7 @@ const VideosContent: React.FC = () => {
         },
       });
 
-      console.log(`Uploaded: ${file.name}`);
+      // File uploaded successfully
       fetchVideos();
     } catch (error) {
       console.error('Upload error:', error);

@@ -7,7 +7,7 @@ echo "🏠 Starting Real Estate Auto-Posting SaaS..."
 echo "🔄 Cleaning up existing processes..."
 pkill -f "node.*server" 2>/dev/null || true
 pkill -f "next dev" 2>/dev/null || true
-lsof -ti:3000,3001,5001 | xargs kill -9 2>/dev/null || true
+lsof -ti:3000,5001 | xargs kill -9 2>/dev/null || true
 
 # Wait for cleanup
 sleep 2
@@ -49,10 +49,6 @@ echo "🎉 All servers are running successfully!"
 echo "📱 Frontend: http://localhost:3000"
 echo "🔧 Backend API: http://localhost:5001/api"
 echo "❤️  Health Check: http://localhost:5001/api/health"
-echo ""
-echo "🔐 Demo Login:"
-echo "   Email: admin@example.com"
-echo "   Password: password123"
 echo ""
 echo "💡 Press Ctrl+C to stop all servers"
 

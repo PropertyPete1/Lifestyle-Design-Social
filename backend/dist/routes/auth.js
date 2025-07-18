@@ -13,13 +13,14 @@ const router = express_1.default.Router();
 router.post('/register', async (req, res) => {
     try {
         await (0, database_1.connectToDatabase)();
-        const { username, email, password, name } = req.body;
-        if (!username || !email || !password || !name) {
+        const { email, password, name, company } = req.body;
+        if (!email || !password || !name) {
             return res.status(400).json({
                 success: false,
-                error: 'Username, email, password, and name are required'
+                error: 'Name, email, and password are required'
             });
         }
+        const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
         const existingUser = await User_1.User.findOne({
             $or: [{ email }, { username }]
         });
@@ -34,7 +35,8 @@ router.post('/register', async (req, res) => {
             username,
             name,
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            company: company || undefined
         });
         await user.save();
         const jwtSecret = process.env.JWT_SECRET;
@@ -49,7 +51,9 @@ router.post('/register', async (req, res) => {
                 user: {
                     id: user._id,
                     username: user.username,
-                    email: user.email
+                    name: user.name,
+                    email: user.email,
+                    company: user.company
                 }
             }
         });

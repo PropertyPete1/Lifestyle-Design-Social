@@ -3,9 +3,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 
-// Simplified User interface for frontend context (avoid duplication with shared package)
+// Real User interface matching backend response
 interface User {
-  id: number;
+  id: string;
   username: string;
   name: string;
   email: string;
@@ -55,16 +55,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const response = await apiClient.get('/auth/me');
-      // Handle different response formats
-      const userData = response.data.user || response.data.data?.user || response.data;
-      // Map backend 'name' field to frontend 'username' field for compatibility
-      const mappedUserData = {
-        ...userData,
-        username: userData.name || userData.username || userData.email.split('@')[0]
-      };
-      setUser(mappedUserData);
+      
+      // Handle backend response format: { success: true, data: { user: {...} } }
+      if (response.data.success && response.data.data?.user) {
+        const userData = response.data.data.user;
+        const mappedUserData = {
+          id: userData.id || userData._id,
+          username: userData.username || userData.name || userData.email.split('@')[0],
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          autoPostingEnabled: userData.autoPostingEnabled,
+          company: userData.company
+        };
+        setUser(mappedUserData);
+      } else {
+        // Invalid response, remove token
+        localStorage.removeItem('token');
+      }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      // Auth check failed, remove invalid token
       localStorage.removeItem('token');
     } finally {
       setLoading(false);
@@ -75,24 +85,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiClient.post('/auth/login', { email, password });
       
-      // Handle different response formats
-      const token = response.data.token || response.data.data?.token;
-      const userData = response.data.user || response.data.data?.user;
-      
-      if (token) {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('token', token);
+      // Handle backend response format: { success: true, data: { token, user } }
+      if (response.data.success && response.data.data) {
+        const { token, user: userData } = response.data.data;
+        
+        if (token && userData) {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('token', token);
+          }
+          
+          const mappedUserData = {
+            id: userData.id || userData._id,
+            username: userData.username || userData.name || userData.email.split('@')[0],
+            name: userData.name,
+            email: userData.email,
+            role: userData.role,
+            autoPostingEnabled: userData.autoPostingEnabled,
+            company: userData.company
+          };
+          
+          setUser(mappedUserData);
+          return { success: true };
         }
-        // Map backend 'name' field to frontend 'username' field for compatibility
-        const mappedUserData = {
-          ...userData,
-          username: userData.name || userData.username || userData.email.split('@')[0]
-        };
-        setUser(mappedUserData);
-        return { success: true };
       }
       
-      return { success: false, error: 'Invalid credentials' };
+      // Login failed
+      return { 
+        success: false, 
+        error: response.data.error || 'Invalid credentials'
+      };
+      
     } catch (error: unknown) {
       let errorMessage = 'Login failed';
       
@@ -118,22 +140,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiClient.post('/auth/register', userData);
       
-      // Handle different response formats
-      const token = response.data.token || response.data.data?.token;
-      const user = response.data.user || response.data.data?.user;
-      
-      if (token) {
-        localStorage.setItem('token', token);
-        // Map backend 'name' field to frontend 'username' field for compatibility
-        const mappedUserData = {
-          ...user,
-          username: user.name || user.username || user.email.split('@')[0]
-        };
-        setUser(mappedUserData);
-        return { success: true };
+      // Handle backend response format: { success: true, data: { token, user } }
+      if (response.data.success && response.data.data) {
+        const { token, user: userInfo } = response.data.data;
+        
+        if (token && userInfo) {
+          localStorage.setItem('token', token);
+          
+          const mappedUserData = {
+            id: userInfo.id || userInfo._id,
+            username: userInfo.username || userInfo.name || userInfo.email.split('@')[0],
+            name: userInfo.name,
+            email: userInfo.email,
+            role: userInfo.role,
+            autoPostingEnabled: userInfo.autoPostingEnabled,
+            company: userInfo.company
+          };
+          
+          setUser(mappedUserData);
+          return { success: true };
+        }
       }
       
-      return { success: false, error: 'Registration failed' };
+      return { 
+        success: false, 
+        error: response.data.error || 'Registration failed' 
+      };
+      
     } catch (error: unknown) {
       let errorMessage = 'Registration failed';
       

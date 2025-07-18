@@ -57,6 +57,10 @@ const userSchema = new mongoose_1.Schema({
         trim: true,
         sparse: true
     },
+    company: {
+        type: String,
+        trim: true
+    },
     instagramAccessToken: String,
     instagramRefreshToken: String,
     instagramUserId: String,

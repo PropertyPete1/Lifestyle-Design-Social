@@ -233,6 +233,41 @@
     font-weight: 300;
   }
 
+  /* Input Styles */
+  .input {
+    background-color: #1a1a1a;
+    border: 2px solid #333333;
+    border-radius: 0.75rem;
+    padding: 0.875rem 1rem;
+    color: #ffffff;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 300;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+
+  .input::placeholder {
+    color: #666666;
+    font-weight: 300;
+  }
+
+  .input:focus {
+    border-color: var(--neon-yellow);
+    box-shadow: 0 0 8px rgba(252, 238, 9, 0.3);
+    background-color: #222222;
+  }
+
+  .input:hover {
+    border-color: #555555;
+    background-color: #222222;
+  }
+
+  .input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   /* Page Container - Vertical Stacking like Reference */
   .page-container {
     display: flex;

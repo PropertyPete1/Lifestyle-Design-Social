@@ -75,14 +75,14 @@ const DashboardScreen: React.FC = () => {
 
   const handleUploadVideo = () => {
             // Navigate to videos screen or show upload modal
-    console.log('Upload video pressed');
+    // TODO: Implement video upload navigation
   };
 
   const handleSchedulePost = async () => {
     try {
       const response = await get('/autopost/manual-post');
       if (response.success) {
-        console.log('Post scheduled successfully');
+        // Post scheduled successfully
         loadDashboardData(); // Refresh stats
       }
     } catch (error) {
@@ -92,12 +92,12 @@ const DashboardScreen: React.FC = () => {
 
   const handleViewAnalytics = () => {
             // Navigate to analytics screen
-    console.log('View analytics pressed');
+    // TODO: Implement analytics navigation
   };
 
   const handleManageVideos = () => {
             // Navigate to videos screen
-    console.log('Manage videos pressed');
+    // TODO: Implement videos navigation
   };
 
   const QuickAction: React.FC<{ title: string; icon: string; onPress: () => void }> = ({

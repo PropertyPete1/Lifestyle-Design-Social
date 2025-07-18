@@ -21,99 +21,114 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
-    const result = await login(email, password);
-    
-    if (result.success) {
-      router.push('/dashboard');
-    } else {
-      setError(result.error || 'Login failed');
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        router.push('/dashboard');
+      } else {
+        setError(result.error || 'Invalid login credentials. Please check your email and password.');
+      }
+    } catch (err) {
+      setError('Connection error. Please check if the backend server is running.');
     }
     
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      {/* Lifestyle Header */}
+      <div className="lifestyle-header mb-8">
+        Lifestyle Design Social
+      </div>
+      
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="mt-6 text-center text-3xl font-light text-white tracking-wide">
           Sign in to your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Auto-Posting SaaS Platform
+        <p className="mt-2 text-center text-sm text-gray-400 font-light">
+          Real Estate Auto-Posting Platform
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="card py-8 px-4 sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
+              <div className="bg-red-900/20 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg backdrop-blur-sm">
                 {error}
               </div>
             )}
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-light text-gray-300 mb-2">
                 Email address
               </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input w-full"
-                  placeholder="admin@example.com"
-                />
-              </div>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input w-full"
+                placeholder="Enter your email address"
+                disabled={loading}
+              />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-light text-gray-300 mb-2">
                 Password
               </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input w-full"
-                  placeholder="password123"
-                />
-              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input w-full"
+                placeholder="Enter your password"
+                disabled={loading}
+              />
             </div>
 
             <div>
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary w-full flex justify-center"
+                className="btn-primary w-full flex justify-center py-3"
               >
                 {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-yellow-400"></div>
                 ) : (
-                  'Sign in'
+                  'Sign In'
                 )}
               </button>
             </div>
           </form>
           
-          <div className="mt-6">
-            <div className="text-sm text-gray-600 text-center">
-              <strong>Demo Credentials:</strong><br />
-              Email: admin@example.com<br />
-              Password: password123
-            </div>
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => router.push('/register')}
+              className="text-yellow-400 hover:text-yellow-300 text-sm font-light transition-colors"
+              disabled={loading}
+            >
+              Don't have an account? Sign up
+            </button>
           </div>
         </div>
       </div>

@@ -55,7 +55,7 @@ const Dashboard: React.FC = () => {
         if (statsResult.status === 'fulfilled') {
           setStats(statsResult.value.data);
         } else {
-          console.error('Failed to fetch stats:', statsResult.reason);
+          // Failed to fetch stats
           setStats({
             totalVideos: 0,
             totalPosts: 0,
@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
         if (platformsResult.status === 'fulfilled') {
           setPlatforms(platformsResult.value.data);
         } else {
-          console.error('Failed to fetch platforms:', platformsResult.reason);
+          // Failed to fetch platforms
           setPlatforms([]);
         }
 
@@ -80,13 +80,13 @@ const Dashboard: React.FC = () => {
         if (postsResult.status === 'fulfilled') {
           setRecentPosts(postsResult.value.data);
         } else {
-          console.error('Failed to fetch posts:', postsResult.reason);
+          // Failed to fetch posts
           setRecentPosts([]);
         }
 
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
+          } catch (error) {
+      // Error fetching dashboard data
+    } finally {
         setLoading(false);
       }
     };

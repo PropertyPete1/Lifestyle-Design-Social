@@ -47,8 +47,8 @@ export class EngagementTrackingService {
             'engagementMetrics.views': update.metrics.views,
             'engagementMetrics.reach': update.metrics.reach || 0,
             'engagementMetrics.impressions': update.metrics.impressions || 0,
-            updatedAt: update.timestamp
-          }
+            updatedAt: update.timestamp,
+          },
         },
         { new: true }
       );
@@ -57,7 +57,6 @@ export class EngagementTrackingService {
       await this.storeEngagementHistory(update);
 
       logger.info(`Successfully tracked engagement for post ${update.postId}`);
-
     } catch (error) {
       logger.error('Error tracking engagement:', error);
       throw new Error('Failed to track engagement metrics');
@@ -71,7 +70,7 @@ export class EngagementTrackingService {
 
       // Get the post with all its engagement data
       const post = await PostModel.findById(postId).lean();
-      
+
       if (!post) {
         logger.warn(`Post ${postId} not found`);
         return [];
@@ -79,7 +78,7 @@ export class EngagementTrackingService {
 
       // Convert post engagement data to history format
       const history: EngagementHistory[] = [];
-      
+
       if (post.engagementMetrics) {
         // Use the actual engagementMetrics from the Post model
         history.push({
@@ -92,14 +91,13 @@ export class EngagementTrackingService {
             shares: post.engagementMetrics.shares || 0,
             views: post.engagementMetrics.views || 0,
             reach: post.engagementMetrics.reach || 0,
-            impressions: post.engagementMetrics.impressions || 0
-          }
+            impressions: post.engagementMetrics.impressions || 0,
+          },
         });
       }
 
       logger.info(`Found ${history.length} engagement records for post ${postId}`);
       return history;
-
     } catch (error) {
       logger.error(`Error getting engagement history for post ${postId}:`, error);
       return [];
@@ -117,21 +115,20 @@ export class EngagementTrackingService {
           $addFields: {
             totalEngagement: {
               $add: [
-                { $ifNull: ["$engagementMetrics.likes", 0] },
-                { $ifNull: ["$engagementMetrics.comments", 0] },
-                { $ifNull: ["$engagementMetrics.shares", 0] },
-                { $ifNull: ["$engagementMetrics.views", 0] }
-              ]
-            }
-          }
+                { $ifNull: ['$engagementMetrics.likes', 0] },
+                { $ifNull: ['$engagementMetrics.comments', 0] },
+                { $ifNull: ['$engagementMetrics.shares', 0] },
+                { $ifNull: ['$engagementMetrics.views', 0] },
+              ],
+            },
+          },
         },
         { $sort: { totalEngagement: -1 } },
-        { $limit: limit }
+        { $limit: limit },
       ]);
 
       logger.info(`Found ${posts.length} top performing posts`);
       return posts;
-
     } catch (error) {
       logger.error('Error getting top performing posts:', error);
       return [];
@@ -147,15 +144,14 @@ export class EngagementTrackingService {
         postId,
         {
           $set: {
-            'engagementMetrics': metrics,
-            updatedAt: new Date()
-          }
+            engagementMetrics: metrics,
+            updatedAt: new Date(),
+          },
         },
         { new: true }
       );
 
       logger.info(`Successfully updated engagement for post ${postId} on ${platform}`);
-
     } catch (error) {
       logger.error(`Error updating post engagement for ${postId}:`, error);
       throw new Error('Failed to update post engagement metrics');
@@ -170,17 +166,16 @@ export class EngagementTrackingService {
     try {
       // For now, we store engagement data directly in the post document
       // In a more complex system, this could be a separate collection
-      
+
       // For now, we store engagement data directly in the post document
       // In a more complex system, this could be a separate EngagementHistory collection
       logger.debug(`Would store engagement history for post ${update.postId}:`, {
         platform: update.platform,
         timestamp: update.timestamp,
-        metrics: update.metrics
+        metrics: update.metrics,
       });
 
       logger.debug(`Stored engagement history for post ${update.postId}`);
-
     } catch (error) {
       logger.error('Error storing engagement history:', error);
       // Don't throw here, as the main engagement tracking should still succeed
@@ -190,25 +185,25 @@ export class EngagementTrackingService {
   /**
    * Calculate engagement rate for a post
    */
-     async calculateEngagementRate(postId: string, platform: string): Promise<number> {
-     try {
-       const post = await PostModel.findById(postId).lean();
-       
-       if (!post || !post.engagementMetrics) {
-         return 0;
-       }
+  async calculateEngagementRate(postId: string, platform: string): Promise<number> {
+    try {
+      const post = await PostModel.findById(postId).lean();
 
-       const metrics = post.engagementMetrics;
-       const totalEngagement = (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0);
-       const impressions = metrics.impressions || metrics.views || 1;
+      if (!post || !post.engagementMetrics) {
+        return 0;
+      }
 
-       return totalEngagement / impressions;
+      const metrics = post.engagementMetrics;
+      const totalEngagement =
+        (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0);
+      const impressions = metrics.impressions || metrics.views || 1;
 
-     } catch (error) {
-       logger.error(`Error calculating engagement rate for post ${postId}:`, error);
-       return 0;
-     }
-   }
+      return totalEngagement / impressions;
+    } catch (error) {
+      logger.error(`Error calculating engagement rate for post ${postId}:`, error);
+      return 0;
+    }
+  }
 }
 
-export default EngagementTrackingService; 
+export default EngagementTrackingService;

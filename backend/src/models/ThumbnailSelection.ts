@@ -16,68 +16,74 @@ export interface IThumbnailSelection extends Document {
   updatedAt: Date;
 }
 
-const thumbnailSelectionSchema = new Schema<IThumbnailSelection>({
-  videoId: {
-    type: String,
-    required: true
+const thumbnailSelectionSchema = new Schema<IThumbnailSelection>(
+  {
+    videoId: {
+      type: String,
+      required: true,
+    },
+    thumbnailPath: {
+      type: String,
+      required: true,
+    },
+    timestamp: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    score: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 1,
+    },
+    faceCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    textPresent: {
+      type: Boolean,
+      default: false,
+    },
+    colorScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 1,
+    },
+    compositionScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 1,
+    },
+    engagementPrediction: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 1,
+    },
+    reasoning: {
+      type: String,
+      default: '',
+    },
+    selected: {
+      type: Boolean,
+      default: false,
+    },
   },
-  thumbnailPath: {
-    type: String,
-    required: true
-  },
-  timestamp: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  score: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 1
-  },
-  faceCount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  textPresent: {
-    type: Boolean,
-    default: false
-  },
-  colorScore: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 1
-  },
-  compositionScore: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 1
-  },
-  engagementPrediction: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 1
-  },
-  reasoning: {
-    type: String,
-    default: ''
-  },
-  selected: {
-    type: Boolean,
-    default: false
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
 // Create indexes
 thumbnailSelectionSchema.index({ videoId: 1 });
 thumbnailSelectionSchema.index({ videoId: 1, selected: 1 });
 thumbnailSelectionSchema.index({ videoId: 1, score: -1 });
 
-export const ThumbnailSelection = mongoose.model<IThumbnailSelection>('ThumbnailSelection', thumbnailSelectionSchema); 
+export const ThumbnailSelection = mongoose.model<IThumbnailSelection>(
+  'ThumbnailSelection',
+  thumbnailSelectionSchema
+);

@@ -12,7 +12,7 @@ const router = Router();
 router.get('/optimal-times', authenticateToken, async (_req: Request, res: Response) => {
   try {
     // const _userId = req.user!.userId;
-    
+
     // Mock optimal times based on engagement patterns
     const optimalTimes = [
       { time: '09:00', platform: 'instagram', score: 8.5 },
@@ -20,14 +20,14 @@ router.get('/optimal-times', authenticateToken, async (_req: Request, res: Respo
       { time: '18:00', platform: 'instagram', score: 9.1 },
       { time: '11:00', platform: 'tiktok', score: 8.8 },
       { time: '15:00', platform: 'tiktok', score: 7.5 },
-      { time: '20:00', platform: 'tiktok', score: 8.9 }
+      { time: '20:00', platform: 'tiktok', score: 8.9 },
     ];
-    
-    return res.json({ 
+
+    return res.json({
       optimalTimes,
       bestDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
       recommendedFrequency: 'daily',
-      timezone: 'America/Chicago'
+      timezone: 'America/Chicago',
     });
   } catch (error) {
     logger.error('Get optimal times error:', error);
@@ -41,18 +41,18 @@ router.get('/optimal-times', authenticateToken, async (_req: Request, res: Respo
 router.get('/status', authenticateToken, async (_req: Request, res: Response) => {
   try {
     // const _userId = req.user!.userId;
-    
+
     // Mock schedule status
     const nextPostTime = new Date();
     nextPostTime.setHours(nextPostTime.getHours() + 2);
-    
+
     return res.json({
       isActive: true,
       nextPostTime: nextPostTime.toISOString(),
       queuedPosts: 5,
       lastPostTime: new Date().toISOString(),
       postsToday: 2,
-      postsThisWeek: 14
+      postsThisWeek: 14,
     });
   } catch (error) {
     logger.error('Get schedule status error:', error);
@@ -60,4 +60,4 @@ router.get('/status', authenticateToken, async (_req: Request, res: Response) =>
   }
 });
 
-export default router; 
+export default router;

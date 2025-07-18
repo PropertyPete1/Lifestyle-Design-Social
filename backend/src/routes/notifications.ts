@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
@@ -21,14 +21,14 @@ router.get('/', async (req, res) => {
       success: true,
       data: {
         notifications,
-        count: notifications.length
-      }
+        count: notifications.length,
+      },
     });
   } catch (error) {
     logger.error('Error getting notifications:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get notifications'
+      error: 'Failed to get notifications',
     });
   }
 });
@@ -38,11 +38,11 @@ router.put('/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
-    
+
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
@@ -51,19 +51,19 @@ router.put('/:id/read', async (req, res) => {
     if (success) {
       return res.json({
         success: true,
-        message: 'Notification marked as read'
+        message: 'Notification marked as read',
       });
     } else {
       return res.status(404).json({
         success: false,
-        error: 'Notification not found'
+        error: 'Notification not found',
       });
     }
   } catch (error) {
     logger.error('Error marking notification as read:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to mark notification as read'
+      error: 'Failed to mark notification as read',
     });
   }
 });
@@ -75,23 +75,26 @@ router.post('/test', async (req, res) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
-    const success = await NotificationService.sendSystemAlert(userId, 'This is a test notification');
+    const success = await NotificationService.sendSystemAlert(
+      userId,
+      'This is a test notification'
+    );
 
     return res.json({
       success,
-      message: success ? 'Test notification sent' : 'Failed to send test notification'
+      message: success ? 'Test notification sent' : 'Failed to send test notification',
     });
   } catch (error) {
     logger.error('Error sending test notification:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to send test notification'
+      error: 'Failed to send test notification',
     });
   }
 });
 
-export default router; 
+export default router;

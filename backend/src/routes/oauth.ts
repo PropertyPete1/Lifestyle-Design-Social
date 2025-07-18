@@ -1,6 +1,6 @@
 import express from 'express';
 import { logger } from '../utils/logger';
-import { User } from '../models/User';
+import User from '../models/User';
 import { connectToDatabase } from '../config/database';
 
 const router = express.Router();
@@ -9,12 +9,13 @@ const router = express.Router();
 router.get('/instagram', async (_req, res) => {
   try {
     const clientId = process.env.INSTAGRAM_CLIENT_ID;
-    const redirectUri = process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:3001/api/oauth/instagram/callback';
-    
+    const redirectUri =
+      process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:3001/api/oauth/instagram/callback';
+
     if (!clientId) {
       return res.status(500).json({
         success: false,
-        error: 'Instagram OAuth not configured'
+        error: 'Instagram OAuth not configured',
       });
     }
 
@@ -22,13 +23,13 @@ router.get('/instagram', async (_req, res) => {
 
     return res.json({
       success: true,
-      authUrl
+      authUrl,
     });
   } catch (error) {
     logger.error('Instagram OAuth error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to start Instagram OAuth flow'
+      error: 'Failed to start Instagram OAuth flow',
     });
   }
 });
@@ -42,21 +43,21 @@ router.get('/instagram/callback', async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        error: `Instagram OAuth error: ${error}`
+        error: `Instagram OAuth error: ${error}`,
       });
     }
 
     if (!code) {
       return res.status(400).json({
         success: false,
-        error: 'No authorization code received'
+        error: 'No authorization code received',
       });
     }
 
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
@@ -68,7 +69,7 @@ router.get('/instagram/callback', async (req, res) => {
     if (!clientId || !clientSecret) {
       return res.status(500).json({
         success: false,
-        error: 'Instagram OAuth credentials not configured'
+        error: 'Instagram OAuth credentials not configured',
       });
     }
 
@@ -84,7 +85,7 @@ router.get('/instagram/callback', async (req, res) => {
       {
         instagramAccessToken: mockAccessToken,
         instagramUserId: mockInstagramUserId,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -92,7 +93,7 @@ router.get('/instagram/callback', async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
@@ -101,14 +102,14 @@ router.get('/instagram/callback', async (req, res) => {
       message: 'Instagram account connected successfully',
       data: {
         instagramUserId: mockInstagramUserId,
-        connected: true
-      }
+        connected: true,
+      },
     });
   } catch (error) {
     logger.error('Instagram OAuth callback error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to complete Instagram OAuth'
+      error: 'Failed to complete Instagram OAuth',
     });
   }
 });
@@ -117,11 +118,11 @@ router.get('/instagram/callback', async (req, res) => {
 router.delete('/instagram', async (req, res) => {
   try {
     const userId = req.user?.id;
-    
+
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
@@ -133,9 +134,9 @@ router.delete('/instagram', async (req, res) => {
         $unset: {
           instagramAccessToken: 1,
           instagramUserId: 1,
-          instagramRefreshToken: 1
+          instagramRefreshToken: 1,
         },
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -143,21 +144,21 @@ router.delete('/instagram', async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
     return res.json({
       success: true,
-      message: 'Instagram account disconnected successfully'
+      message: 'Instagram account disconnected successfully',
     });
   } catch (error) {
     logger.error('Instagram disconnect error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to disconnect Instagram account'
+      error: 'Failed to disconnect Instagram account',
     });
   }
 });
 
-export default router; 
+export default router;

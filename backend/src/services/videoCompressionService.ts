@@ -21,7 +21,6 @@ export interface VideoMetadata {
   audioChannels?: number;
 }
 
-
 // Configure ffmpeg path
 import ffmpegStatic from 'ffmpeg-static';
 if (ffmpegStatic) {
@@ -88,8 +87,8 @@ export class VideoCompressionService {
       recommendedFps: 30,
       maxFps: 30,
       supportedCodecs: ['h264', 'h265'],
-      aspectRatios: [1, 4/5, 16/9],
-      audioRequired: false
+      aspectRatios: [1, 4 / 5, 16 / 9],
+      audioRequired: false,
     },
     tiktok: {
       maxFileSize: 500,
@@ -101,8 +100,8 @@ export class VideoCompressionService {
       recommendedFps: 30,
       maxFps: 60,
       supportedCodecs: ['h264', 'h265'],
-      aspectRatios: [9/16, 1, 16/9],
-      audioRequired: true
+      aspectRatios: [9 / 16, 1, 16 / 9],
+      audioRequired: true,
     },
     youtube: {
       maxFileSize: 2000,
@@ -114,8 +113,8 @@ export class VideoCompressionService {
       recommendedFps: 30,
       maxFps: 60,
       supportedCodecs: ['h264', 'h265', 'vp9'],
-      aspectRatios: [9/16, 1, 16/9],
-      audioRequired: false
+      aspectRatios: [9 / 16, 1, 16 / 9],
+      audioRequired: false,
     },
     universal: {
       maxFileSize: 100,
@@ -127,9 +126,9 @@ export class VideoCompressionService {
       recommendedFps: 30,
       maxFps: 30,
       supportedCodecs: ['h264'],
-      aspectRatios: [1, 4/5, 16/9, 9/16],
-      audioRequired: false
-    }
+      aspectRatios: [1, 4 / 5, 16 / 9, 9 / 16],
+      audioRequired: false,
+    },
   };
 
   /**
@@ -141,7 +140,7 @@ export class VideoCompressionService {
     settings: CompressionSettings
   ): Promise<CompressionResult> {
     const startTime = Date.now();
-    
+
     try {
       logger.info(`Starting intelligent video compression: ${inputPath}`);
 
@@ -181,15 +180,16 @@ export class VideoCompressionService {
         settings,
         metadata: compressedMetadata,
         optimizations: compressionParams.optimizations,
-        warnings: compressionParams.warnings
+        warnings: compressionParams.warnings,
       };
 
       // Store compression results
       await this.storeCompressionResult(result);
 
-      logger.info(`Compression completed: ${(compressionRatio * 100).toFixed(1)}% reduction, quality: ${(qualityScore * 100).toFixed(1)}%`);
+      logger.info(
+        `Compression completed: ${(compressionRatio * 100).toFixed(1)}% reduction, quality: ${(qualityScore * 100).toFixed(1)}%`
+      );
       return result;
-
     } catch (error) {
       logger.error(`Video compression failed: ${error}`);
       return {
@@ -204,7 +204,7 @@ export class VideoCompressionService {
         settings,
         metadata: this.getDefaultMetadata(),
         optimizations: [],
-        warnings: [`Compression failed: ${error}`]
+        warnings: [`Compression failed: ${error}`],
       };
     }
   }
@@ -220,8 +220,8 @@ export class VideoCompressionService {
           return;
         }
 
-        const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
-        const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
+        const videoStream = metadata.streams.find((stream) => stream.codec_type === 'video');
+        const audioStream = metadata.streams.find((stream) => stream.codec_type === 'audio');
 
         if (!videoStream) {
           reject(new Error('No video stream found'));
@@ -241,7 +241,7 @@ export class VideoCompressionService {
           audioCodec: audioStream?.codec_name,
           aspectRatio: (videoStream.width || 1) / (videoStream.height || 1),
           audioChannels: audioStream ? parseInt(String(audioStream.channels || '0')) : 0,
-          audioSampleRate: audioStream ? parseInt(String(audioStream.sample_rate || '0')) : 0
+          audioSampleRate: audioStream ? parseInt(String(audioStream.sample_rate || '0')) : 0,
         };
 
         resolve(videoMetadata);
@@ -260,7 +260,8 @@ export class VideoCompressionService {
     optimizations: OptimizationApplied[];
     warnings: string[];
   } {
-    const platformReqs = this.platformRequirements[settings.platform] || this.platformRequirements.universal!;
+    const platformReqs =
+      this.platformRequirements[settings.platform] || this.platformRequirements.universal!;
     const ffmpegOptions: string[] = [];
     const optimizations: OptimizationApplied[] = [];
     const warnings: string[] = [];
@@ -278,7 +279,7 @@ export class VideoCompressionService {
         description: `Resized from ${metadata.width}x${metadata.height} to ${resolution.width}x${resolution.height}`,
         impact: 'high',
         sizeSaving: this.calculateResolutionSaving(metadata, resolution),
-        qualityImpact: 0.1
+        qualityImpact: 0.1,
       });
     }
 
@@ -288,10 +289,10 @@ export class VideoCompressionService {
       ffmpegOptions.push('-b:v', `${bitrate}k`);
       optimizations.push({
         type: 'bitrate',
-        description: `Bitrate adjusted from ${Math.round(metadata.bitrate/1000)}k to ${bitrate}k`,
+        description: `Bitrate adjusted from ${Math.round(metadata.bitrate / 1000)}k to ${bitrate}k`,
         impact: 'high',
-        sizeSaving: Math.abs(bitrate - metadata.bitrate/1000) / (metadata.bitrate/1000) * 100,
-        qualityImpact: bitrate < metadata.bitrate/1000 ? 0.15 : 0
+        sizeSaving: (Math.abs(bitrate - metadata.bitrate / 1000) / (metadata.bitrate / 1000)) * 100,
+        qualityImpact: bitrate < metadata.bitrate / 1000 ? 0.15 : 0,
       });
     }
 
@@ -303,8 +304,8 @@ export class VideoCompressionService {
         type: 'fps',
         description: `Frame rate adjusted from ${metadata.fps} to ${fps}`,
         impact: 'medium',
-        sizeSaving: Math.abs(fps - metadata.fps) / metadata.fps * 30,
-        qualityImpact: fps < metadata.fps ? 0.05 : 0
+        sizeSaving: (Math.abs(fps - metadata.fps) / metadata.fps) * 30,
+        qualityImpact: fps < metadata.fps ? 0.05 : 0,
       });
     }
 
@@ -313,14 +314,14 @@ export class VideoCompressionService {
       const audioSettings = this.calculateOptimalAudioSettings(metadata, settings, platformReqs);
       ffmpegOptions.push('-c:a', audioSettings.codec);
       ffmpegOptions.push('-b:a', `${audioSettings.bitrate}k`);
-      
+
       if (audioSettings.bitrate !== (metadata.audioSampleRate || 128) / 1000) {
         optimizations.push({
           type: 'audio',
           description: `Audio bitrate optimized to ${audioSettings.bitrate}k`,
           impact: 'low',
           sizeSaving: 5,
-          qualityImpact: 0.02
+          qualityImpact: 0.02,
         });
       }
     } else if (!settings.preserveAudio) {
@@ -330,7 +331,7 @@ export class VideoCompressionService {
         description: 'Audio removed',
         impact: 'medium',
         sizeSaving: 20,
-        qualityImpact: 0
+        qualityImpact: 0,
       });
     }
 
@@ -339,7 +340,7 @@ export class VideoCompressionService {
       // Real estate videos benefit from higher quality, lower motion
       ffmpegOptions.push('-preset', 'slow');
       ffmpegOptions.push('-crf', '23');
-      
+
       if (settings.enhanceVisuals) {
         ffmpegOptions.push('-vf', 'unsharp=5:5:1.0:5:5:0.0');
         optimizations.push({
@@ -347,7 +348,7 @@ export class VideoCompressionService {
           description: 'Enhanced sharpness for real estate content',
           impact: 'low',
           sizeSaving: 0,
-          qualityImpact: -0.05 // Negative means quality improvement
+          qualityImpact: -0.05, // Negative means quality improvement
         });
       }
     } else if (settings.contentType === 'cartoon') {
@@ -369,7 +370,7 @@ export class VideoCompressionService {
         description: 'Optimized for mobile playback',
         impact: 'low',
         sizeSaving: 0,
-        qualityImpact: 0.02
+        qualityImpact: 0.02,
       });
     }
 
@@ -442,8 +443,9 @@ export class VideoCompressionService {
     let qualityScore = 1.0;
 
     // Resolution impact
-    const resolutionRatio = (compressedMetadata.width * compressedMetadata.height) / 
-                           (originalMetadata.width * originalMetadata.height);
+    const resolutionRatio =
+      (compressedMetadata.width * compressedMetadata.height) /
+      (originalMetadata.width * originalMetadata.height);
     qualityScore *= Math.min(resolutionRatio + 0.2, 1.0);
 
     // Bitrate impact
@@ -481,7 +483,7 @@ export class VideoCompressionService {
           maxDuration: result.settings.maxDuration,
           preserveAudio: result.settings.preserveAudio,
           enhanceVisuals: result.settings.enhanceVisuals,
-          optimizeForMobile: result.settings.optimizeForMobile
+          optimizeForMobile: result.settings.optimizeForMobile,
         },
         compressionResult: {
           originalPath: result.originalPath,
@@ -490,16 +492,16 @@ export class VideoCompressionService {
           compressedSize: result.compressedSize,
           compressionRatio: result.compressionRatio,
           qualityScore: result.qualityScore,
-          processingTime: result.processingTime
+          processingTime: result.processingTime,
         },
-        optimizations: result.optimizations.map(opt => ({
+        optimizations: result.optimizations.map((opt) => ({
           type: opt.type,
           description: opt.description,
           impact: opt.impact,
           sizeSaving: opt.sizeSaving,
-          qualityImpact: opt.qualityImpact
+          qualityImpact: opt.qualityImpact,
         })),
-        warnings: result.warnings
+        warnings: result.warnings,
       };
 
       const optimization = new VideoOptimization(optimizationData);
@@ -549,7 +551,7 @@ export class VideoCompressionService {
 
     // Scale down maintaining aspect ratio
     const aspectRatio = metadata.width / metadata.height;
-    
+
     if (settings.quality === 'maximum') {
       // Use maximum allowed resolution
       if (aspectRatio > 1) {
@@ -618,9 +620,9 @@ export class VideoCompressionService {
     _platformReqs: PlatformRequirements
   ): { codec: string; bitrate: number } {
     const codec = 'aac'; // Universal compatibility
-    
+
     let bitrate = 128; // Default
-    
+
     switch (settings.quality) {
       case 'maximum':
         bitrate = 192;
@@ -662,11 +664,11 @@ export class VideoCompressionService {
   private calculateTargetBitrate(metadata: VideoMetadata, targetSizeMB: number): number {
     const targetSizeBytes = targetSizeMB * 1024 * 1024;
     const durationSeconds = metadata.duration;
-    
+
     // Calculate bitrate needed for target file size (accounting for audio)
     const audioBitrate = metadata.hasAudio ? 128000 : 0; // 128kbps for audio
-    const availableForVideo = targetSizeBytes * 8 - (audioBitrate * durationSeconds);
-    
+    const availableForVideo = targetSizeBytes * 8 - audioBitrate * durationSeconds;
+
     return Math.max(Math.round(availableForVideo / durationSeconds / 1000), 500); // Minimum 500kbps
   }
 
@@ -676,7 +678,7 @@ export class VideoCompressionService {
   ): number {
     const originalPixels = originalMetadata.width * originalMetadata.height;
     const newPixels = newResolution.width * newResolution.height;
-    
+
     return ((originalPixels - newPixels) / originalPixels) * 100;
   }
 
@@ -691,7 +693,7 @@ export class VideoCompressionService {
       hasAudio: false,
       format: 'unknown',
       fileSize: 0,
-      aspectRatio: 1
+      aspectRatio: 1,
     };
   }
 
@@ -709,17 +711,22 @@ export class VideoCompressionService {
   }> {
     try {
       const metadata = await this.analyzeVideo(videoPath);
-      const platformReqs = this.platformRequirements[targetPlatform] || this.platformRequirements.universal!;
+      const platformReqs =
+        this.platformRequirements[targetPlatform] || this.platformRequirements.universal!;
       const warnings: string[] = [];
-      
+
       // Check for potential issues
       if (metadata.duration > platformReqs.maxDuration) {
-        warnings.push(`Video duration (${metadata.duration}s) exceeds platform limit (${platformReqs.maxDuration}s)`);
+        warnings.push(
+          `Video duration (${metadata.duration}s) exceeds platform limit (${platformReqs.maxDuration}s)`
+        );
       }
-      
+
       const fileSizeMB = fs.statSync(videoPath).size / (1024 * 1024);
       if (fileSizeMB > platformReqs.maxFileSize) {
-        warnings.push(`File size (${fileSizeMB.toFixed(1)}MB) exceeds platform limit (${platformReqs.maxFileSize}MB)`);
+        warnings.push(
+          `File size (${fileSizeMB.toFixed(1)}MB) exceeds platform limit (${platformReqs.maxFileSize}MB)`
+        );
       }
 
       // Generate recommendations
@@ -730,7 +737,7 @@ export class VideoCompressionService {
           quality: 'high',
           preserveAudio: metadata.hasAudio,
           enhanceVisuals: contentType === 'real_estate',
-          optimizeForMobile: true
+          optimizeForMobile: true,
         },
         {
           platform: targetPlatform as any,
@@ -739,7 +746,7 @@ export class VideoCompressionService {
           targetFileSize: platformReqs.maxFileSize * 0.8,
           preserveAudio: metadata.hasAudio,
           enhanceVisuals: false,
-          optimizeForMobile: true
+          optimizeForMobile: true,
         },
         {
           platform: targetPlatform as any,
@@ -748,14 +755,14 @@ export class VideoCompressionService {
           targetFileSize: platformReqs.maxFileSize * 0.5,
           preserveAudio: false,
           enhanceVisuals: false,
-          optimizeForMobile: true
-        }
+          optimizeForMobile: true,
+        },
       ];
 
       return {
         recommendations,
         analysis: metadata,
-        warnings
+        warnings,
       };
     } catch (error) {
       logger.error('Error getting compression recommendations:', error);
@@ -765,4 +772,4 @@ export class VideoCompressionService {
 }
 
 export const videoCompressionService = new VideoCompressionService();
-export default VideoCompressionService; 
+export default VideoCompressionService;

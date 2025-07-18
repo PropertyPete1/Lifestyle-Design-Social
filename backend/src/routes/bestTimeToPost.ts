@@ -12,20 +12,19 @@ const router = Router();
 router.get('/optimal-times', authenticateToken, async (req: Request, res: Response) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const optimalTimes = await bestTimeToPostService.getAllOptimalTimes(days);
-    
+
     return res.json({
       success: true,
       data: optimalTimes,
-      message: 'Optimal posting times retrieved successfully'
+      message: 'Optimal posting times retrieved successfully',
     });
-
   } catch (error) {
     logger.error('Error getting optimal posting times:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get optimal posting times'
+      error: 'Failed to get optimal posting times',
     });
   }
 });
@@ -38,31 +37,30 @@ router.get('/optimal-times/:platform', authenticateToken, async (req: Request, r
   try {
     const platform = req.params.platform as 'instagram' | 'tiktok' | 'youtube';
     const days = parseInt(req.query.days as string) || 30;
-    
+
     if (!['instagram', 'tiktok', 'youtube'].includes(platform)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid platform. Must be instagram, tiktok, or youtube'
+        error: 'Invalid platform. Must be instagram, tiktok, or youtube',
       });
     }
-    
+
     const optimalTimes = await bestTimeToPostService.getOptimalPostingTimes(platform, days);
-    
+
     return res.json({
       success: true,
       data: {
         platform,
         optimal_times: optimalTimes,
-        analysis_period_days: days
+        analysis_period_days: days,
       },
-      message: `Optimal posting times for ${platform} retrieved successfully`
+      message: `Optimal posting times for ${platform} retrieved successfully`,
     });
-
   } catch (error) {
     logger.error(`Error getting optimal posting times for ${req.params.platform}:`, error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get optimal posting times'
+      error: 'Failed to get optimal posting times',
     });
   }
 });
@@ -73,21 +71,20 @@ router.get('/optimal-times/:platform', authenticateToken, async (req: Request, r
  */
 router.post('/record-engagement', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const {
-      platform,
-      post_id,
-      posted_at,
-      likes,
-      comments,
-      shares,
-      views
-    } = req.body;
+    const { platform, post_id, posted_at, likes, comments, shares, views } = req.body;
 
     // Validate required fields
-    if (!platform || !post_id || !posted_at || likes === undefined || comments === undefined || shares === undefined) {
+    if (
+      !platform ||
+      !post_id ||
+      !posted_at ||
+      likes === undefined ||
+      comments === undefined ||
+      shares === undefined
+    ) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: platform, post_id, posted_at, likes, comments, shares'
+        error: 'Missing required fields: platform, post_id, posted_at, likes, comments, shares',
       });
     }
 
@@ -95,7 +92,7 @@ router.post('/record-engagement', authenticateToken, async (req: Request, res: R
     if (!['instagram', 'tiktok', 'youtube'].includes(platform)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid platform. Must be instagram, tiktok, or youtube'
+        error: 'Invalid platform. Must be instagram, tiktok, or youtube',
       });
     }
 
@@ -106,19 +103,18 @@ router.post('/record-engagement', authenticateToken, async (req: Request, res: R
       likes: parseInt(likes),
       comments: parseInt(comments),
       shares: parseInt(shares),
-      views: views ? parseInt(views) : undefined
+      views: views ? parseInt(views) : undefined,
     });
 
     return res.json({
       success: true,
-      message: 'Engagement data recorded successfully'
+      message: 'Engagement data recorded successfully',
     });
-
   } catch (error) {
     logger.error('Error recording engagement data:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to record engagement data'
+      error: 'Failed to record engagement data',
     });
   }
 });
@@ -130,17 +126,16 @@ router.post('/record-engagement', authenticateToken, async (req: Request, res: R
 router.put('/update-schedule', authenticateToken, async (_req: Request, res: Response) => {
   try {
     await bestTimeToPostService.updateDynamicSchedule();
-    
+
     return res.json({
       success: true,
-      message: 'Dynamic posting schedule updated successfully'
+      message: 'Dynamic posting schedule updated successfully',
     });
-
   } catch (error) {
     logger.error('Error updating dynamic schedule:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to update dynamic schedule'
+      error: 'Failed to update dynamic schedule',
     });
   }
 });
@@ -152,25 +147,24 @@ router.put('/update-schedule', authenticateToken, async (_req: Request, res: Res
 router.get('/current-schedule', authenticateToken, async (_req: Request, res: Response) => {
   try {
     const currentSchedule = await bestTimeToPostService.getCurrentSchedule();
-    
+
     if (!currentSchedule) {
       return res.status(404).json({
         success: false,
-        error: 'No dynamic schedule found'
+        error: 'No dynamic schedule found',
       });
     }
-    
+
     return res.json({
       success: true,
       data: currentSchedule,
-      message: 'Current dynamic schedule retrieved successfully'
+      message: 'Current dynamic schedule retrieved successfully',
     });
-
   } catch (error) {
     logger.error('Error getting current schedule:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get current schedule'
+      error: 'Failed to get current schedule',
     });
   }
 });
@@ -182,9 +176,9 @@ router.get('/current-schedule', authenticateToken, async (_req: Request, res: Re
 router.get('/analytics', authenticateToken, async (req: Request, res: Response) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
-    
+
     const allOptimalTimes = await bestTimeToPostService.getAllOptimalTimes(days);
-    
+
     // Calculate analytics summary
     const analytics = {
       total_data_points: allOptimalTimes.data_points,
@@ -196,30 +190,35 @@ router.get('/analytics', authenticateToken, async (req: Request, res: Response) 
       platform_breakdown: {
         instagram: {
           optimal_times: allOptimalTimes.instagram,
-          avg_confidence: allOptimalTimes.instagram.reduce((sum, time) => sum + time.confidence, 0) / allOptimalTimes.instagram.length || 0
+          avg_confidence:
+            allOptimalTimes.instagram.reduce((sum, time) => sum + time.confidence, 0) /
+              allOptimalTimes.instagram.length || 0,
         },
         tiktok: {
           optimal_times: allOptimalTimes.tiktok,
-          avg_confidence: allOptimalTimes.tiktok.reduce((sum, time) => sum + time.confidence, 0) / allOptimalTimes.tiktok.length || 0
+          avg_confidence:
+            allOptimalTimes.tiktok.reduce((sum, time) => sum + time.confidence, 0) /
+              allOptimalTimes.tiktok.length || 0,
         },
         youtube: {
           optimal_times: allOptimalTimes.youtube,
-          avg_confidence: allOptimalTimes.youtube.reduce((sum, time) => sum + time.confidence, 0) / allOptimalTimes.youtube.length || 0
-        }
-      }
+          avg_confidence:
+            allOptimalTimes.youtube.reduce((sum, time) => sum + time.confidence, 0) /
+              allOptimalTimes.youtube.length || 0,
+        },
+      },
     };
-    
+
     return res.json({
       success: true,
       data: analytics,
-      message: 'Engagement analytics retrieved successfully'
+      message: 'Engagement analytics retrieved successfully',
     });
-
   } catch (error) {
     logger.error('Error getting engagement analytics:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get engagement analytics'
+      error: 'Failed to get engagement analytics',
     });
   }
 });
@@ -231,18 +230,17 @@ router.get('/analytics', authenticateToken, async (req: Request, res: Response) 
 router.get('/health', authenticateToken, async (_req: Request, res: Response) => {
   try {
     const health = await bestTimeToPostService.getSystemHealth();
-    
+
     return res.json({
       success: true,
       data: health,
-      message: 'System health retrieved successfully'
+      message: 'System health retrieved successfully',
     });
-
   } catch (error) {
     logger.error('Error getting system health:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get system health'
+      error: 'Failed to get system health',
     });
   }
 });
@@ -258,7 +256,7 @@ router.post('/record-api-failure', authenticateToken, async (req: Request, res: 
     if (!platform || !['instagram', 'tiktok', 'youtube'].includes(platform)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid platform. Must be instagram, tiktok, or youtube'
+        error: 'Invalid platform. Must be instagram, tiktok, or youtube',
       });
     }
 
@@ -266,16 +264,15 @@ router.post('/record-api-failure', authenticateToken, async (req: Request, res: 
 
     return res.json({
       success: true,
-      message: 'API failure recorded successfully'
+      message: 'API failure recorded successfully',
     });
-
   } catch (error) {
     logger.error('Error recording API failure:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to record API failure'
+      error: 'Failed to record API failure',
     });
   }
 });
 
-export default router; 
+export default router;

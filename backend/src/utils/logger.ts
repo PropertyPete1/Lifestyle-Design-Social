@@ -50,14 +50,27 @@ class Logger {
     // Console output only (simplified to reduce duplication)
     if (this.config.enableConsole) {
       const formattedMessage = this.formatMessage(level, message, data);
-      console.log(formattedMessage);
+      // Production-ready logging without console.log
+      if (level === 'error') {
+        process.stderr.write(formattedMessage + '\n');
+      } else {
+        process.stdout.write(formattedMessage + '\n');
+      }
     }
   }
 
-  debug(message: string, data?: any): void { this.log('debug', message, data); }
-  info(message: string, data?: any): void { this.log('info', message, data); }
-  warn(message: string, data?: any): void { this.log('warn', message, data); }
-  error(message: string, data?: any): void { this.log('error', message, data); }
+  debug(message: string, data?: any): void {
+    this.log('debug', message, data);
+  }
+  info(message: string, data?: any): void {
+    this.log('info', message, data);
+  }
+  warn(message: string, data?: any): void {
+    this.log('warn', message, data);
+  }
+  error(message: string, data?: any): void {
+    this.log('error', message, data);
+  }
 }
 
 // Export backend logger instance
@@ -69,4 +82,4 @@ export const logger = new Logger({
 });
 
 // Export logger factory
-export const createLogger = (config: LoggerConfig): Logger => new Logger(config); 
+export const createLogger = (config: LoggerConfig): Logger => new Logger(config);

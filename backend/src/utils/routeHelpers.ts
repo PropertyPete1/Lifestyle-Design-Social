@@ -35,7 +35,11 @@ export function createSuccessResponse<T>(data: T, message?: string): ApiResponse
 /**
  * Create a standardized error response
  */
-export function createErrorResponse(error: string, details?: string, statusCode: number = 500): ApiError {
+export function createErrorResponse(
+  error: string,
+  details?: string,
+  statusCode: number = 500
+): ApiError {
   return {
     success: false,
     error,
@@ -54,7 +58,7 @@ export function asyncHandler(
   return (req: Request, res: Response, next: NextFunction): void => {
     fn(req, res, next).catch((error: any) => {
       logger.error('Route handler error:', error);
-      
+
       // Don't send response if headers already sent
       if (res.headersSent) {
         return next(error);
@@ -62,12 +66,16 @@ export function asyncHandler(
 
       const statusCode = error.statusCode || error.status || 500;
       const errorMessage = error.message || 'Internal server error';
-      
-      res.status(statusCode).json(createErrorResponse(
-        errorMessage,
-        process.env.NODE_ENV === 'development' ? error.stack : undefined,
-        statusCode
-      ));
+
+      res
+        .status(statusCode)
+        .json(
+          createErrorResponse(
+            errorMessage,
+            process.env.NODE_ENV === 'development' ? error.stack : undefined,
+            statusCode
+          )
+        );
     });
   };
 }
@@ -76,7 +84,7 @@ export function asyncHandler(
  * Validation error handler
  */
 export function handleValidationErrors(errors: any[]): ApiError {
-  const errorMessages = errors.map(err => err.msg || err.message).join(', ');
+  const errorMessages = errors.map((err) => err.msg || err.message).join(', ');
   return createErrorResponse('Validation failed', errorMessages, 400);
 }
 
@@ -85,12 +93,12 @@ export function handleValidationErrors(errors: any[]): ApiError {
  */
 export function handleDatabaseError(error: any): ApiError {
   logger.error('Database error:', error);
-  
+
   // Don't expose internal database errors in production
   if (process.env.NODE_ENV === 'production') {
     return createErrorResponse('Database operation failed', undefined, 500);
   }
-  
+
   return createErrorResponse('Database error', error.message, 500);
 }
 
@@ -127,7 +135,7 @@ export function handleRateLimitError(): ApiError {
  */
 export function handleServiceUnavailableError(service: string): ApiError {
   return createErrorResponse(
-    'Service temporarily unavailable', 
+    'Service temporarily unavailable',
     `${service} is currently unavailable`,
     503
   );
@@ -141,11 +149,12 @@ export function setStandardHeaders(req: Request, res: Response, next: NextFuncti
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
+
   // Add request ID for tracing
-  const requestId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const requestId =
+    req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   res.setHeader('X-Request-ID', requestId);
-  
+
   next();
 }
 
@@ -155,14 +164,14 @@ export function setStandardHeaders(req: Request, res: Response, next: NextFuncti
 export function logRequests(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
   const requestId = res.getHeader('X-Request-ID');
-  
+
   logger.info(`🌐 ${req.method} ${req.path}`, {
     requestId,
     userAgent: req.get('User-Agent'),
     ip: req.ip,
     query: req.query,
   });
-  
+
   res.on('finish', () => {
     const duration = Date.now() - start;
     logger.info(`✅ ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`, {
@@ -171,7 +180,7 @@ export function logRequests(req: Request, res: Response, next: NextFunction): vo
       duration,
     });
   });
-  
+
   next();
 }
 
@@ -182,7 +191,7 @@ export function getPaginationParams(req: Request): { limit: number; offset: numb
   const limit = Math.min(parseInt(req.query.limit as string) || 20, 100); // Max 100 items
   const page = Math.max(parseInt(req.query.page as string) || 1, 1); // Min page 1
   const offset = (page - 1) * limit;
-  
+
   return { limit, offset, page };
 }
 
@@ -207,16 +216,19 @@ export function createPaginatedResponse<T>(
   };
 }> {
   const totalPages = Math.ceil(total / limit);
-  
-  return createSuccessResponse({
-    items: data,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1,
+
+  return createSuccessResponse(
+    {
+      items: data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
     },
-  }, message);
-} 
+    message
+  );
+}

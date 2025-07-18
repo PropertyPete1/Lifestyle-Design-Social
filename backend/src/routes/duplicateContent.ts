@@ -24,7 +24,7 @@ router.post('/check', authenticateToken, async (req: Request, res: Response) => 
       newCaption: caption,
       platform,
       timeframeDays,
-      similarityThreshold
+      similarityThreshold,
     });
 
     logger.info(`Duplicate check for user ${userId}: ${result.similarity * 100}% similar`);
@@ -36,18 +36,17 @@ router.post('/check', authenticateToken, async (req: Request, res: Response) => 
         similarity: Math.round(result.similarity * 100),
         matchedCaption: result.matchedCaption,
         recommendation: result.recommendation,
-        threshold: (similarityThreshold || 0.7) * 100
+        threshold: (similarityThreshold || 0.7) * 100,
       },
-      message: result.isSimilar 
+      message: result.isSimilar
         ? 'Caption is too similar to recent posts'
-        : 'Caption is unique and ready to use'
+        : 'Caption is unique and ready to use',
     });
-
   } catch (error) {
     logger.error('Duplicate content check error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to check duplicate content' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check duplicate content',
     });
   }
 });
@@ -70,7 +69,7 @@ router.post('/regenerate', authenticateToken, async (req: Request, res: Response
       videoType: 'real_estate', // Default to real_estate, could be made configurable
       platform,
       timeframeDays,
-      similarityThreshold
+      similarityThreshold,
     });
 
     logger.info(`Caption regeneration for user ${userId}: regenerated: ${result.regenerated}`);
@@ -80,18 +79,17 @@ router.post('/regenerate', authenticateToken, async (req: Request, res: Response
       data: {
         finalCaption: result.newCaption || caption,
         wasRegenerated: result.regenerated,
-        originalCaption: caption
+        originalCaption: caption,
       },
-      message: result.regenerated 
+      message: result.regenerated
         ? `Caption regenerated to ensure uniqueness`
-        : 'Original caption was already unique'
+        : 'Original caption was already unique',
     });
-
   } catch (error) {
     logger.error('Caption regeneration error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to regenerate caption' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to regenerate caption',
     });
   }
 });
@@ -106,26 +104,25 @@ router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
 
     // Get basic stats from database
     await connectToDatabase();
-    
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - parseInt(timeframeDays as string, 10));
-    
+
     const posts = await Post.find({
       userId,
       createdAt: { $gte: cutoffDate },
-      content: { $exists: true, $ne: '' }
+      content: { $exists: true, $ne: '' },
     });
-    
+
     const totalPosts = posts.length;
-    const uniqueCaptions = new Set(posts.map(p => p.content)).size;
-    const avgCaptionLength = totalPosts > 0 ? 
-      posts.reduce((sum, p) => sum + p.content.length, 0) / totalPosts : 0;
-    
+    const uniqueCaptions = new Set(posts.map((p) => p.content)).size;
+    const avgCaptionLength =
+      totalPosts > 0 ? posts.reduce((sum, p) => sum + p.content.length, 0) / totalPosts : 0;
+
     const stats = { totalPosts, uniqueCaptions, avgCaptionLength: Math.round(avgCaptionLength) };
 
-    const duplicateRisk = stats.totalPosts > 0 
-      ? Math.round((1 - (stats.uniqueCaptions / stats.totalPosts)) * 100)
-      : 0;
+    const duplicateRisk =
+      stats.totalPosts > 0 ? Math.round((1 - stats.uniqueCaptions / stats.totalPosts) * 100) : 0;
 
     return res.json({
       success: true,
@@ -135,20 +132,20 @@ router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
         duplicateRisk: duplicateRisk,
         avgCaptionLength: Math.round(stats.avgCaptionLength || 0),
         timeframeDays: parseInt(timeframeDays as string),
-        recommendations: duplicateRisk > 30 
-          ? ['Consider more diverse caption templates', 'Vary your writing style more']
-          : ['Good content diversity!', 'Keep up the varied approach']
+        recommendations:
+          duplicateRisk > 30
+            ? ['Consider more diverse caption templates', 'Vary your writing style more']
+            : ['Good content diversity!', 'Keep up the varied approach'],
       },
-      message: `Analyzed ${stats.totalPosts} posts from the last ${timeframeDays} days`
+      message: `Analyzed ${stats.totalPosts} posts from the last ${timeframeDays} days`,
     });
-
   } catch (error) {
     logger.error('Duplicate content stats error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to get duplicate content statistics' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get duplicate content statistics',
     });
   }
 });
 
-export default router; 
+export default router;

@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger';
 import { connectToDatabase } from '../config/database';
-import { User } from '../models/User';
+import User from '../models/User';
 import { Team } from '../models/Team';
 import { TeamMember } from '../models/TeamMember';
 import { TeamActivity } from '../models/TeamActivity';
@@ -95,7 +95,7 @@ export class TeamCollaborationService {
       });
 
       const savedTeam = await team.save();
-      
+
       // Add owner as admin member
       const teamMember = new TeamMember({
         teamId: String(savedTeam._id),
@@ -103,18 +103,18 @@ export class TeamCollaborationService {
         role: 'admin',
         permissions: { all: true },
         status: 'active',
-        joinedAt: new Date()
+        joinedAt: new Date(),
       });
 
       await teamMember.save();
-      
+
       return {
         id: String(savedTeam._id),
         name: savedTeam.name,
         description: savedTeam.description,
         ownerId: savedTeam.ownerId,
         createdAt: savedTeam.createdAt,
-        memberCount: 1
+        memberCount: 1,
       };
     } catch (error) {
       logger.error('Error creating team:', error);
@@ -129,23 +129,22 @@ export class TeamCollaborationService {
     try {
       await connectToDatabase();
 
-      const teamMembers = await TeamMember.find({ 
-        userId: userId, 
-        status: 'active' 
+      const teamMembers = await TeamMember.find({
+        userId: userId,
+        status: 'active',
       }).sort({ createdAt: -1 });
 
-      const teamIds = teamMembers.map(tm => tm.teamId);
+      const teamIds = teamMembers.map((tm) => tm.teamId);
       const teams = await Team.find({ _id: { $in: teamIds } });
 
-      return teamMembers.map(tm => {
-        const team = teams.find(t => String(t._id) === tm.teamId);
+      return teamMembers.map((tm) => {
+        const team = teams.find((t) => String(t._id) === tm.teamId);
         return this.mapTeamFromDB({
           ...team?.toObject(),
           role: tm.role,
-          status: tm.status
+          status: tm.status,
         });
       });
-
     } catch (error) {
       logger.error('Error getting user teams:', error);
       throw new Error('Failed to get user teams');
@@ -159,10 +158,10 @@ export class TeamCollaborationService {
     try {
       await connectToDatabase();
 
-      const teamMember = await TeamMember.findOne({ 
-        teamId: teamId, 
-        userId: userId, 
-        status: 'active' 
+      const teamMember = await TeamMember.findOne({
+        teamId: teamId,
+        userId: userId,
+        status: 'active',
       });
 
       if (!teamMember) {
@@ -170,7 +169,7 @@ export class TeamCollaborationService {
       }
 
       const team = await Team.findById(teamId);
-      
+
       if (!team) {
         return null;
       }
@@ -178,9 +177,8 @@ export class TeamCollaborationService {
       return this.mapTeamFromDB({
         ...team.toObject(),
         role: teamMember.role,
-        status: teamMember.status
+        status: teamMember.status,
       });
-
     } catch (error) {
       logger.error('Error getting team:', error);
       throw new Error('Failed to get team');
@@ -190,7 +188,11 @@ export class TeamCollaborationService {
   /**
    * Invite member to team
    */
-  async inviteMember(teamId: string, inviterId: string, inviteData: InviteMemberData): Promise<TeamMember> {
+  async inviteMember(
+    teamId: string,
+    inviterId: string,
+    inviteData: InviteMemberData
+  ): Promise<TeamMember> {
     try {
       await connectToDatabase();
 
@@ -223,7 +225,7 @@ export class TeamCollaborationService {
         role: inviteData.role,
         permissions: inviteData.permissions || {},
         invitedBy: inviterId,
-        status: 'pending'
+        status: 'pending',
       });
 
       const savedMember = await teamMember.save();
@@ -233,12 +235,11 @@ export class TeamCollaborationService {
       // Log activity
       await this.logActivity(teamId, inviterId, 'member_invited', 'user', userId, {
         invitedEmail: inviteData.email,
-        role: inviteData.role
+        role: inviteData.role,
       });
 
       logger.info(`Member invited to team ${teamId}: ${inviteData.email} as ${inviteData.role}`);
       return member;
-
     } catch (error) {
       logger.error('Error inviting member:', error);
       throw error;
@@ -255,10 +256,10 @@ export class TeamCollaborationService {
       // Update member status
       const updatedMember = await TeamMember.findOneAndUpdate(
         { teamId: teamId, userId: userId, status: 'pending' },
-        { 
-          status: 'active', 
+        {
+          status: 'active',
           joinedAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         { new: true }
       );
@@ -271,12 +272,11 @@ export class TeamCollaborationService {
 
       // Log activity
       await this.logActivity(teamId, userId, 'member_joined', 'user', userId, {
-        role: member.role
+        role: member.role,
       });
 
       logger.info(`User ${userId} accepted invitation to team ${teamId}`);
       return member;
-
     } catch (error) {
       logger.error('Error accepting invitation:', error);
       throw error;
@@ -296,24 +296,24 @@ export class TeamCollaborationService {
         throw new Error('Access denied');
       }
 
-      const teamMembers = await TeamMember.find({ teamId: teamId })
-        .sort({ role: 1, joinedAt: -1 });
+      const teamMembers = await TeamMember.find({ teamId: teamId }).sort({ role: 1, joinedAt: -1 });
 
-      const userIds = teamMembers.map(tm => tm.userId);
+      const userIds = teamMembers.map((tm) => tm.userId);
       const users = await User.find({ _id: { $in: userIds } }).select('email name');
 
-      return teamMembers.map(tm => {
-        const user = users.find(u => String(u._id) === tm.userId);
+      return teamMembers.map((tm) => {
+        const user = users.find((u) => String(u._id) === tm.userId);
         return this.mapTeamMemberFromDB({
           ...tm.toObject(),
-          user: user ? {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name
-          } : undefined
+          user: user
+            ? {
+                id: user._id.toString(),
+                email: user.email,
+                name: user.name,
+              }
+            : undefined,
         });
       });
-
     } catch (error) {
       logger.error('Error getting team members:', error);
       throw error;
@@ -323,14 +323,19 @@ export class TeamCollaborationService {
   /**
    * Update member role
    */
-  async updateMemberRole(teamId: string, userId: string, newRole: string, updatedBy: string): Promise<any> {
+  async updateMemberRole(
+    teamId: string,
+    userId: string,
+    newRole: string,
+    updatedBy: string
+  ): Promise<any> {
     try {
       await connectToDatabase();
 
       // Check permissions
-      const updaterMember = await TeamMember.findOne({ 
-        teamId: teamId, 
-        userId: updatedBy 
+      const updaterMember = await TeamMember.findOne({
+        teamId: teamId,
+        userId: updatedBy,
       });
 
       if (!updaterMember) {
@@ -345,10 +350,10 @@ export class TeamCollaborationService {
       // Update role
       const updatedMember = await TeamMember.findOneAndUpdate(
         { teamId: teamId, userId: userId },
-        { 
+        {
           role: newRole as 'admin' | 'editor' | 'member',
           permissions: this.getDefaultPermissions(newRole),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         { new: true }
       );
@@ -363,7 +368,7 @@ export class TeamCollaborationService {
         userId: updatedMember.userId,
         role: updatedMember.role,
         permissions: updatedMember.permissions,
-        updatedAt: updatedMember.updatedAt
+        updatedAt: updatedMember.updatedAt,
       };
     } catch (error) {
       logger.error('Error updating member role:', error);
@@ -400,11 +405,10 @@ export class TeamCollaborationService {
 
       // Log activity
       await this.logActivity(teamId, removerId, 'member_removed', 'user', memberId, {
-        removedRole: member.role
+        removedRole: member.role,
       });
 
       logger.info(`Member removed from team ${teamId}: ${memberId}`);
-
     } catch (error) {
       logger.error('Error removing member:', error);
       throw error;
@@ -414,7 +418,11 @@ export class TeamCollaborationService {
   /**
    * Get team activity log
    */
-  async getTeamActivity(teamId: string, userId: string, limit: number = 50): Promise<TeamActivity[]> {
+  async getTeamActivity(
+    teamId: string,
+    userId: string,
+    limit: number = 50
+  ): Promise<TeamActivity[]> {
     try {
       await connectToDatabase();
 
@@ -428,21 +436,22 @@ export class TeamCollaborationService {
         .sort({ createdAt: -1 })
         .limit(limit);
 
-      const userIds = activities.map(a => a.userId);
+      const userIds = activities.map((a) => a.userId);
       const users = await User.find({ _id: { $in: userIds } }).select('email name');
 
-      return activities.map(activity => {
-        const user = users.find(u => u._id.toString() === activity.userId);
+      return activities.map((activity) => {
+        const user = users.find((u) => u._id.toString() === activity.userId);
         return this.mapTeamActivityFromDB({
           ...activity.toObject(),
-          user: user ? {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name
-          } : undefined
+          user: user
+            ? {
+                id: user._id.toString(),
+                email: user.email,
+                name: user.name,
+              }
+            : undefined,
         });
       });
-
     } catch (error) {
       logger.error('Error getting team activity:', error);
       throw error;
@@ -469,11 +478,10 @@ export class TeamCollaborationService {
         action: action,
         resourceType: resourceType,
         resourceId: resourceId,
-        details: details || {}
+        details: details || {},
       });
 
       await activity.save();
-
     } catch (error) {
       logger.error('Error logging team activity:', error);
       // Don't throw error for logging failures
@@ -487,10 +495,10 @@ export class TeamCollaborationService {
     try {
       await connectToDatabase();
 
-      const member = await TeamMember.findOne({ 
-        teamId: teamId, 
-        userId: userId, 
-        status: 'active' 
+      const member = await TeamMember.findOne({
+        teamId: teamId,
+        userId: userId,
+        status: 'active',
       });
 
       if (!member) {
@@ -507,7 +515,6 @@ export class TeamCollaborationService {
 
       // Check specific permissions
       return permissions[permission] === true;
-
     } catch (error) {
       logger.error('Error checking permission:', error);
       return false;
@@ -521,14 +528,13 @@ export class TeamCollaborationService {
     try {
       await connectToDatabase();
 
-      const member = await TeamMember.findOne({ 
-        teamId: teamId, 
-        userId: userId, 
-        status: 'active' 
+      const member = await TeamMember.findOne({
+        teamId: teamId,
+        userId: userId,
+        status: 'active',
       });
 
       return !!member;
-
     } catch (error) {
       logger.error('Error checking membership:', error);
       return false;
@@ -543,28 +549,29 @@ export class TeamCollaborationService {
       await connectToDatabase();
 
       const totalMembers = await TeamMember.countDocuments({ teamId });
-      const activeMembers = await TeamMember.countDocuments({ 
-        teamId, 
-        status: 'active' 
+      const activeMembers = await TeamMember.countDocuments({
+        teamId,
+        status: 'active',
       });
-      const pendingInvitations = await TeamMember.countDocuments({ 
-        teamId, 
-        status: 'pending' 
+      const pendingInvitations = await TeamMember.countDocuments({
+        teamId,
+        status: 'pending',
       });
 
       // Get team members for post counting
       const teamMembers = await TeamMember.find({ teamId, status: 'active' })
-        .select('userId').lean();
-      const memberUserIds = teamMembers.map(member => member.userId);
+        .select('userId')
+        .lean();
+      const memberUserIds = teamMembers.map((member) => member.userId);
 
       // Count posts for all team members
-      const totalPosts = await PostModel.countDocuments({ 
-        userId: { $in: memberUserIds } 
-      });
-      
-      const scheduledPosts = await PostModel.countDocuments({ 
+      const totalPosts = await PostModel.countDocuments({
         userId: { $in: memberUserIds },
-        status: 'scheduled' 
+      });
+
+      const scheduledPosts = await PostModel.countDocuments({
+        userId: { $in: memberUserIds },
+        status: 'scheduled',
       });
 
       return {
@@ -573,12 +580,11 @@ export class TeamCollaborationService {
         pendingInvitations,
         totalPosts,
         scheduledPosts,
-        recentActivity: await TeamActivity.countDocuments({ 
-          teamId: teamId, 
-          createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } 
-        })
+        recentActivity: await TeamActivity.countDocuments({
+          teamId: teamId,
+          createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        }),
       };
-
     } catch (error) {
       logger.error('Error getting team stats:', error);
       return {
@@ -587,7 +593,7 @@ export class TeamCollaborationService {
         pendingInvitations: 0,
         totalPosts: 0,
         scheduledPosts: 0,
-        recentActivity: 0
+        recentActivity: 0,
       };
     }
   }
@@ -603,7 +609,7 @@ export class TeamCollaborationService {
       ownerId: String(row.ownerId || row.owner_id || ''),
       settings: row.settings || {},
       createdAt: row.createdAt || row.created_at || new Date(),
-      updatedAt: row.updatedAt || row.updated_at || new Date()
+      updatedAt: row.updatedAt || row.updated_at || new Date(),
     };
   }
 
@@ -620,7 +626,7 @@ export class TeamCollaborationService {
       status: row.status || 'pending',
       createdAt: row.createdAt || row.created_at || new Date(),
       updatedAt: row.updatedAt || row.updated_at || new Date(),
-      user: row.user
+      user: row.user,
     };
   }
 
@@ -634,35 +640,35 @@ export class TeamCollaborationService {
       resourceId: row.resourceId || row.resource_id,
       details: row.details || {},
       createdAt: row.createdAt || row.created_at || new Date(),
-      user: row.user
+      user: row.user,
     };
   }
 
   private getDefaultPermissions(role: string): Record<string, boolean> {
     switch (role) {
       case 'admin':
-        return { 
+        return {
           manage_members: true,
           manage_posts: true,
           view_analytics: true,
-          manage_settings: true
+          manage_settings: true,
         };
       case 'editor':
-        return { 
+        return {
           manage_posts: true,
-          view_analytics: true
+          view_analytics: true,
         };
       case 'member':
-        return { 
-          view_analytics: false
+        return {
+          view_analytics: false,
         };
       default:
         return {
           manage_posts: false,
-          view_analytics: false
+          view_analytics: false,
         };
     }
   }
 }
 
-export const teamCollaborationService = new TeamCollaborationService(); 
+export const teamCollaborationService = new TeamCollaborationService();

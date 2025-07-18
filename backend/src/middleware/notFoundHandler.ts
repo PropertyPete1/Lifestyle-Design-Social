@@ -7,4 +7,4 @@ export const notFoundHandler = (req: Request, res: Response): void => {
       status: 404,
     },
   });
-}; 
+};

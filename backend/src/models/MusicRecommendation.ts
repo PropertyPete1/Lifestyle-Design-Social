@@ -45,186 +45,193 @@ export interface IMusicRecommendation extends Document {
   updatedAt: Date;
 }
 
-const musicRecommendationSchema = new Schema<IMusicRecommendation>({
-  userId: {
-    type: String,
-    required: true,
-    ref: 'User'
-  },
-  videoId: {
-    type: String,
-    required: true,
-    ref: 'Video'
-  },
-  trackId: {
-    type: String,
-    required: true
-  },
-  trackName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  artistName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  album: {
-    type: String,
-    trim: true
-  },
-  genre: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  mood: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  tempo: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 300
-  },
-  energy: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 1
-  },
-  danceability: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 1
-  },
-  valence: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 1
-  },
-  popularity: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 100
-  },
-  trendingScore: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 100
-  },
-  platform: {
-    type: String,
-    enum: ['spotify', 'tiktok', 'youtube', 'soundcloud', 'custom'],
-    required: true
-  },
-  previewUrl: {
-    type: String,
-    trim: true
-  },
-  externalUrl: {
-    type: String,
-    trim: true
-  },
-  duration: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-  isExplicit: {
-    type: Boolean,
-    default: false
-  },
-  tags: [{
-    type: String,
-    trim: true
-  }],
-  matchData: {
-    matchScore: {
+const musicRecommendationSchema = new Schema<IMusicRecommendation>(
+  {
+    userId: {
+      type: String,
+      required: true,
+      ref: 'User',
+    },
+    videoId: {
+      type: String,
+      required: true,
+      ref: 'Video',
+    },
+    trackId: {
+      type: String,
+      required: true,
+    },
+    trackName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    artistName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    album: {
+      type: String,
+      trim: true,
+    },
+    genre: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    mood: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    tempo: {
       type: Number,
       required: true,
       min: 0,
-      max: 1
+      max: 300,
     },
-    matchReason: {
-      type: String,
+    energy: {
+      type: Number,
       required: true,
-      trim: true
+      min: 0,
+      max: 1,
     },
-    videoMood: {
-      type: String,
+    danceability: {
+      type: Number,
       required: true,
-      trim: true
-    },
-    contentType: {
-      type: String,
-      enum: ['real_estate', 'cartoon'],
-      required: true
-    },
-    platformOptimized: [{
-      type: String,
-      enum: ['instagram', 'tiktok', 'facebook', 'youtube']
-    }],
-    audioDuration: {
-      type: Number,
-      required: true
-    },
-    audioTempo: {
-      type: Number,
       min: 0,
-      max: 300
+      max: 1,
     },
-    audioEnergy: {
+    valence: {
       type: Number,
+      required: true,
       min: 0,
-      max: 1
-    }
-  },
-  recommendationSource: {
-    type: String,
-    enum: ['ai_analysis', 'trending', 'user_preference', 'similar_videos'],
-    required: true
-  },
-  isUsed: {
-    type: Boolean,
-    default: false
-  },
-  usedAt: {
-    type: Date
-  },
-  performance: {
-    engagement: {
-      type: Number,
-      default: 0
+      max: 1,
     },
-    likes: {
+    popularity: {
       type: Number,
-      default: 0
+      required: true,
+      min: 0,
+      max: 100,
     },
-    comments: {
+    trendingScore: {
       type: Number,
-      default: 0
+      required: true,
+      min: 0,
+      max: 100,
     },
-    shares: {
+    platform: {
+      type: String,
+      enum: ['spotify', 'tiktok', 'youtube', 'soundcloud', 'custom'],
+      required: true,
+    },
+    previewUrl: {
+      type: String,
+      trim: true,
+    },
+    externalUrl: {
+      type: String,
+      trim: true,
+    },
+    duration: {
       type: Number,
-      default: 0
-    }
+      required: true,
+      min: 1,
+    },
+    isExplicit: {
+      type: Boolean,
+      default: false,
+    },
+    tags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    matchData: {
+      matchScore: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 1,
+      },
+      matchReason: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      videoMood: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      contentType: {
+        type: String,
+        enum: ['real_estate', 'cartoon'],
+        required: true,
+      },
+      platformOptimized: [
+        {
+          type: String,
+          enum: ['instagram', 'tiktok', 'facebook', 'youtube'],
+        },
+      ],
+      audioDuration: {
+        type: Number,
+        required: true,
+      },
+      audioTempo: {
+        type: Number,
+        min: 0,
+        max: 300,
+      },
+      audioEnergy: {
+        type: Number,
+        min: 0,
+        max: 1,
+      },
+    },
+    recommendationSource: {
+      type: String,
+      enum: ['ai_analysis', 'trending', 'user_preference', 'similar_videos'],
+      required: true,
+    },
+    isUsed: {
+      type: Boolean,
+      default: false,
+    },
+    usedAt: {
+      type: Date,
+    },
+    performance: {
+      engagement: {
+        type: Number,
+        default: 0,
+      },
+      likes: {
+        type: Number,
+        default: 0,
+      },
+      comments: {
+        type: Number,
+        default: 0,
+      },
+      shares: {
+        type: Number,
+        default: 0,
+      },
+    },
+    expiresAt: {
+      type: Date,
+      required: true,
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    },
   },
-  expiresAt: {
-    type: Date,
-    required: true,
-    default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
 // Create indexes
 musicRecommendationSchema.index({ userId: 1, videoId: 1 });
@@ -235,7 +242,10 @@ musicRecommendationSchema.index({ platform: 1, trendingScore: -1 });
 musicRecommendationSchema.index({ genre: 1, mood: 1 });
 musicRecommendationSchema.index({ isUsed: 1, usedAt: -1 });
 
-export const MusicRecommendation = mongoose.model<IMusicRecommendation>('MusicRecommendation', musicRecommendationSchema);
+export const MusicRecommendation = mongoose.model<IMusicRecommendation>(
+  'MusicRecommendation',
+  musicRecommendationSchema
+);
 
 // Export model alias for service compatibility
-export const MusicRecommendationsModel = MusicRecommendation; 
+export const MusicRecommendationsModel = MusicRecommendation;

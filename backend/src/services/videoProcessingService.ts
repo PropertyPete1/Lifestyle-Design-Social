@@ -52,7 +52,9 @@ export class VideoProcessingService {
 
       // Extract metadata
       const metadata = await this.extractMetadata(filePath);
-      logger.info(`Extracted metadata for video: ${metadata.duration}s, ${metadata.width}x${metadata.height}`);
+      logger.info(
+        `Extracted metadata for video: ${metadata.duration}s, ${metadata.width}x${metadata.height}`
+      );
 
       // Validate video
       await this.validateVideo(metadata, options);
@@ -79,7 +81,9 @@ export class VideoProcessingService {
       };
     } catch (error) {
       logger.error('Video processing failed:', error);
-      throw new Error(`Video processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Video processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -94,7 +98,7 @@ export class VideoProcessingService {
           return;
         }
 
-        const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
+        const videoStream = metadata.streams.find((stream) => stream.codec_type === 'video');
         if (!videoStream) {
           reject(new Error('No video stream found'));
           return;
@@ -107,7 +111,9 @@ export class VideoProcessingService {
           width: videoStream.width || 0,
           height: videoStream.height || 0,
           bitrate: parseInt(metadata.format.bit_rate ? String(metadata.format.bit_rate) : '0'),
-          fps: parseFloat(videoStream.r_frame_rate?.split('/')[0] || '0') / parseFloat(videoStream.r_frame_rate?.split('/')[1] || '1'),
+          fps:
+            parseFloat(videoStream.r_frame_rate?.split('/')[0] || '0') /
+            parseFloat(videoStream.r_frame_rate?.split('/')[1] || '1'),
           codec: videoStream.codec_name || 'unknown',
           size: stats.size,
         });
@@ -123,12 +129,16 @@ export class VideoProcessingService {
 
     // Check duration
     if (options.maxDuration && metadata.duration > options.maxDuration) {
-      errors.push(`Video duration (${metadata.duration}s) exceeds maximum (${options.maxDuration}s)`);
+      errors.push(
+        `Video duration (${metadata.duration}s) exceeds maximum (${options.maxDuration}s)`
+      );
     }
 
     // Check file size
     if (options.maxFileSize && metadata.size > options.maxFileSize * 1024 * 1024) {
-      errors.push(`Video size (${Math.round(metadata.size / 1024 / 1024)}MB) exceeds maximum (${options.maxFileSize}MB)`);
+      errors.push(
+        `Video size (${Math.round(metadata.size / 1024 / 1024)}MB) exceeds maximum (${options.maxFileSize}MB)`
+      );
     }
 
     // Check dimensions (Instagram requirements)
@@ -139,7 +149,9 @@ export class VideoProcessingService {
     // Check aspect ratio (Instagram prefers 1:1, 4:5, or 16:9)
     const aspectRatio = metadata.width / metadata.height;
     if (aspectRatio < 0.8 || aspectRatio > 1.91) {
-      logger.warn(`Video aspect ratio (${aspectRatio.toFixed(2)}) may not be optimal for Instagram`);
+      logger.warn(
+        `Video aspect ratio (${aspectRatio.toFixed(2)}) may not be optimal for Instagram`
+      );
     }
 
     if (errors.length > 0) {
@@ -156,7 +168,10 @@ export class VideoProcessingService {
       fs.mkdirSync(thumbnailDir, { recursive: true });
     }
 
-    const thumbnailPath = path.join(thumbnailDir, `${path.basename(filePath, path.extname(filePath))}_thumb.jpg`);
+    const thumbnailPath = path.join(
+      thumbnailDir,
+      `${path.basename(filePath, path.extname(filePath))}_thumb.jpg`
+    );
 
     return new Promise((resolve, reject) => {
       ffmpeg(filePath)
@@ -185,7 +200,10 @@ export class VideoProcessingService {
       fs.mkdirSync(compressedDir, { recursive: true });
     }
 
-    const compressedPath = path.join(compressedDir, `${path.basename(filePath, path.extname(filePath))}_compressed.mp4`);
+    const compressedPath = path.join(
+      compressedDir,
+      `${path.basename(filePath, path.extname(filePath))}_compressed.mp4`
+    );
 
     return new Promise((resolve, reject) => {
       ffmpeg(filePath)
@@ -226,7 +244,11 @@ export class VideoProcessingService {
   /**
    * Update video metadata in database
    */
-  async updateVideoMetadata(videoId: string, metadata: VideoMetadata, thumbnailPath?: string): Promise<void> {
+  async updateVideoMetadata(
+    videoId: string,
+    metadata: VideoMetadata,
+    thumbnailPath?: string
+  ): Promise<void> {
     try {
       await this.videoModel.findByIdAndUpdate(videoId, {
         thumbnailPath,
@@ -265,10 +287,10 @@ export class VideoProcessingService {
   }> {
     try {
       const result = await this.videoModel.aggregate([
-        { $group: { _id: null, count: { $sum: 1 }, totalSize: { $sum: '$fileSize' } } }
+        { $group: { _id: null, count: { $sum: 1 }, totalSize: { $sum: '$fileSize' } } },
       ]);
-              return {
-          totalProcessed: result[0]?.count || 0,
+      return {
+        totalProcessed: result[0]?.count || 0,
         averageProcessingTime: 0, // Would need to track processing times
         successRate: 1.0, // Would need to track failures
         totalSize: 0, // result.totalSize || 0,
@@ -280,4 +302,4 @@ export class VideoProcessingService {
   }
 }
 
-export default VideoProcessingService; 
+export default VideoProcessingService;

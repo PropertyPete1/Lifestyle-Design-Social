@@ -3,7 +3,7 @@ import * as QRCode from 'qrcode';
 import { randomBytes } from 'crypto';
 import { logger } from '../utils/logger';
 import { connectToDatabase } from '../config/database';
-import { User } from '../models/User';
+import User from '../models/User';
 
 export interface TwoFactorSetupResult {
   secret: string;
@@ -27,7 +27,7 @@ class TwoFactorService {
 
       // Check if user already has 2FA enabled
       const isEnabled = await this.isTwoFactorEnabled(userId);
-      
+
       if (isEnabled) {
         throw new Error('Two-factor authentication is already enabled');
       }
@@ -36,7 +36,7 @@ class TwoFactorService {
       const secret = speakeasy.generateSecret({
         name: `Real Estate Auto-Posting (${userEmail})`,
         issuer: 'Real Estate Auto-Posting App',
-        length: 32
+        length: 32,
       });
 
       // Generate backup codes
@@ -52,9 +52,8 @@ class TwoFactorService {
         secret: secret.base32,
         qrCodeUrl,
         backupCodes,
-        manualEntryKey: secret.base32
+        manualEntryKey: secret.base32,
       };
-
     } catch (error) {
       logger.error('Error generating 2FA setup:', error);
       throw new Error('Failed to generate two-factor authentication setup');
@@ -70,11 +69,11 @@ class TwoFactorService {
 
       // Get user's stored secret
       const user = await this.getUserTwoFactorData(userId);
-      
+
       if (!user || !user.twoFactorSecret) {
         return {
           success: false,
-          message: 'Two-factor authentication setup not found. Please start setup again.'
+          message: 'Two-factor authentication setup not found. Please start setup again.',
         };
       }
 
@@ -83,13 +82,13 @@ class TwoFactorService {
         secret: user.twoFactorSecret,
         encoding: 'base32',
         token,
-        window: 2
+        window: 2,
       });
 
       if (!verified) {
         return {
           success: false,
-          message: 'Invalid verification code. Please try again.'
+          message: 'Invalid verification code. Please try again.',
         };
       }
 
@@ -100,9 +99,8 @@ class TwoFactorService {
 
       return {
         success: true,
-        message: 'Two-factor authentication enabled successfully.'
+        message: 'Two-factor authentication enabled successfully.',
       };
-
     } catch (error) {
       logger.error('Error enabling 2FA:', error);
       throw new Error('Failed to enable two-factor authentication');
@@ -117,22 +115,22 @@ class TwoFactorService {
       await connectToDatabase();
 
       const user = await this.getUserTwoFactorData(userId);
-      
+
       if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
         return {
           success: false,
-          message: 'Two-factor authentication is not enabled for this account.'
+          message: 'Two-factor authentication is not enabled for this account.',
         };
       }
 
       // Check if it's a backup code (8 characters, alphanumeric)
       if (token.length === 8 && /^[A-Z0-9]+$/.test(token)) {
         const isValidBackupCode = await this.useBackupCode(userId, token);
-        
+
         if (isValidBackupCode) {
           return {
             success: true,
-            message: 'Backup code verified successfully.'
+            message: 'Backup code verified successfully.',
           };
         }
       }
@@ -142,26 +140,25 @@ class TwoFactorService {
         secret: user.twoFactorSecret,
         encoding: 'base32',
         token,
-        window: 2
+        window: 2,
       });
 
       if (verified) {
         return {
           success: true,
-          message: 'Authentication successful.'
+          message: 'Authentication successful.',
         };
       }
 
       return {
         success: false,
-        message: 'Invalid authentication code.'
+        message: 'Invalid authentication code.',
       };
-
     } catch (error) {
       logger.error('Error verifying 2FA token:', error);
       return {
         success: false,
-        message: 'Authentication verification failed.'
+        message: 'Authentication verification failed.',
       };
     }
   }
@@ -172,22 +169,21 @@ class TwoFactorService {
   async disable2FA(userId: string): Promise<{ success: boolean; message: string }> {
     try {
       await connectToDatabase();
-      
+
       // Disable 2FA
       await User.findByIdAndUpdate(userId, {
         twoFactorEnabled: false,
         twoFactorSecret: null,
         backupCodes: null,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       logger.info(`2FA disabled for user ${userId}`);
 
       return {
         success: true,
-        message: 'Two-factor authentication disabled successfully.'
+        message: 'Two-factor authentication disabled successfully.',
       };
-
     } catch (error) {
       logger.error('Error disabling 2FA:', error);
       throw new Error('Failed to disable two-factor authentication');
@@ -200,10 +196,10 @@ class TwoFactorService {
   async generateNewBackupCodes(userId: string, token: string): Promise<string[]> {
     try {
       await connectToDatabase();
-      
+
       // Verify current token
       const verification = await this.verifyToken(userId, token);
-      
+
       if (!verification.success) {
         throw new Error('Invalid authentication code');
       }
@@ -214,13 +210,12 @@ class TwoFactorService {
       // Update in database
       await User.findByIdAndUpdate(userId, {
         backupCodes: backupCodes,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       logger.info(`New backup codes generated for user ${userId}`);
 
       return backupCodes;
-
     } catch (error) {
       logger.error('Error generating backup codes:', error);
       throw new Error('Failed to generate backup codes');
@@ -233,15 +228,14 @@ class TwoFactorService {
   async isTwoFactorEnabled(userId: string): Promise<boolean> {
     try {
       await connectToDatabase();
-      
+
       const user = await User.findById(userId).select('twoFactorEnabled');
-      
+
       if (!user) {
         return false;
       }
 
       return Boolean(user.twoFactorEnabled) || false;
-
     } catch (error) {
       logger.error('Error checking 2FA status:', error);
       return false;
@@ -253,21 +247,25 @@ class TwoFactorService {
    */
   private generateBackupCodes(): string[] {
     const codes: string[] = [];
-    
+
     for (let i = 0; i < 10; i++) {
       // Generate 8-character alphanumeric backup codes
       const code = randomBytes(4).toString('hex').toUpperCase();
       codes.push(code);
     }
-    
+
     return codes;
   }
 
-  private async storeTwoFactorSecret(userId: string, secret: string, backupCodes: string[]): Promise<void> {
+  private async storeTwoFactorSecret(
+    userId: string,
+    secret: string,
+    backupCodes: string[]
+  ): Promise<void> {
     await User.findByIdAndUpdate(userId, {
       twoFactorSecret: secret,
       backupCodes: backupCodes,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 
@@ -275,7 +273,7 @@ class TwoFactorService {
     await User.findByIdAndUpdate(userId, {
       twoFactorEnabled: true,
       twoFactorSetupAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 
@@ -285,28 +283,28 @@ class TwoFactorService {
     backupCodes: string[] | null;
   } | null> {
     const user = await User.findById(userId).select('twoFactorEnabled twoFactorSecret backupCodes');
-    
+
     if (!user) {
       return null;
     }
-    
+
     return {
       twoFactorEnabled: Boolean(user.twoFactorEnabled) || false,
       twoFactorSecret: user.twoFactorSecret || null,
-      backupCodes: user.backupCodes || null
+      backupCodes: user.backupCodes || null,
     };
   }
 
   private async useBackupCode(userId: string, code: string): Promise<boolean> {
     try {
       const user = await User.findById(userId).select('backupCodes');
-      
+
       if (!user || !user.backupCodes) {
         return false;
       }
 
       const codeIndex = user.backupCodes.indexOf(code);
-      
+
       if (codeIndex === -1) {
         return false;
       }
@@ -317,11 +315,10 @@ class TwoFactorService {
       // Update database
       await User.findByIdAndUpdate(userId, {
         backupCodes: user.backupCodes,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       return true;
-
     } catch (error) {
       logger.error('Error using backup code:', error);
       return false;
@@ -329,4 +326,4 @@ class TwoFactorService {
   }
 }
 
-export const twoFactorService = new TwoFactorService(); 
+export const twoFactorService = new TwoFactorService();

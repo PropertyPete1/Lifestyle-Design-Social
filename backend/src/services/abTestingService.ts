@@ -1,6 +1,6 @@
 import { connectToDatabase } from '../config/database';
 import { logger } from '../utils/logger';
-import { User } from '../models/User';
+import User from '../models/User';
 
 export interface ABTest {
   id: string;
@@ -46,30 +46,33 @@ class ABTestingService {
   private tests: Map<string, ABTest> = new Map();
 
   // Create a new A/B test
-  async createABTest(userId: string, config: {
-    name: string;
-    description: string;
-    testType: ABTest['testType'];
-    variants: Array<{
+  async createABTest(
+    userId: string,
+    config: {
       name: string;
       description: string;
-      config: any;
-      traffic: number;
-    }>;
-    duration?: number; // days
-    targetMetric?: ABTest['targetMetric'];
-  }): Promise<ABTest> {
+      testType: ABTest['testType'];
+      variants: Array<{
+        name: string;
+        description: string;
+        config: any;
+        traffic: number;
+      }>;
+      duration?: number; // days
+      targetMetric?: ABTest['targetMetric'];
+    }
+  ): Promise<ABTest> {
     try {
       await connectToDatabase();
-      
+
       const user = await User.findById(userId);
       if (!user) {
         throw new Error('User not found');
       }
 
-      const endDate = config.duration ? 
-        new Date(Date.now() + config.duration * 24 * 60 * 60 * 1000) : 
-        undefined;
+      const endDate = config.duration
+        ? new Date(Date.now() + config.duration * 24 * 60 * 60 * 1000)
+        : undefined;
 
       const abTest: ABTest = {
         id: `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -88,21 +91,20 @@ class ABTestingService {
             impressions: 0,
             clicks: 0,
             conversions: 0,
-            value: 0
-          }
+            value: 0,
+          },
         })),
         startDate: new Date(),
         endDate,
         targetMetric: config.targetMetric || 'engagement',
         confidenceLevel: 95,
-        createdAt: new Date()
+        createdAt: new Date(),
       };
 
       this.tests.set(abTest.id, abTest);
-      
+
       logger.info(`A/B test created: ${abTest.name} (${abTest.id}) for user ${userId}`);
       return abTest;
-
     } catch (error) {
       logger.error(`Error creating A/B test for user ${userId}:`, error);
       throw error;
@@ -116,8 +118,8 @@ class ABTestingService {
 
   // Get all A/B tests for user
   getUserABTests(userId: string, status?: string): ABTest[] {
-    return Array.from(this.tests.values()).filter(test => 
-      test.userId === userId && (!status || test.status === status)
+    return Array.from(this.tests.values()).filter(
+      (test) => test.userId === userId && (!status || test.status === status)
     );
   }
 
@@ -131,7 +133,7 @@ class ABTestingService {
       }
 
       test.status = status;
-      
+
       if (status === 'completed') {
         test.endDate = new Date();
         test.results = this.calculateTestResults(test);
@@ -139,7 +141,6 @@ class ABTestingService {
 
       logger.info(`A/B test ${testId} status updated to ${status}`);
       return true;
-
     } catch (error) {
       logger.error(`Error updating A/B test ${testId}:`, error);
       return false;
@@ -147,17 +148,21 @@ class ABTestingService {
   }
 
   // Record metrics for a variant
-  async recordVariantMetrics(testId: string, variantId: string, metrics: {
-    impressions?: number;
-    clicks?: number;
-    conversions?: number;
-    value?: number;
-  }): Promise<boolean> {
+  async recordVariantMetrics(
+    testId: string,
+    variantId: string,
+    metrics: {
+      impressions?: number;
+      clicks?: number;
+      conversions?: number;
+      value?: number;
+    }
+  ): Promise<boolean> {
     try {
       const test = this.tests.get(testId);
       if (!test) return false;
 
-      const variant = test.variants.find(v => v.id === variantId);
+      const variant = test.variants.find((v) => v.id === variantId);
       if (!variant) return false;
 
       // Update metrics
@@ -168,7 +173,6 @@ class ABTestingService {
 
       logger.info(`Metrics recorded for variant ${variantId} in test ${testId}`);
       return true;
-
     } catch (error) {
       logger.error(`Error recording metrics for variant ${variantId}:`, error);
       return false;
@@ -203,7 +207,7 @@ class ABTestingService {
         confidence: 0,
         significantDifference: false,
         summary: 'Not enough variants to compare',
-        recommendations: ['Add more variants to get meaningful results']
+        recommendations: ['Add more variants to get meaningful results'],
       };
     }
 
@@ -213,7 +217,7 @@ class ABTestingService {
 
     for (const variant of test.variants) {
       let value = 0;
-      
+
       switch (test.targetMetric) {
         case 'engagement':
           value = variant.metrics.clicks + variant.metrics.conversions;
@@ -242,12 +246,12 @@ class ABTestingService {
       winner: winner?.id,
       confidence,
       significantDifference,
-      summary: winner ? 
-        `${winner.name} is the winning variant with ${highestValue} ${test.targetMetric}` :
-        'No clear winner determined',
-      recommendations: significantDifference ? 
-        [`Implement ${winner?.name} variant for all users`] :
-        ['Continue testing to gather more data']
+      summary: winner
+        ? `${winner.name} is the winning variant with ${highestValue} ${test.targetMetric}`
+        : 'No clear winner determined',
+      recommendations: significantDifference
+        ? [`Implement ${winner?.name} variant for all users`]
+        : ['Continue testing to gather more data'],
     };
   }
 
@@ -256,7 +260,7 @@ class ABTestingService {
     let hash = 0;
     for (let i = 0; i < userId.length; i++) {
       const char = userId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash);
@@ -295,11 +299,15 @@ class ABTestingService {
       totalConversions,
       overallCTR: Math.round(overallCTR * 100) / 100,
       overallConversionRate: Math.round(overallConversionRate * 100) / 100,
-      variants: test.variants.map(variant => {
-        const ctr = variant.metrics.impressions > 0 ? 
-          (variant.metrics.clicks / variant.metrics.impressions) * 100 : 0;
-        const conversionRate = variant.metrics.clicks > 0 ? 
-          (variant.metrics.conversions / variant.metrics.clicks) * 100 : 0;
+      variants: test.variants.map((variant) => {
+        const ctr =
+          variant.metrics.impressions > 0
+            ? (variant.metrics.clicks / variant.metrics.impressions) * 100
+            : 0;
+        const conversionRate =
+          variant.metrics.clicks > 0
+            ? (variant.metrics.conversions / variant.metrics.clicks) * 100
+            : 0;
 
         return {
           id: variant.id,
@@ -308,9 +316,9 @@ class ABTestingService {
           clicks: variant.metrics.clicks,
           conversions: variant.metrics.conversions,
           ctr: Math.round(ctr * 100) / 100,
-          conversionRate: Math.round(conversionRate * 100) / 100
+          conversionRate: Math.round(conversionRate * 100) / 100,
         };
-      })
+      }),
     };
   }
 
@@ -322,7 +330,6 @@ class ABTestingService {
         logger.info(`A/B test ${testId} deleted`);
       }
       return deleted;
-
     } catch (error) {
       logger.error(`Error deleting A/B test ${testId}:`, error);
       return false;
@@ -339,9 +346,7 @@ class ABTestingService {
       const testIds = Array.from(this.tests.keys());
       for (const testId of testIds) {
         const test = this.tests.get(testId);
-        if (test && test.status === 'completed' && 
-            test.endDate && 
-            test.endDate < cutoffDate) {
+        if (test && test.status === 'completed' && test.endDate && test.endDate < cutoffDate) {
           this.tests.delete(testId);
           deletedCount++;
         }
@@ -349,7 +354,6 @@ class ABTestingService {
 
       logger.info(`Cleaned up ${deletedCount} completed A/B tests`);
       return deletedCount;
-
     } catch (error) {
       logger.error('Error cleaning up A/B tests:', error);
       return 0;
@@ -382,16 +386,16 @@ class ABTestingService {
   async completeABTest(testId: string): Promise<any> {
     try {
       logger.info(`A/B test ${testId} completed`);
-      
+
       // Return mock results for now
       return {
         testId,
         results: {
           variant_a: { conversions: 15, impressions: 100 },
-          variant_b: { conversions: 18, impressions: 95 }
+          variant_b: { conversions: 18, impressions: 95 },
         },
         completedAt: new Date(),
-        winner: 'variant_b'
+        winner: 'variant_b',
       };
     } catch (error) {
       logger.error('Error completing A/B test:', error);
@@ -399,9 +403,16 @@ class ABTestingService {
     }
   }
 
-  async recordPostResult(testId: string, variantId: string, postId: string, metrics: any): Promise<void> {
+  async recordPostResult(
+    testId: string,
+    variantId: string,
+    postId: string,
+    metrics: any
+  ): Promise<void> {
     try {
-      logger.info(`Recorded result for test ${testId}, variant ${variantId}, post ${postId}`, { metrics });
+      logger.info(`Recorded result for test ${testId}, variant ${variantId}, post ${postId}`, {
+        metrics,
+      });
       // In a full implementation, this would store results in a dedicated ABTest collection
       // For now, we'll use logging for tracking
     } catch (error) {
@@ -419,16 +430,16 @@ class ABTestingService {
     try {
       // Generate caption variations using the existing caption service logic
       const variations: any[] = [];
-      
+
       for (let i = 0; i < count; i++) {
         variations.push({
           id: `variant_${i + 1}`,
           caption: `${prompt} - Variation ${i + 1}`,
           tone: i === 0 ? 'professional' : i === 1 ? 'casual' : 'funny',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
       }
-      
+
       logger.info(`Generated ${variations.length} caption variations`);
       return variations;
     } catch (error) {
@@ -436,10 +447,8 @@ class ABTestingService {
       throw error;
     }
   }
-
-
 }
 
 // Export singleton instance
 export const abTestingService = new ABTestingService();
-export default abTestingService; 
+export default abTestingService;

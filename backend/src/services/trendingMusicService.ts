@@ -2,7 +2,6 @@ import axios from 'axios';
 import { logger } from '../utils/logger';
 import { MusicRecommendationsModel } from '../models/MusicRecommendation';
 
-
 export interface TrendingTrack {
   id: string;
   name: string;
@@ -79,13 +78,13 @@ export class TrendingMusicService {
       const filteredTracks = this.filterTracks(trendingTracks, request);
 
       // Calculate match scores
-      const recommendations = filteredTracks.map(track => ({
+      const recommendations = filteredTracks.map((track) => ({
         track,
         matchScore: this.calculateMatchScore(track, request),
         matchReason: this.generateMatchReason(track, request),
         videoMood: request.videoMood,
         contentType: request.contentType,
-        platformOptimized: this.getPlatformOptimization(track, request.targetPlatforms)
+        platformOptimized: this.getPlatformOptimization(track, request.targetPlatforms),
       }));
 
       // Sort by match score and return top recommendations
@@ -96,9 +95,10 @@ export class TrendingMusicService {
       // Store recommendations for analytics
       await this.storeMusicRecommendations(request.videoId, sortedRecommendations);
 
-      logger.info(`Generated ${sortedRecommendations.length} music recommendations for video: ${request.videoId}`);
+      logger.info(
+        `Generated ${sortedRecommendations.length} music recommendations for video: ${request.videoId}`
+      );
       return sortedRecommendations;
-
     } catch (error) {
       logger.error(`Error getting music recommendations for video ${request.videoId}:`, error);
       return this.getFallbackRecommendations(request);
@@ -115,7 +115,7 @@ export class TrendingMusicService {
         this.getSpotifyTrendingTracks(),
         this.getTikTokTrendingTracks(),
         this.getYouTubeTrendingTracks(),
-        this.getCustomTrendingTracks()
+        this.getCustomTrendingTracks(),
       ]);
 
       // Combine all tracks
@@ -127,7 +127,6 @@ export class TrendingMusicService {
 
       logger.info(`Fetched ${sortedTracks.length} trending tracks from all platforms`);
       return sortedTracks;
-
     } catch (error) {
       logger.error('Error fetching trending tracks:', error);
       return this.getFallbackTracks();
@@ -151,25 +150,31 @@ export class TrendingMusicService {
       }
 
       // Get trending playlists
-      const playlistsResponse = await axios.get('https://api.spotify.com/v1/browse/featured-playlists', {
-        headers: { 'Authorization': `Bearer ${accessToken}` },
-        params: { limit: 10, country: 'US' }
-      });
+      const playlistsResponse = await axios.get(
+        'https://api.spotify.com/v1/browse/featured-playlists',
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: { limit: 10, country: 'US' },
+        }
+      );
 
       const tracks: TrendingTrack[] = [];
 
       // Get tracks from each playlist
       for (const playlist of playlistsResponse.data.playlists.items.slice(0, 3)) {
-        const tracksResponse = await axios.get(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-          params: { limit: 20 }
-        });
+        const tracksResponse = await axios.get(
+          `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: { limit: 20 },
+          }
+        );
 
         for (const item of tracksResponse.data.items) {
           if (item.track && item.track.preview_url) {
             // Get audio features
             const audioFeatures = await this.getSpotifyAudioFeatures(item.track.id, accessToken);
-            
+
             tracks.push({
               id: `spotify_${item.track.id}`,
               name: item.track.name,
@@ -190,7 +195,7 @@ export class TrendingMusicService {
               isExplicit: item.track.explicit,
               tags: this.generateSpotifyTags(item.track, audioFeatures),
               createdAt: new Date(),
-              updatedAt: new Date()
+              updatedAt: new Date(),
             });
           }
         }
@@ -198,7 +203,6 @@ export class TrendingMusicService {
 
       logger.info(`Fetched ${tracks.length} trending tracks from Spotify`);
       return tracks;
-
     } catch (error) {
       logger.error('Error fetching Spotify trending tracks:', error);
       return [];
@@ -235,7 +239,7 @@ export class TrendingMusicService {
           isExplicit: false,
           tags: ['viral', 'trending', 'dance', 'electronic'],
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         {
           id: 'tiktok_trending_2',
@@ -254,13 +258,12 @@ export class TrendingMusicService {
           isExplicit: false,
           tags: ['real-estate', 'professional', 'ambient', 'property'],
           createdAt: new Date(),
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       ];
 
       logger.info(`Fetched ${mockTracks.length} trending tracks from TikTok`);
       return mockTracks;
-
     } catch (error) {
       logger.error('Error fetching TikTok trending tracks:', error);
       return [];
@@ -297,13 +300,12 @@ export class TrendingMusicService {
           isExplicit: false,
           tags: ['trending', 'pop', 'upbeat', 'youtube'],
           createdAt: new Date(),
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       ];
 
       logger.info(`Fetched ${mockTracks.length} trending tracks from YouTube`);
       return mockTracks;
-
     } catch (error) {
       logger.error('Error fetching YouTube trending tracks:', error);
       return [];
@@ -332,7 +334,7 @@ export class TrendingMusicService {
         isExplicit: false,
         tags: ['real-estate', 'professional', 'showcase', 'ambient'],
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       {
         id: 'custom_real_estate_2',
@@ -351,7 +353,7 @@ export class TrendingMusicService {
         isExplicit: false,
         tags: ['luxury', 'inspiring', 'cinematic', 'real-estate'],
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       {
         id: 'custom_cartoon_1',
@@ -370,8 +372,8 @@ export class TrendingMusicService {
         isExplicit: false,
         tags: ['cartoon', 'playful', 'cheerful', 'animated'],
         createdAt: new Date(),
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     ];
 
     logger.info(`Loaded ${customTracks.length} custom trending tracks`);
@@ -384,26 +386,30 @@ export class TrendingMusicService {
   private async getSpotifyAccessToken(): Promise<string | null> {
     try {
       // Check if current token is still valid
-      if (this.spotifyAccessToken && this.spotifyTokenExpiry && new Date() < this.spotifyTokenExpiry) {
+      if (
+        this.spotifyAccessToken &&
+        this.spotifyTokenExpiry &&
+        new Date() < this.spotifyTokenExpiry
+      ) {
         return this.spotifyAccessToken;
       }
 
       // Get new token
-      const response = await axios.post('https://accounts.spotify.com/api/token', 
+      const response = await axios.post(
+        'https://accounts.spotify.com/api/token',
         'grant_type=client_credentials',
         {
           headers: {
-            'Authorization': `Basic ${Buffer.from(`${this.SPOTIFY_CLIENT_ID}:${this.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
+            Authorization: `Basic ${Buffer.from(`${this.SPOTIFY_CLIENT_ID}:${this.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         }
       );
 
       this.spotifyAccessToken = response.data.access_token;
-      this.spotifyTokenExpiry = new Date(Date.now() + (response.data.expires_in * 1000));
+      this.spotifyTokenExpiry = new Date(Date.now() + response.data.expires_in * 1000);
 
       return this.spotifyAccessToken;
-
     } catch (error) {
       logger.error('Error getting Spotify access token:', error);
       return null;
@@ -416,7 +422,7 @@ export class TrendingMusicService {
   private async getSpotifyAudioFeatures(trackId: string, accessToken: string): Promise<any> {
     try {
       const response = await axios.get(`https://api.spotify.com/v1/audio-features/${trackId}`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       return response.data;
     } catch (error) {
@@ -429,7 +435,7 @@ export class TrendingMusicService {
    * Filter tracks based on request criteria
    */
   private filterTracks(tracks: TrendingTrack[], request: MusicMatchRequest): TrendingTrack[] {
-    return tracks.filter(track => {
+    return tracks.filter((track) => {
       // Filter by explicit content
       if (request.excludeExplicit && track.isExplicit) {
         return false;
@@ -450,7 +456,13 @@ export class TrendingMusicService {
       // Filter by content type relevance
       if (request.contentType === 'real_estate') {
         // Prefer professional, ambient, cinematic music for real estate
-        const realEstateGenres = ['ambient', 'cinematic', 'classical', 'electronic', 'instrumental'];
+        const realEstateGenres = [
+          'ambient',
+          'cinematic',
+          'classical',
+          'electronic',
+          'instrumental',
+        ];
         if (!realEstateGenres.includes(track.genre) && !track.tags.includes('real-estate')) {
           // Lower threshold for real estate content
           return track.popularity > 70;
@@ -500,13 +512,13 @@ export class TrendingMusicService {
    */
   private calculateMoodMatch(trackMood: string, videoMood: string): number {
     const moodCompatibility: Record<string, string[]> = {
-      'energetic': ['upbeat', 'exciting', 'dynamic', 'powerful'],
-      'calm': ['peaceful', 'relaxing', 'ambient', 'professional'],
-      'professional': ['corporate', 'clean', 'sophisticated', 'calm'],
-      'upbeat': ['energetic', 'happy', 'positive', 'cheerful'],
-      'dramatic': ['cinematic', 'intense', 'powerful', 'emotional'],
-      'cheerful': ['happy', 'upbeat', 'positive', 'playful'],
-      'inspiring': ['uplifting', 'motivational', 'positive', 'emotional']
+      energetic: ['upbeat', 'exciting', 'dynamic', 'powerful'],
+      calm: ['peaceful', 'relaxing', 'ambient', 'professional'],
+      professional: ['corporate', 'clean', 'sophisticated', 'calm'],
+      upbeat: ['energetic', 'happy', 'positive', 'cheerful'],
+      dramatic: ['cinematic', 'intense', 'powerful', 'emotional'],
+      cheerful: ['happy', 'upbeat', 'positive', 'playful'],
+      inspiring: ['uplifting', 'motivational', 'positive', 'emotional'],
     };
 
     if (trackMood === videoMood) {
@@ -599,9 +611,9 @@ export class TrendingMusicService {
 
     // Platform-specific preferences
     const platformPreferences: Record<string, string[]> = {
-      'instagram': ['pop', 'electronic', 'ambient', 'cinematic'],
-      'tiktok': ['electronic', 'pop', 'upbeat', 'viral'],
-      'youtube': ['cinematic', 'ambient', 'pop', 'electronic']
+      instagram: ['pop', 'electronic', 'ambient', 'cinematic'],
+      tiktok: ['electronic', 'pop', 'upbeat', 'viral'],
+      youtube: ['cinematic', 'ambient', 'pop', 'electronic'],
     };
 
     let score = 0;
@@ -669,11 +681,14 @@ export class TrendingMusicService {
     return optimized;
   }
 
-  private async storeMusicRecommendations(userId: string, recommendations: MusicRecommendation[]): Promise<void> {
+  private async storeMusicRecommendations(
+    userId: string,
+    recommendations: MusicRecommendation[]
+  ): Promise<void> {
     try {
       // Store music recommendations in database
       logger.info(`Storing ${recommendations.length} music recommendations for user ${userId}`);
-      
+
       // Store each recommendation in the database
       for (const rec of recommendations) {
         try {
@@ -706,17 +721,16 @@ export class TrendingMusicService {
               platformOptimized: rec.platformOptimized,
               audioDuration: 120, // Default duration
               audioTempo: rec.track.tempo,
-              audioEnergy: rec.track.energy
+              audioEnergy: rec.track.energy,
             },
             recommendationSource: 'ai_analysis',
-            isUsed: false
+            isUsed: false,
           });
         } catch (error) {
           logger.error(`Failed to store recommendation for track ${rec.track.name}:`, error);
           // Continue with other recommendations
         }
       }
-      
     } catch (error) {
       logger.warn('Could not store music recommendations:', error);
       // Don't fail the request if storage fails
@@ -728,20 +742,19 @@ export class TrendingMusicService {
       // For now, return empty array (no cached recommendations available)
       // In production, this would query the MusicRecommendations collection
       logger.debug(`Checking for cached music recommendations for user ${userId}`);
-      
+
       // Future: Query MusicRecommendations collection
       // const cached = await MusicRecommendationsModel.findOne({
       //   userId,
       //   createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Within last 24 hours
       // }).lean();
-      // 
+      //
       // if (cached && cached.recommendations) {
       //   logger.info(`Found ${cached.recommendations.length} cached recommendations for user ${userId}`);
       //   return cached.recommendations;
       // }
-      
+
       return [];
-      
     } catch (error) {
       logger.error('Error checking cached music recommendations:', error);
       return [];
@@ -755,57 +768,59 @@ export class TrendingMusicService {
     try {
       // Query stored recommendations from database
       logger.info(`Retrieving music recommendations for video ${videoId}`);
-      
+
       // Check for cached recommendations first
       const cached = await MusicRecommendationsModel.findOne({
         videoId,
-        expiresAt: { $gt: new Date() }
+        expiresAt: { $gt: new Date() },
       }).sort({ createdAt: -1 });
 
       if (cached) {
         logger.info(`Found cached music recommendation for video ${videoId}`);
-        return [{
-          track: {
-            id: cached.trackId,
-            name: cached.trackName,
-            artist: cached.artistName,
-            album: cached.album,
-            genre: cached.genre,
-            mood: cached.mood,
-            tempo: cached.tempo,
-            energy: cached.energy,
-            danceability: cached.danceability,
-            valence: cached.valence,
-            popularity: cached.popularity,
-            trendingScore: cached.trendingScore,
-            platform: cached.platform,
-            previewUrl: cached.previewUrl,
-            externalUrl: cached.externalUrl,
-            duration: cached.duration,
-            isExplicit: cached.isExplicit,
-            tags: cached.tags,
-            createdAt: cached.createdAt,
-            updatedAt: cached.updatedAt
+        return [
+          {
+            track: {
+              id: cached.trackId,
+              name: cached.trackName,
+              artist: cached.artistName,
+              album: cached.album,
+              genre: cached.genre,
+              mood: cached.mood,
+              tempo: cached.tempo,
+              energy: cached.energy,
+              danceability: cached.danceability,
+              valence: cached.valence,
+              popularity: cached.popularity,
+              trendingScore: cached.trendingScore,
+              platform: cached.platform,
+              previewUrl: cached.previewUrl,
+              externalUrl: cached.externalUrl,
+              duration: cached.duration,
+              isExplicit: cached.isExplicit,
+              tags: cached.tags,
+              createdAt: cached.createdAt,
+              updatedAt: cached.updatedAt,
+            },
+            matchScore: cached.matchData.matchScore,
+            matchReason: cached.matchData.matchReason,
+            videoMood: cached.matchData.videoMood,
+            contentType: cached.matchData.contentType,
+            platformOptimized: cached.matchData.platformOptimized,
           },
-          matchScore: cached.matchData.matchScore,
-          matchReason: cached.matchData.matchReason,
-          videoMood: cached.matchData.videoMood,
-          contentType: cached.matchData.contentType,
-          platformOptimized: cached.matchData.platformOptimized
-        }];
+        ];
       }
 
       const storedRecs = await MusicRecommendationsModel.find({
         videoId,
         expiresAt: { $gt: new Date() }, // Only active recommendations
-        isUsed: false
+        isUsed: false,
       })
-      .sort({ 'matchData.matchScore': -1 })
-      .limit(10);
+        .sort({ 'matchData.matchScore': -1 })
+        .limit(10);
 
       if (storedRecs.length > 0) {
         // Convert stored recommendations to MusicRecommendation format
-        return storedRecs.map(rec => ({
+        return storedRecs.map((rec) => ({
           track: {
             id: rec.trackId,
             name: rec.trackName,
@@ -826,13 +841,13 @@ export class TrendingMusicService {
             isExplicit: rec.isExplicit,
             tags: rec.tags,
             createdAt: rec.createdAt,
-            updatedAt: rec.updatedAt
+            updatedAt: rec.updatedAt,
           },
           matchScore: rec.matchData.matchScore,
           matchReason: rec.matchData.matchReason,
           videoMood: rec.matchData.videoMood,
           contentType: rec.matchData.contentType,
-          platformOptimized: rec.matchData.platformOptimized
+          platformOptimized: rec.matchData.platformOptimized,
         }));
       }
 
@@ -856,14 +871,14 @@ export class TrendingMusicService {
             isExplicit: false,
             tags: ['corporate', 'upbeat', 'background'],
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
           },
           matchScore: 0.9,
           matchReason: 'High energy match for professional content',
           videoMood: 'professional',
           contentType: 'real_estate' as const,
-          platformOptimized: ['instagram', 'youtube']
-        }
+          platformOptimized: ['instagram', 'youtube'],
+        },
       ];
     } catch (error) {
       logger.error('Error getting stored recommendations:', error);
@@ -876,7 +891,7 @@ export class TrendingMusicService {
    */
   private removeDuplicateTracks(tracks: TrendingTrack[]): TrendingTrack[] {
     const seen = new Set();
-    return tracks.filter(track => {
+    return tracks.filter((track) => {
       const key = `${track.name.toLowerCase()}_${track.artist.toLowerCase()}`;
       if (seen.has(key)) {
         return false;
@@ -896,7 +911,7 @@ export class TrendingMusicService {
 
   private inferMoodFromAudioFeatures(audioFeatures: any): string {
     if (!audioFeatures) return 'neutral';
-    
+
     if (audioFeatures.energy > 0.7 && audioFeatures.valence > 0.7) {
       return 'energetic';
     } else if (audioFeatures.energy < 0.4 && audioFeatures.valence > 0.6) {
@@ -912,36 +927,36 @@ export class TrendingMusicService {
 
   private calculateSpotifyTrendingScore(track: any, playlist: any): number {
     let score = track.popularity / 100;
-    
+
     // Boost score for featured playlists
     if (playlist.name.toLowerCase().includes('trending')) {
       score += 0.2;
     }
-    
+
     return Math.min(score, 1);
   }
 
   private generateSpotifyTags(track: any, audioFeatures: any): string[] {
     const tags = [];
-    
+
     if (audioFeatures?.energy > 0.7) tags.push('energetic');
     if (audioFeatures?.danceability > 0.7) tags.push('danceable');
     if (audioFeatures?.valence > 0.7) tags.push('positive');
     if (track.popularity > 80) tags.push('popular');
-    
+
     return tags;
   }
 
   private getFallbackRecommendations(request: MusicMatchRequest): MusicRecommendation[] {
     const fallbackTracks = this.getFallbackTracks();
-    
-    return fallbackTracks.map(track => ({
+
+    return fallbackTracks.map((track) => ({
       track,
       matchScore: 0.6,
       matchReason: 'Fallback recommendation',
       videoMood: request.videoMood,
       contentType: request.contentType,
-      platformOptimized: request.targetPlatforms
+      platformOptimized: request.targetPlatforms,
     }));
   }
 
@@ -964,11 +979,11 @@ export class TrendingMusicService {
         isExplicit: false,
         tags: ['real-estate', 'fallback'],
         createdAt: new Date(),
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     ];
   }
 }
 
 export const trendingMusicService = new TrendingMusicService();
-export default TrendingMusicService; 
+export default TrendingMusicService;

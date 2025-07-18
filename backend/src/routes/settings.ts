@@ -1,6 +1,6 @@
 import express from 'express';
 import { logger } from '../utils/logger';
-import { User } from '../models/User';
+import User from '../models/User';
 import { connectToDatabase } from '../config/database';
 
 const router = express.Router();
@@ -12,17 +12,17 @@ router.get('/', async (req, res) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
     await connectToDatabase();
-    
+
     const user = await User.findById(userId).select('-password');
     if (!user) {
       return res.status(404).json({
         success: false,
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
@@ -32,15 +32,14 @@ router.get('/', async (req, res) => {
         autoPostingEnabled: user.autoPostingEnabled || false,
         postingTimes: user.postingTimes || [],
         timezone: user.timezone || 'UTC',
-        testMode: user.testMode || false,
-        instagramConnected: !!user.instagramAccessToken
-      }
+        instagramConnected: !!user.instagramAccessToken,
+      },
     });
   } catch (error) {
     logger.error('Error getting settings:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get settings'
+      error: 'Failed to get settings',
     });
   }
 });
@@ -52,18 +51,13 @@ router.put('/', async (req, res) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
     await connectToDatabase();
-    
-    const { 
-      autoPostingEnabled, 
-      postingTimes, 
-      timezone, 
-      testMode 
-    } = req.body;
+
+    const { autoPostingEnabled, postingTimes, timezone } = req.body;
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
@@ -71,8 +65,7 @@ router.put('/', async (req, res) => {
         autoPostingEnabled,
         postingTimes,
         timezone,
-        testMode,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { new: true }
     ).select('-password');
@@ -80,7 +73,7 @@ router.put('/', async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
@@ -90,15 +83,14 @@ router.put('/', async (req, res) => {
         autoPostingEnabled: updatedUser.autoPostingEnabled,
         postingTimes: updatedUser.postingTimes,
         timezone: updatedUser.timezone,
-        testMode: updatedUser.testMode
       },
-      message: 'Settings updated successfully'
+      message: 'Settings updated successfully',
     });
   } catch (error) {
     logger.error('Error updating settings:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to update settings'
+      error: 'Failed to update settings',
     });
   }
 });
@@ -110,7 +102,7 @@ router.post('/instagram', async (req, res) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
@@ -119,7 +111,7 @@ router.post('/instagram', async (req, res) => {
     if (!accessToken || !username) {
       return res.status(400).json({
         success: false,
-        error: 'Access token and username are required'
+        error: 'Access token and username are required',
       });
     }
 
@@ -130,7 +122,7 @@ router.post('/instagram', async (req, res) => {
       {
         instagramAccessToken: accessToken,
         instagramUserId: instagramUserId,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { new: true }
     ).select('-password');
@@ -138,7 +130,7 @@ router.post('/instagram', async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
@@ -147,14 +139,14 @@ router.post('/instagram', async (req, res) => {
       message: 'Instagram account connected successfully',
       data: {
         instagramUserId: updatedUser.instagramUserId,
-        instagramConnected: true
-      }
+        instagramConnected: true,
+      },
     });
   } catch (error) {
     logger.error('Error connecting Instagram:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to connect Instagram account'
+      error: 'Failed to connect Instagram account',
     });
   }
 });
@@ -166,7 +158,7 @@ router.delete('/instagram', async (req, res) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
       });
     }
 
@@ -178,9 +170,9 @@ router.delete('/instagram', async (req, res) => {
         $unset: {
           instagramAccessToken: 1,
           instagramUsername: 1,
-          instagramUserId: 1
+          instagramUserId: 1,
         },
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { new: true }
     ).select('-password');
@@ -188,21 +180,21 @@ router.delete('/instagram', async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        error: 'User not found'
+        error: 'User not found',
       });
     }
 
     return res.json({
       success: true,
-      message: 'Instagram account disconnected successfully'
+      message: 'Instagram account disconnected successfully',
     });
   } catch (error) {
     logger.error('Error disconnecting Instagram:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to disconnect Instagram account'
+      error: 'Failed to disconnect Instagram account',
     });
   }
 });
 
-export default router; 
+export default router;

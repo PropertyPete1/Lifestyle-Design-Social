@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
-import { User } from '../models/User';
+import User from '../models/User';
 import { connectToDatabase } from '../config/database';
 
 const router = Router();
@@ -25,7 +25,7 @@ router.get('/status', authenticateToken, async (req: Request, res: Response) => 
   try {
     await connectToDatabase();
     const userId = req.user!.id;
-    
+
     // Get user to check connected platforms
     const user = await User.findById(userId);
     if (!user) {
@@ -43,7 +43,7 @@ router.get('/status', authenticateToken, async (req: Request, res: Response) => 
         followerCount: 1250,
         nextPostTime: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), // 3 hours from now
         health: 'healthy',
-        message: 'All systems operational'
+        message: 'All systems operational',
       },
       {
         platform: 'TikTok',
@@ -54,7 +54,7 @@ router.get('/status', authenticateToken, async (req: Request, res: Response) => 
         followerCount: 892,
         nextPostTime: new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(), // 1 hour from now
         health: 'healthy',
-        message: 'Ready to post'
+        message: 'Ready to post',
       },
       {
         platform: 'YouTube',
@@ -65,8 +65,8 @@ router.get('/status', authenticateToken, async (req: Request, res: Response) => 
         followerCount: 0,
         nextPostTime: undefined,
         health: 'warning',
-        message: 'Not connected - Click to set up'
-      }
+        message: 'Not connected - Click to set up',
+      },
     ];
 
     return res.json(platforms);
@@ -84,11 +84,11 @@ router.post('/connect/:platform', authenticateToken, async (req: Request, res: R
     await connectToDatabase();
     const userId = req.user!.id;
     const platform = req.params.platform.toLowerCase();
-    
+
     const validPlatforms = ['instagram', 'tiktok', 'youtube', 'facebook'];
     if (!validPlatforms.includes(platform)) {
-      return res.status(400).json({ 
-        error: 'Invalid platform. Supported platforms: instagram, tiktok, youtube, facebook' 
+      return res.status(400).json({
+        error: 'Invalid platform. Supported platforms: instagram, tiktok, youtube, facebook',
       });
     }
 
@@ -99,37 +99,36 @@ router.post('/connect/:platform', authenticateToken, async (req: Request, res: R
         step2: 'Create Instagram Basic Display App',
         step3: 'Get your Instagram API credentials',
         step4: 'Add redirect URL: http://localhost:3000/auth/instagram/callback',
-        authUrl: 'https://developers.facebook.com/docs/instagram-basic-display-api'
+        authUrl: 'https://developers.facebook.com/docs/instagram-basic-display-api',
       },
       youtube: {
         step1: 'Go to Google Cloud Console',
         step2: 'Enable YouTube Data API v3',
         step3: 'Create OAuth 2.0 credentials',
         step4: 'Add redirect URL: http://localhost:3000/auth/youtube/callback',
-        authUrl: 'https://console.cloud.google.com/apis/library/youtube.googleapis.com'
+        authUrl: 'https://console.cloud.google.com/apis/library/youtube.googleapis.com',
       },
       tiktok: {
         step1: 'Apply for TikTok for Developers',
         step2: 'Wait for approval (can take several days)',
         step3: 'Set up OAuth integration',
         step4: 'Add redirect URL: http://localhost:3000/auth/tiktok/callback',
-        authUrl: 'https://developers.tiktok.com/'
-      }
+        authUrl: 'https://developers.tiktok.com/',
+      },
     };
 
     return res.json({
       success: true,
-      message: `${platform} connection initiated`,
-      platform: platform,
-      status: 'pending_setup',
-      instructions: connectionInstructions[platform as keyof typeof connectionInstructions] || {
-        step1: 'Please check platform documentation',
-        authUrl: '#'
-      }
+      message: `To connect ${platform}, follow these steps:`,
+      instructions: connectionInstructions[platform as keyof typeof connectionInstructions],
+      mockConnection: true,
     });
   } catch (error) {
-    logger.error('Connect platform error:', error);
-    return res.status(500).json({ error: 'Failed to connect platform' });
+    logger.error(`Error connecting ${req.params.platform}:`, error);
+    return res.status(500).json({
+      success: false,
+      error: `Failed to connect ${req.params.platform}`,
+    });
   }
 });
 
@@ -139,18 +138,63 @@ router.post('/connect/:platform', authenticateToken, async (req: Request, res: R
 router.delete('/disconnect/:platform', authenticateToken, async (req: Request, res: Response) => {
   try {
     await connectToDatabase();
+    const userId = req.user!.id;
     const platform = req.params.platform.toLowerCase();
+
+    const validPlatforms = ['instagram', 'tiktok', 'youtube'];
+    if (!validPlatforms.includes(platform)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid platform. Supported platforms: instagram, tiktok, youtube',
+      });
+    }
+
+    let updateFields = {};
     
-    // For demo purposes, always return success
+    switch (platform) {
+      case 'instagram':
+        updateFields = {
+          $unset: {
+            instagramAccessToken: 1,
+            instagramRefreshToken: 1,
+            instagramUserId: 1,
+          },
+        };
+        break;
+      case 'tiktok':
+        updateFields = {
+          $unset: {
+            tiktokAccessToken: 1,
+            tiktokUserId: 1,
+          },
+        };
+        break;
+      case 'youtube':
+        updateFields = {
+          $unset: {
+            youtubeAccessToken: 1,
+            youtubeRefreshToken: 1,
+            youtubeChannelId: 1,
+          },
+        };
+        break;
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      ...updateFields,
+      updatedAt: new Date(),
+    });
+
     return res.json({
       success: true,
       message: `${platform} disconnected successfully`,
-      platform: platform,
-      status: 'disconnected'
     });
   } catch (error) {
-    logger.error('Disconnect platform error:', error);
-    return res.status(500).json({ error: 'Failed to disconnect platform' });
+    logger.error(`Error disconnecting ${req.params.platform}:`, error);
+    return res.status(500).json({
+      success: false,
+      error: `Failed to disconnect ${req.params.platform}`,
+    });
   }
 });
 
@@ -168,7 +212,7 @@ router.get('/supported', async (_req: Request, res: Response) => {
         maxVideoLength: 60,
         maxFileSize: '100MB',
         supportedFormats: ['mp4', 'mov'],
-        apiDocumentation: 'https://developers.facebook.com/docs/instagram-basic-display-api'
+        apiDocumentation: 'https://developers.facebook.com/docs/instagram-basic-display-api',
       },
       {
         id: 'tiktok',
@@ -178,7 +222,7 @@ router.get('/supported', async (_req: Request, res: Response) => {
         maxVideoLength: 180,
         maxFileSize: '500MB',
         supportedFormats: ['mp4', 'mov'],
-        apiDocumentation: 'https://developers.tiktok.com/'
+        apiDocumentation: 'https://developers.tiktok.com/',
       },
       {
         id: 'youtube',
@@ -188,14 +232,14 @@ router.get('/supported', async (_req: Request, res: Response) => {
         maxVideoLength: 900, // 15 minutes for unverified accounts
         maxFileSize: '2GB',
         supportedFormats: ['mp4', 'mov', 'avi'],
-        apiDocumentation: 'https://developers.google.com/youtube/v3'
-      }
+        apiDocumentation: 'https://developers.google.com/youtube/v3',
+      },
     ];
 
     return res.json({
       success: true,
       platforms: supportedPlatforms,
-      totalPlatforms: supportedPlatforms.length
+      totalPlatforms: supportedPlatforms.length,
     });
   } catch (error) {
     logger.error('Get supported platforms error:', error);
@@ -210,7 +254,7 @@ router.get('/analytics/:platform', authenticateToken, async (req: Request, res: 
   try {
     const platform = req.params.platform.toLowerCase();
     const { days = 30 } = req.query;
-    
+
     // Mock analytics data for the specified platform
     const analytics = {
       platform: platform,
@@ -225,14 +269,14 @@ router.get('/analytics/:platform', authenticateToken, async (req: Request, res: 
         caption: 'Beautiful real estate property showcase',
         likes: Math.floor(Math.random() * 500) + 50,
         comments: Math.floor(Math.random() * 50) + 5,
-        shares: Math.floor(Math.random() * 25) + 2
-      }
+        shares: Math.floor(Math.random() * 25) + 2,
+      },
     };
 
     return res.json({
       success: true,
       data: analytics,
-      message: `Analytics for ${platform} retrieved successfully`
+      message: `Analytics for ${platform} retrieved successfully`,
     });
   } catch (error) {
     logger.error('Get platform analytics error:', error);
@@ -240,4 +284,56 @@ router.get('/analytics/:platform', authenticateToken, async (req: Request, res: 
   }
 });
 
-export default router; 
+// @route   GET /api/platforms/connections
+// @desc    Get user's platform connections status
+// @access  Private
+router.get('/connections', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    await connectToDatabase();
+    const userId = req.user!.id;
+
+    const user = await User.findById(userId).select(
+      'instagramAccessToken instagramUserId tiktokAccessToken tiktokUserId youtubeAccessToken youtubeChannelId'
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const connections = {
+      instagram: {
+        connected: !!user.instagramAccessToken,
+        username: user.instagramUserId || '',
+        lastSync: null, // Will be implemented later
+      },
+      tiktok: {
+        connected: !!user.tiktokAccessToken,
+        username: user.tiktokUserId || '',
+        lastSync: null,
+      },
+      youtube: {
+        connected: !!user.youtubeAccessToken,
+        username: user.youtubeChannelId || '',
+        lastSync: null,
+      },
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        connections,
+      },
+    });
+  } catch (error) {
+    logger.error('Error fetching platform connections:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch platform connections',
+    });
+  }
+});
+
+export default router;

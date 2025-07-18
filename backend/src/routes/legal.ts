@@ -98,7 +98,7 @@ For questions about these terms, contact us at:
 ## 12. Governing Law
 
 These terms are governed by the laws of [Your Jurisdiction].
-    `
+    `,
   });
 });
 
@@ -251,7 +251,7 @@ You may file complaints with:
 - Your local data protection authority
 - Our customer support team
 - Relevant social media platforms
-    `
+    `,
   });
 });
 
@@ -266,12 +266,12 @@ router.get('/api-status', (_req, res) => {
       tiktok: 'operational',
       youtube: 'operational',
       database: 'operational',
-      videoProcessing: 'operational'
+      videoProcessing: 'operational',
     },
     uptime: process.uptime(),
     memory: process.memoryUsage(),
     platform: process.platform,
-    nodeVersion: process.version
+    nodeVersion: process.version,
   });
 });
 
@@ -286,15 +286,15 @@ router.get('/compliance', (_req, res) => {
       apiCompliance: {
         instagram: true,
         tiktok: true,
-        youtube: true
+        youtube: true,
       },
       securityMeasures: true,
       dataRetention: true,
-      userRights: true
+      userRights: true,
     },
     lastAudit: '2024-01-15',
-    nextAudit: '2024-07-15'
+    nextAudit: '2024-07-15',
   });
 });
 
-export default router; 
+export default router;

@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { logger } from '../utils/logger';
 import { connectToDatabase } from '../config/database';
-import { User } from '../models/User';
+import User from '../models/User';
 
 export interface WatermarkSettings {
   enabled: boolean;
@@ -44,21 +44,24 @@ export class WatermarkService {
    */
   async applyWatermark(videoPath: string, userId: string): Promise<WatermarkResult> {
     const startTime = Date.now();
-    
+
     try {
       // Get user's watermark settings
       const settings = await this.getUserWatermarkSettings(userId);
-      
+
       if (!settings.enabled || !settings.logoPath) {
         return {
           success: false,
-          error: 'Watermark not enabled or logo path not set'
+          error: 'Watermark not enabled or logo path not set',
         };
       }
 
       // Generate unique output filename
       const inputFilename = path.basename(videoPath, path.extname(videoPath));
-      const outputPath = path.join(this.OUTPUT_DIR, `${inputFilename}_watermarked${path.extname(videoPath)}`);
+      const outputPath = path.join(
+        this.OUTPUT_DIR,
+        `${inputFilename}_watermarked${path.extname(videoPath)}`
+      );
 
       // Apply watermark
       await this.processVideoWithWatermark(videoPath, settings.logoPath, outputPath, settings);
@@ -68,14 +71,13 @@ export class WatermarkService {
       return {
         success: true,
         outputPath,
-        processingTime
+        processingTime,
       };
-
     } catch (error) {
       logger.error('Error applying watermark:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -88,7 +90,7 @@ export class WatermarkService {
       // Validate image
       // Sharp removed for production deployment - using placeholder metadata
       const metadata = { width: 200, height: 60 };
-      
+
       if (!metadata.width || !metadata.height) {
         throw new Error('Invalid image file');
       }
@@ -108,7 +110,6 @@ export class WatermarkService {
       logger.info(`Watermark logo uploaded for user ${userId}: ${logoPath}`);
 
       return logoPath;
-
     } catch (error) {
       logger.error('Error uploading watermark logo:', error);
       throw new Error('Failed to upload watermark logo');
@@ -121,17 +122,17 @@ export class WatermarkService {
   async generatePreview(userId: string): Promise<string> {
     try {
       const settings = await this.getUserWatermarkSettings(userId);
-      
+
       if (!settings.logoPath) {
         throw new Error('No watermark logo set');
       }
 
       // Create sample video
       const sampleVideoPath = await this.createSampleVideo();
-      
+
       // Apply watermark
       const result = await this.applyWatermark(sampleVideoPath, userId);
-      
+
       if (!result.success || !result.outputPath) {
         throw new Error(result.error || 'Failed to generate preview');
       }
@@ -140,7 +141,6 @@ export class WatermarkService {
       await this.cleanup(sampleVideoPath);
 
       return result.outputPath;
-
     } catch (error) {
       logger.error('Error generating watermark preview:', error);
       throw new Error('Failed to generate watermark preview');
@@ -150,12 +150,15 @@ export class WatermarkService {
   /**
    * Update user's watermark settings
    */
-  async updateWatermarkSettings(userId: string, settings: Partial<WatermarkSettings>): Promise<WatermarkSettings> {
+  async updateWatermarkSettings(
+    userId: string,
+    settings: Partial<WatermarkSettings>
+  ): Promise<WatermarkSettings> {
     try {
       await connectToDatabase();
 
       const updateData: any = {
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       if (settings.enabled !== undefined) {
@@ -178,7 +181,6 @@ export class WatermarkService {
 
       // Return updated settings
       return await this.getUserWatermarkSettings(userId);
-
     } catch (error) {
       logger.error('Error updating watermark settings:', error);
       throw new Error('Failed to update watermark settings');
@@ -191,8 +193,10 @@ export class WatermarkService {
   async getUserWatermarkSettings(userId: string): Promise<WatermarkSettings> {
     try {
       await connectToDatabase();
-      
-      const user = await User.findById(userId).select('watermarkEnabled watermarkLogoPath watermarkPosition watermarkOpacity watermarkSizePercent');
+
+      const user = await User.findById(userId).select(
+        'watermarkEnabled watermarkLogoPath watermarkPosition watermarkOpacity watermarkSizePercent'
+      );
 
       if (!user) {
         throw new Error('User not found');
@@ -202,10 +206,9 @@ export class WatermarkService {
         enabled: Boolean(user.watermarkEnabled) || false,
         logoPath: user.watermarkLogoPath || null,
         position: user.watermarkPosition || 'bottom-right',
-        opacity: user.watermarkOpacity || 0.70,
-        sizePercent: user.watermarkSizePercent || 10.00
+        opacity: user.watermarkOpacity || 0.7,
+        sizePercent: user.watermarkSizePercent || 10.0,
       };
-
     } catch (error) {
       logger.error('Error getting watermark settings:', error);
       throw error;
@@ -216,9 +219,9 @@ export class WatermarkService {
    * Private helper methods
    */
   private async processVideoWithWatermark(
-    inputPath: string, 
-    logoPath: string, 
-    outputPath: string, 
+    inputPath: string,
+    logoPath: string,
+    outputPath: string,
     settings: WatermarkSettings
   ): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -229,7 +232,7 @@ export class WatermarkService {
         .input(logoPath)
         .complexFilter([
           `[1:v]scale=100:100[logo]`,
-          `[0:v][logo]overlay=${position.x}:${position.y}[output]`
+          `[0:v][logo]overlay=${position.x}:${position.y}[output]`,
         ])
         .map('[output]')
         .output(outputPath)
@@ -239,9 +242,12 @@ export class WatermarkService {
     });
   }
 
-  private calculateWatermarkPosition(position: string, sizePercent: number): { x: string; y: string } {
+  private calculateWatermarkPosition(
+    position: string,
+    sizePercent: number
+  ): { x: string; y: string } {
     const margin = 20;
-    const size = `(main_w*${sizePercent/100})`;
+    const size = `(main_w*${sizePercent / 100})`;
 
     switch (position) {
       case 'top-left':
@@ -262,7 +268,7 @@ export class WatermarkService {
   private async updateUserWatermarkLogo(userId: string, logoPath: string): Promise<void> {
     await User.findByIdAndUpdate(userId, {
       watermarkLogoPath: logoPath,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 
@@ -277,7 +283,7 @@ export class WatermarkService {
   private async createSampleVideo(): Promise<string> {
     // Create a simple test video for preview purposes
     const samplePath = path.join(this.OUTPUT_DIR, 'sample_video.mp4');
-    
+
     return new Promise((resolve, reject) => {
       ffmpeg()
         .input('color=blue:size=1920x1080:duration=5')
@@ -290,4 +296,4 @@ export class WatermarkService {
   }
 }
 
-export const watermarkService = new WatermarkService(); 
+export const watermarkService = new WatermarkService();

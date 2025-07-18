@@ -37,9 +37,11 @@ yarn-error.log*
 # Secure environment files
 .env
 .env.*
+.env.local
 backend/.env
 client/.env
 frontend/.env
+frontend/.env.local
 
 # Sensitive API tokens
 ghp_*

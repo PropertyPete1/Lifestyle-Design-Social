@@ -34,37 +34,37 @@ export interface CaptionTemplate {
 
 /**
  * Production-Ready Caption Generation Service
- * 
+ *
  * This service generates AI-powered captions for real estate videos with:
  * - Template-based generation with customizable tones
- * - Hashtag optimization based on performance analytics  
+ * - Hashtag optimization based on performance analytics
  * - Database storage for analytics and reuse
  * - Multi-platform optimization (Instagram, TikTok, YouTube)
- * 
+ *
  * Models Used:
  * - CaptionModel: Stores generated captions with performance metrics
  * - HashtagModel: Manages hashtag performance analytics and trending data
  * - VideoModel: Video metadata and content analysis
- * 
+ *
  * Future Enhancements:
  * - AI-powered mood detection from video content
- * - Real-time hashtag trending analysis  
+ * - Real-time hashtag trending analysis
  * - A/B testing for caption performance optimization
  */
 export class CaptionGenerationService {
   private videoModel: typeof Video;
-  
+
   /**
    * NOTE: Advanced Model Integration Placeholders
-   * 
+   *
    * The following models are planned for future implementation:
-   * 
+   *
    * CaptionModel: Will store custom caption templates, performance metrics,
    * and user-specific caption preferences for enhanced personalization.
-   * 
+   *
    * HashtagModel: Will store hashtag performance data, trending analysis,
    * and industry-specific hashtag recommendations for improved reach.
-   * 
+   *
    * Current implementation uses built-in templates and hashtag generation
    * which provides full functionality for production use.
    */
@@ -86,7 +86,10 @@ export class CaptionGenerationService {
       }
 
       // Get caption template based on video category and tone
-      const template = await this.getCaptionTemplate(video.category, options.tone || 'professional');
+      const template = await this.getCaptionTemplate(
+        video.category,
+        options.tone || 'professional'
+      );
 
       // Generate caption using template
       const caption = await this.fillCaptionTemplate(template, video, options);
@@ -114,11 +117,11 @@ export class CaptionGenerationService {
 
       // Caption data is stored as part of the Post when scheduling/posting
       // This service generates the content, storage happens in scheduling service
-      logger.debug('Generated caption', { 
+      logger.debug('Generated caption', {
         userId: options.videoId,
         captionLength: caption.length,
         hashtagCount: hashtags.length,
-        tone: options.tone || 'professional'
+        tone: options.tone || 'professional',
       });
 
       // Store generated caption in CaptionModel for future reference and analytics
@@ -134,7 +137,7 @@ export class CaptionGenerationService {
           callToAction: template.callToAction,
           category: 'real_estate', // Default category
           isTemplate: false,
-          generatedAt: new Date()
+          generatedAt: new Date(),
         });
       } catch (error) {
         logger.error('Failed to store generated caption:', error);
@@ -150,7 +153,7 @@ export class CaptionGenerationService {
 
   /**
    * Get custom caption template for user
-   * 
+   *
    * Production Implementation:
    * - Queries CaptionModel for user-specific templates
    * - Applies performance-based template selection
@@ -160,19 +163,18 @@ export class CaptionGenerationService {
     try {
       /**
        * NOTE: CaptionModel Integration Placeholder
-       * 
+       *
        * Future implementation will:
        * 1. Query CaptionModel for user-specific templates
        * 2. Return templates with performance metrics
        * 3. Support A/B testing of different templates
-       * 
+       *
        * Current implementation provides comprehensive built-in templates
        * that cover all major real estate content categories and tones.
        */
-      
+
       // For now, use built-in templates (fully functional)
       return this.getDefaultTemplate(category, tone);
-      
     } catch (error) {
       logger.error('Failed to get caption template:', error);
       return this.getDefaultTemplate(category, tone);
@@ -202,7 +204,7 @@ export class CaptionGenerationService {
         emojis: ['🏠', '✨', '💫'],
         callToAction: 'Let me know what you think!',
       },
-      'cartoon_funny': {
+      cartoon_funny: {
         id: 'default_cartoon',
         template: '😂 Real estate agents be like... {funnyScenario} {callToAction}',
         tone: 'funny',
@@ -211,7 +213,7 @@ export class CaptionGenerationService {
         emojis: ['😂', '🤣', '😅'],
         callToAction: 'Tag a realtor friend!',
       },
-      'cartoon_professional': {
+      cartoon_professional: {
         id: 'default_cartoon_professional',
         template: 'Real estate humor: {scenario} | {lesson} | {callToAction}',
         tone: 'professional',
@@ -233,7 +235,11 @@ export class CaptionGenerationService {
   /**
    * Fill caption template with video data
    */
-  private async fillCaptionTemplate(template: CaptionTemplate, video: any, options: CaptionGenerationOptions): Promise<string> {
+  private async fillCaptionTemplate(
+    template: CaptionTemplate,
+    video: any,
+    options: CaptionGenerationOptions
+  ): Promise<string> {
     let caption = template.template;
 
     // Replace placeholders with actual data
@@ -276,10 +282,10 @@ export class CaptionGenerationService {
       const topHashtags = await Hashtag.find({
         category: category === 'real_estate' ? 'real_estate' : 'trending',
         isActive: true,
-        'performance.averageEngagement': { $gte: 0.05 } // Filter for good performing hashtags
+        'performance.averageEngagement': { $gte: 0.05 }, // Filter for good performing hashtags
       })
-      .sort({ 'performance.averageEngagement': -1 })
-      .limit(30);
+        .sort({ 'performance.averageEngagement': -1 })
+        .limit(30);
 
       if (topHashtags.length > 0) {
         // Return hashtags sorted by performance
@@ -290,7 +296,7 @@ export class CaptionGenerationService {
       const { HashtagLibrary } = await import('../models/HashtagLibrary');
       const hashtagDocs = await HashtagLibrary.find({
         category: category === 'real_estate' ? 'real_estate' : 'trending',
-        isActive: true
+        isActive: true,
       }).limit(30);
 
       if (hashtagDocs.length > 0) {
@@ -313,24 +319,72 @@ export class CaptionGenerationService {
   private getDefaultHashtags(category: string, tone: string): string[] {
     const defaultHashtags: Record<string, string[]> = {
       'real-estate_professional': [
-        '#realestate', '#luxuryhomes', '#property', '#homesforsale', '#realestateagent',
-        '#luxuryrealestate', '#dreamhome', '#homeselling', '#homebuying', '#realestateinvesting',
-        '#centraltexas', '#texasrealestate', '#austinhomes', '#luxuryproperties', '#realestatephotography',
+        '#realestate',
+        '#luxuryhomes',
+        '#property',
+        '#homesforsale',
+        '#realestateagent',
+        '#luxuryrealestate',
+        '#dreamhome',
+        '#homeselling',
+        '#homebuying',
+        '#realestateinvesting',
+        '#centraltexas',
+        '#texasrealestate',
+        '#austinhomes',
+        '#luxuryproperties',
+        '#realestatephotography',
       ],
       'real-estate_casual': [
-        '#realestate', '#homes', '#property', '#dreamhome', '#homegoals',
-        '#realestateagent', '#homesforsale', '#homebuying', '#homeselling', '#realestateinvesting',
-        '#centraltexas', '#texasrealestate', '#austinhomes', '#luxuryhomes', '#realestatephotography',
+        '#realestate',
+        '#homes',
+        '#property',
+        '#dreamhome',
+        '#homegoals',
+        '#realestateagent',
+        '#homesforsale',
+        '#homebuying',
+        '#homeselling',
+        '#realestateinvesting',
+        '#centraltexas',
+        '#texasrealestate',
+        '#austinhomes',
+        '#luxuryhomes',
+        '#realestatephotography',
       ],
-      'cartoon_funny': [
-        '#realestatehumor', '#realtorlife', '#funny', '#cartoon', '#realestateagent',
-        '#realtorhumor', '#realestatefunny', '#realtorproblems', '#realestatecartoon', '#funnyrealtor',
-        '#realestatememes', '#realtormemes', '#realestatehumor', '#realtorlife', '#realestatefun',
+      cartoon_funny: [
+        '#realestatehumor',
+        '#realtorlife',
+        '#funny',
+        '#cartoon',
+        '#realestateagent',
+        '#realtorhumor',
+        '#realestatefunny',
+        '#realtorproblems',
+        '#realestatecartoon',
+        '#funnyrealtor',
+        '#realestatememes',
+        '#realtormemes',
+        '#realestatehumor',
+        '#realtorlife',
+        '#realestatefun',
       ],
-      'cartoon_professional': [
-        '#realestate', '#realtorhumor', '#realestatehumor', '#realestateagent', '#realtorlife',
-        '#realestatecartoon', '#realestatefun', '#realtorhumor', '#realestatefunny', '#realtorproblems',
-        '#realestatememes', '#realtormemes', '#realestatehumor', '#realtorlife', '#realestatefun',
+      cartoon_professional: [
+        '#realestate',
+        '#realtorhumor',
+        '#realestatehumor',
+        '#realestateagent',
+        '#realtorlife',
+        '#realestatecartoon',
+        '#realestatefun',
+        '#realtorhumor',
+        '#realestatefunny',
+        '#realtorproblems',
+        '#realestatememes',
+        '#realtormemes',
+        '#realestatehumor',
+        '#realtorlife',
+        '#realestatefun',
       ],
     };
 
@@ -345,7 +399,7 @@ export class CaptionGenerationService {
   private getEmojisForCategory(category: string): string[] {
     const emojiMap: Record<string, string[]> = {
       'real-estate': ['🏠', '💰', '📍', '✨', '💫', '🔥', '💎', '🏡', '🌆', '🌇'],
-      'cartoon': ['😂', '🤣', '😅', '😊', '🤪', '😎', '🤔', '💡', '🎯', '🎪'],
+      cartoon: ['😂', '🤣', '😅', '😊', '🤪', '😎', '🤔', '💡', '🎯', '🎪'],
     };
 
     const emojis = emojiMap[category] || emojiMap['real-estate'];
@@ -367,7 +421,9 @@ export class CaptionGenerationService {
       'the eternal "is this a good investment?" question',
     ];
     const selected = scenarios[Math.floor(Math.random() * scenarios.length)];
-    return selected || scenarios[0] || 'when clients ask "is this the final price?" for the 10th time';
+    return (
+      selected || scenarios[0] || 'when clients ask "is this the final price?" for the 10th time'
+    );
   }
 
   /**
@@ -418,20 +474,22 @@ export class CaptionGenerationService {
     try {
       // Get caption statistics from CaptionModel
       const captionStats = await Caption.aggregate([
-        { $group: {
-          _id: null,
-          totalCaptions: { $sum: 1 },
-          averageLength: { $avg: '$length' },
-          tones: { $push: '$tone' },
-          allHashtags: { $push: '$hashtags' }
-        }}
+        {
+          $group: {
+            _id: null,
+            totalCaptions: { $sum: 1 },
+            averageLength: { $avg: '$length' },
+            tones: { $push: '$tone' },
+            allHashtags: { $push: '$hashtags' },
+          },
+        },
       ]);
 
       if (captionStats.length === 0) {
         // Fallback to Post model statistics
         const { Post } = await import('../models/Post');
         const posts = await Post.find({ autoGenerated: true });
-        
+
         if (posts.length === 0) {
           return {
             totalGenerated: 0,
@@ -442,17 +500,19 @@ export class CaptionGenerationService {
         }
 
         const totalGenerated = posts.length;
-        const averageLength = posts.reduce((sum: number, post: any) => sum + (post.content?.length || 0), 0) / totalGenerated;
-        
+        const averageLength =
+          posts.reduce((sum: number, post: any) => sum + (post.content?.length || 0), 0) /
+          totalGenerated;
+
         const hashtagCounts: Record<string, number> = {};
         posts.forEach((post: any) => {
           post.hashtags?.forEach((hashtag: string) => {
             hashtagCounts[hashtag] = (hashtagCounts[hashtag] || 0) + 1;
           });
         });
-        
+
         const mostUsedHashtags = Object.entries(hashtagCounts)
-          .sort(([,a], [,b]) => b - a)
+          .sort(([, a], [, b]) => b - a)
           .slice(0, 10)
           .map(([hashtag]) => hashtag);
 
@@ -466,23 +526,23 @@ export class CaptionGenerationService {
 
       // Process CaptionModel statistics
       const stats = captionStats[0];
-      
+
       // Count tone usage
       const toneCount: Record<string, number> = {};
       stats.tones.forEach((tone: string) => {
         toneCount[tone] = (toneCount[tone] || 0) + 1;
       });
-      const mostUsedTone = Object.entries(toneCount)
-        .sort(([,a], [,b]) => b - a)[0]?.[0] || 'professional';
+      const mostUsedTone =
+        Object.entries(toneCount).sort(([, a], [, b]) => b - a)[0]?.[0] || 'professional';
 
       // Count hashtag usage
       const hashtagCounts: Record<string, number> = {};
       stats.allHashtags.flat().forEach((hashtag: string) => {
         hashtagCounts[hashtag] = (hashtagCounts[hashtag] || 0) + 1;
       });
-      
+
       const mostUsedHashtags = Object.entries(hashtagCounts)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 10)
         .map(([hashtag]) => hashtag);
 
@@ -500,7 +560,7 @@ export class CaptionGenerationService {
 
   /**
    * Save caption template for reuse
-   * 
+   *
    * Production Implementation:
    * - Stores template in CaptionModel with user association
    * - Tracks template performance across uses
@@ -510,20 +570,19 @@ export class CaptionGenerationService {
     try {
       /**
        * NOTE: CaptionModel Integration Placeholder
-       * 
+       *
        * Future implementation will:
        * 1. Store template in CaptionModel with user association
        * 2. Track template performance metrics
        * 3. Enable template sharing between team members
-       * 
+       *
        * Current implementation logs the template for development tracking
        * and returns a generated ID for frontend compatibility.
        */
-      
+
       const templateId = `custom_${Date.now()}`;
       logger.info(`Would save custom caption template: ${templateId}`, template);
       return templateId;
-      
     } catch (error) {
       logger.error('Failed to save custom template:', error);
       throw new Error('Failed to save custom caption template');
@@ -532,7 +591,7 @@ export class CaptionGenerationService {
 
   /**
    * Get hashtag performance analytics
-   * 
+   *
    * Production Implementation:
    * - Queries HashtagModel for detailed performance data
    * - Provides engagement analytics and trending insights
@@ -544,39 +603,49 @@ export class CaptionGenerationService {
 
       /**
        * NOTE: HashtagModel Integration Placeholder
-       * 
+       *
        * Future implementation will:
        * 1. Query HashtagModel for performance data
        * 2. Return hashtags with trending scores
        * 3. Support location-based and time-based hashtag optimization
-       * 
+       *
        * Current implementation provides comprehensive hashtag generation
        * based on real estate industry best practices and keyword analysis.
        */
 
       // Use comprehensive built-in hashtag generation (fully functional)
       const hashtags = await this.generateHashtagsFromKeywords(keywords, maxCount);
-      
+
       logger.info(`Generated ${hashtags.length} trending hashtags`);
       return hashtags;
-
-         } catch (error) {
-       logger.error('Failed to generate trending hashtags:', error);
-       return this.getDefaultHashtagsByCount(maxCount);
-     }
+    } catch (error) {
+      logger.error('Failed to generate trending hashtags:', error);
+      return this.getDefaultHashtagsByCount(maxCount);
+    }
   }
 
   /**
    * Generate hashtags from keywords (built-in implementation)
    */
-  private async generateHashtagsFromKeywords(keywords: string[], maxCount: number): Promise<string[]> {
+  private async generateHashtagsFromKeywords(
+    keywords: string[],
+    maxCount: number
+  ): Promise<string[]> {
     const baseHashtags = [
-      '#realestate', '#realtor', '#property', '#home', '#house',
-      '#listing', '#forsale', '#investment', '#dreamhome', '#newlisting'
+      '#realestate',
+      '#realtor',
+      '#property',
+      '#home',
+      '#house',
+      '#listing',
+      '#forsale',
+      '#investment',
+      '#dreamhome',
+      '#newlisting',
     ];
 
-    const keywordHashtags = keywords.map(keyword => 
-      `#${keyword.toLowerCase().replace(/\s+/g, '')}`
+    const keywordHashtags = keywords.map(
+      (keyword) => `#${keyword.toLowerCase().replace(/\s+/g, '')}`
     );
 
     const combinedHashtags = [...baseHashtags, ...keywordHashtags];
@@ -588,8 +657,16 @@ export class CaptionGenerationService {
    */
   private getDefaultHashtagsByCount(maxCount: number): string[] {
     const defaultHashtags = [
-      '#realestate', '#property', '#home', '#realtor', '#listing',
-      '#forsale', '#dreamhome', '#investment', '#newlisting', '#homebuying'
+      '#realestate',
+      '#property',
+      '#home',
+      '#realtor',
+      '#listing',
+      '#forsale',
+      '#dreamhome',
+      '#investment',
+      '#newlisting',
+      '#homebuying',
     ];
     return defaultHashtags.slice(0, maxCount);
   }
@@ -607,7 +684,7 @@ export class CaptionGenerationService {
       videoId,
       tone: options?.tone || 'professional',
       includeHashtags: true,
-      ...options
+      ...options,
     });
   }
 }
@@ -615,4 +692,4 @@ export class CaptionGenerationService {
 // Export singleton instance for backwards compatibility
 export const captionGenerationService = new CaptionGenerationService();
 
-export default CaptionGenerationService; 
+export default CaptionGenerationService;

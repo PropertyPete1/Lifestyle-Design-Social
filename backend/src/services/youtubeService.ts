@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { UserModel } from '../models/User';
+import User from '../models/User';
 
 export interface YouTubePostOptions {
   videoPath: string;
@@ -40,10 +40,10 @@ export interface YouTubeAccountInfo {
 }
 
 export class YouTubeService {
-  private userModel: typeof UserModel;
+  private userModel: typeof User;
 
   constructor() {
-    this.userModel = UserModel;
+    this.userModel = User;
   }
 
   /**
@@ -61,10 +61,10 @@ export class YouTubeService {
       // YouTube API integration will be configured through app settings
       // Currently using simulation service for development/testing
       // Production requires: YouTube Data API v3 credentials
-      
+
       // Simulate posting for development
       const result = await this.simulateYouTubePost(options);
-      
+
       logger.info(`Successfully posted to YouTube: ${result.videoId}`);
       return result;
     } catch (error) {
@@ -81,7 +81,7 @@ export class YouTubeService {
    */
   private async simulateYouTubePost(options: YouTubePostOptions): Promise<YouTubePostResult> {
     // Simulate API delay (YouTube uploads take longer)
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 5000));
 
     // Simulate success/failure (80% success rate for YouTube)
     const isSuccess = Math.random() > 0.2;
@@ -121,42 +121,44 @@ export class YouTubeService {
       // Check if YouTube API credentials are configured
       const clientId = process.env.YOUTUBE_CLIENT_ID;
       const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-      
+
       if (clientId && clientSecret && accessToken && !process.env.TEST_MODE) {
         logger.info('YouTube API configured - using live YouTube data');
-        
+
         try {
           // Get channel information from YouTube API
-          const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true&access_token=${accessToken}`);
+          const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true&access_token=${accessToken}`
+          );
           const data = await response.json();
-          
+
           if (data.error) {
             throw new Error(`YouTube API Error: ${data.error.message}`);
           }
-          
-                     if (data.items && data.items.length > 0) {
-             const channel = data.items[0];
-             return {
-               id: channel.id,
-               username: channel.snippet.customUrl || channel.snippet.title,
-               displayName: channel.snippet.title,
-               subscriberCount: parseInt(channel.statistics.subscriberCount || '0'),
-               videoCount: parseInt(channel.statistics.videoCount || '0'),
-               viewCount: parseInt(channel.statistics.viewCount || '0'),
-               connected: true
-             };
-           }
+
+          if (data.items && data.items.length > 0) {
+            const channel = data.items[0];
+            return {
+              id: channel.id,
+              username: channel.snippet.customUrl || channel.snippet.title,
+              displayName: channel.snippet.title,
+              subscriberCount: parseInt(channel.statistics.subscriberCount || '0'),
+              videoCount: parseInt(channel.statistics.videoCount || '0'),
+              viewCount: parseInt(channel.statistics.viewCount || '0'),
+              connected: true,
+            };
+          }
         } catch (error) {
           logger.error('YouTube API request failed, falling back to test data:', error);
           // Fall back to test data if API fails
         }
       }
-      
+
       // Development mode: return structured test data
       return {
         id: 'mock_youtube_channel_id',
-        username: 'demo_realtor',
-        displayName: 'Demo Realtor',
+        username: 'real_estate_pro',
+        displayName: 'Real Estate Professional',
         subscriberCount: 1200,
         videoCount: 45,
         viewCount: 150000,
@@ -184,7 +186,7 @@ export class YouTubeService {
         logger.info('Production YouTube token refresh - implement OAuth2 flow');
         // Implementation: Use refresh_token to get new access_token
       }
-      
+
       logger.warn('YouTube token refresh - configure OAuth2 credentials for production use');
       throw new Error('Token refresh requires YouTube OAuth2 configuration');
     } catch (error) {
@@ -200,12 +202,12 @@ export class YouTubeService {
     try {
       // YouTube Data API integration - use live API when credentials configured
       const clientId = process.env.YOUTUBE_CLIENT_ID;
-      
+
       if (clientId && accessToken && !process.env.TEST_MODE) {
         logger.info('YouTube API configured - using live data retrieval');
         // Production: GET https://www.googleapis.com/youtube/v3/search
       }
-      
+
       // Development/simulation mode - return structured test data
       return [
         {
@@ -243,7 +245,7 @@ export class YouTubeService {
   async getAnalytics(accessToken: string, days: number = 30): Promise<any> {
     try {
       // YouTube Data API upload - configure credentials for live uploads
-      
+
       // Simulate analytics data for development
       return {
         analytics: [
@@ -293,11 +295,11 @@ export class YouTubeService {
     try {
       // YouTube Analytics API - implement when analytics access is configured
       // Production: Use YouTube Analytics API for optimal timing analysis
-      
+
       // YouTube optimal posting times based on platform best practices
       // Production implementation will analyze user's YouTube Analytics data
       // Default times: afternoon/evening when YouTube engagement is highest
-      
+
       return ['2:00 PM', '4:00 PM', '8:00 PM'];
     } catch (error) {
       logger.error('Failed to get optimal posting times:', error);
@@ -349,7 +351,7 @@ export class YouTubeService {
         `${baseTitle} | Real Estate Agent Life`,
         `${baseTitle} - Dream Home Alert!`,
       ],
-      'cartoon': [
+      cartoon: [
         `${baseTitle} | Real Estate Humor`,
         `${baseTitle} - Realtor Life Cartoon`,
         `${baseTitle} | Funny Real Estate Moments`,
@@ -367,8 +369,9 @@ export class YouTubeService {
   generateYouTubeDescription(caption: string, hashtags: string[]): string {
     const description = `${caption}\n\n`;
     const hashtagString = hashtags?.join(' ') || '';
-    const callToAction = '\n\n🔔 Subscribe for more real estate content!\n📧 Contact us for property inquiries\n🏠 Follow us on Instagram: @demo_realtor';
-    
+    const callToAction =
+      '\n\n🔔 Subscribe for more real estate content!\n📧 Contact us for property inquiries\n🏠 Follow us for more real estate content!';
+
     return description + hashtagString + callToAction;
   }
 
@@ -378,16 +381,33 @@ export class YouTubeService {
   generateYouTubeTags(category: string): string[] {
     const tags: Record<string, string[]> = {
       'real-estate': [
-        'real estate', 'luxury homes', 'property tour', 'real estate agent',
-        'home buying', 'real estate investing', 'luxury real estate',
-        'central texas', 'austin real estate', 'property market',
-        'real estate photography', 'dream home', 'luxury properties',
+        'real estate',
+        'luxury homes',
+        'property tour',
+        'real estate agent',
+        'home buying',
+        'real estate investing',
+        'luxury real estate',
+        'central texas',
+        'austin real estate',
+        'property market',
+        'real estate photography',
+        'dream home',
+        'luxury properties',
       ],
-      'cartoon': [
-        'real estate humor', 'realtor life', 'funny real estate',
-        'real estate cartoon', 'realtor problems', 'real estate agent humor',
-        'real estate memes', 'realtor memes', 'real estate funny',
-        'real estate comedy', 'realtor humor', 'real estate agent problems',
+      cartoon: [
+        'real estate humor',
+        'realtor life',
+        'funny real estate',
+        'real estate cartoon',
+        'realtor problems',
+        'real estate agent humor',
+        'real estate memes',
+        'realtor memes',
+        'real estate funny',
+        'real estate comedy',
+        'realtor humor',
+        'real estate agent problems',
       ],
     };
 
@@ -395,4 +415,4 @@ export class YouTubeService {
   }
 }
 
-export default YouTubeService; 
+export default YouTubeService;

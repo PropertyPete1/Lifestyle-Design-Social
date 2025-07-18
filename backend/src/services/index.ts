@@ -12,10 +12,23 @@ export { default as SchedulerService } from './schedulerService';
 // Export types
 export type { VideoMetadata, ProcessingOptions } from './videoProcessingService';
 export type { PostingSchedule, PostingResult, SmartPostingOptions } from './autoPostingService';
-export type { InstagramPostOptions, InstagramPostResult, InstagramAccountInfo } from './instagramService';
+export type {
+  InstagramPostOptions,
+  InstagramPostResult,
+  InstagramAccountInfo,
+} from './instagramService';
 export type { TikTokPostOptions, TikTokPostResult, TikTokAccountInfo } from './tiktokService';
 export type { YouTubePostOptions, YouTubePostResult, YouTubeAccountInfo } from './youtubeService';
-export type { PlatformConfig, MultiPlatformPostOptions, MultiPlatformPostResult, PlatformRequirements } from './multiPlatformService';
-export type { CaptionGenerationOptions, GeneratedCaption, CaptionTemplate } from './captionGenerationService';
+export type {
+  PlatformConfig,
+  MultiPlatformPostOptions,
+  MultiPlatformPostResult,
+  PlatformRequirements,
+} from './multiPlatformService';
+export type {
+  CaptionGenerationOptions,
+  GeneratedCaption,
+  CaptionTemplate,
+} from './captionGenerationService';
 export type { EngagementMetrics, AnalyticsData, PostingTimeAnalysis } from './analyticsService';
-export type { ScheduleConfig, ScheduleResult, TimingOptimization } from './schedulerService'; 
+export type { ScheduleConfig, ScheduleResult, TimingOptimization } from './schedulerService';

@@ -59,7 +59,7 @@ export class InstagramAPI {
       redirect_uri: this.redirectUri,
       scope: 'user_profile,user_media',
       response_type: 'code',
-      ...(state && { state })
+      ...(state && { state }),
     });
 
     return `${this.authURL}/authorize?${params.toString()}`;
@@ -70,17 +70,21 @@ export class InstagramAPI {
    */
   async exchangeCodeForToken(code: string): Promise<InstagramAuthTokens> {
     try {
-      const response = await axios.post(`${this.authURL}/access_token`, {
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        grant_type: 'authorization_code',
-        redirect_uri: this.redirectUri,
-        code
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+      const response = await axios.post(
+        `${this.authURL}/access_token`,
+        {
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          grant_type: 'authorization_code',
+          redirect_uri: this.redirectUri,
+          code,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         }
-      });
+      );
 
       logger.info('Instagram token exchange successful');
       return response.data;
@@ -99,8 +103,8 @@ export class InstagramAPI {
         params: {
           grant_type: 'ig_exchange_token',
           client_secret: this.clientSecret,
-          access_token: shortLivedToken
-        }
+          access_token: shortLivedToken,
+        },
       });
 
       logger.info('Instagram long-lived token obtained');
@@ -119,8 +123,8 @@ export class InstagramAPI {
       const response = await axios.get(`${this.baseURL}/refresh_access_token`, {
         params: {
           grant_type: 'ig_refresh_token',
-          access_token: accessToken
-        }
+          access_token: accessToken,
+        },
       });
 
       logger.info('Instagram token refreshed');
@@ -139,8 +143,8 @@ export class InstagramAPI {
       const response = await axios.get(`${this.baseURL}/me`, {
         params: {
           fields: 'id,username,account_type,media_count,followers_count,follows_count',
-          access_token: accessToken
-        }
+          access_token: accessToken,
+        },
       });
 
       logger.info('Instagram account info retrieved');
@@ -154,12 +158,15 @@ export class InstagramAPI {
   /**
    * Get user's media posts
    */
-  async getUserMedia(accessToken: string, options: {
-    limit?: number;
-    after?: string;
-    before?: string;
-    fields?: string[];
-  } = {}): Promise<{ data: InstagramPost[]; paging?: any }> {
+  async getUserMedia(
+    accessToken: string,
+    options: {
+      limit?: number;
+      after?: string;
+      before?: string;
+      fields?: string[];
+    } = {}
+  ): Promise<{ data: InstagramPost[]; paging?: any }> {
     try {
       const fields = options.fields || [
         'id',
@@ -169,12 +176,12 @@ export class InstagramAPI {
         'permalink',
         'timestamp',
         'like_count',
-        'comments_count'
+        'comments_count',
       ];
 
       const params: any = {
         fields: fields.join(','),
-        access_token: accessToken
+        access_token: accessToken,
       };
 
       if (options.limit) params.limit = options.limit;
@@ -199,8 +206,8 @@ export class InstagramAPI {
       const response = await axios.get(`${this.baseURL}/${mediaId}/insights`, {
         params: {
           metric: 'impressions,reach,engagement',
-          access_token: accessToken
-        }
+          access_token: accessToken,
+        },
       });
 
       logger.info(`Retrieved insights for media ${mediaId}`);
@@ -228,15 +235,18 @@ export class InstagramAPI {
   /**
    * Create a container for posting media
    */
-  async createMediaContainer(accessToken: string, mediaData: {
-    image_url?: string;
-    video_url?: string;
-    caption?: string;
-    media_type?: 'IMAGE' | 'VIDEO';
-  }): Promise<{ id: string }> {
+  async createMediaContainer(
+    accessToken: string,
+    mediaData: {
+      image_url?: string;
+      video_url?: string;
+      caption?: string;
+      media_type?: 'IMAGE' | 'VIDEO';
+    }
+  ): Promise<{ id: string }> {
     try {
       const params: any = {
-        access_token: accessToken
+        access_token: accessToken,
       };
 
       if (mediaData.image_url) {
@@ -268,8 +278,8 @@ export class InstagramAPI {
       const response = await axios.post(`${this.baseURL}/me/media_publish`, null, {
         params: {
           creation_id: creationId,
-          access_token: accessToken
-        }
+          access_token: accessToken,
+        },
       });
 
       logger.info('Instagram media published');
@@ -289,8 +299,8 @@ export class InstagramAPI {
         params: {
           user_id: 'me',
           q: hashtag,
-          access_token: accessToken
-        }
+          access_token: accessToken,
+        },
       });
 
       logger.info(`Retrieved hashtag info for #${hashtag}`);
@@ -304,10 +314,13 @@ export class InstagramAPI {
   /**
    * Analyze user's posting patterns for Instagram Learning
    */
-  async analyzeUserContent(accessToken: string, options: {
-    postCount?: number;
-    includeInsights?: boolean;
-  } = {}): Promise<{
+  async analyzeUserContent(
+    accessToken: string,
+    options: {
+      postCount?: number;
+      includeInsights?: boolean;
+    } = {}
+  ): Promise<{
     posts: InstagramPost[];
     analysis: {
       totalPosts: number;
@@ -332,8 +345,8 @@ export class InstagramAPI {
           'permalink',
           'timestamp',
           'like_count',
-          'comments_count'
-        ]
+          'comments_count',
+        ],
       });
 
       const posts = mediaResponse.data;
@@ -364,25 +377,29 @@ export class InstagramAPI {
    */
   private async performContentAnalysis(posts: InstagramPost[]): Promise<any> {
     const totalPosts = posts.length;
-    
+
     // Calculate average caption length
-    const captions = posts.filter(p => p.caption).map(p => p.caption!);
-    const avgCaptionLength = captions.length > 0 
-      ? captions.reduce((sum, caption) => sum + caption.length, 0) / captions.length 
-      : 0;
+    const captions = posts.filter((p) => p.caption).map((p) => p.caption!);
+    const avgCaptionLength =
+      captions.length > 0
+        ? captions.reduce((sum, caption) => sum + caption.length, 0) / captions.length
+        : 0;
 
     // Extract hashtags
     const allHashtags: string[] = [];
-    captions.forEach(caption => {
+    captions.forEach((caption) => {
       const hashtags = caption.match(/#\w+/g) || [];
-      allHashtags.push(...hashtags.map(h => h.toLowerCase()));
+      allHashtags.push(...hashtags.map((h) => h.toLowerCase()));
     });
 
     // Count hashtag frequency
-    const hashtagCounts = allHashtags.reduce((acc, hashtag) => {
-      acc[hashtag] = (acc[hashtag] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const hashtagCounts = allHashtags.reduce(
+      (acc, hashtag) => {
+        acc[hashtag] = (acc[hashtag] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     const commonHashtags = Object.entries(hashtagCounts)
       .sort(([, a], [, b]) => b - a)
@@ -391,30 +408,35 @@ export class InstagramAPI {
 
     // Find top performing posts
     const topPerformingPosts = posts
-      .filter(p => p.like_count !== undefined)
+      .filter((p) => p.like_count !== undefined)
       .sort((a, b) => (b.like_count || 0) - (a.like_count || 0))
       .slice(0, 10);
 
     // Analyze posting frequency
-    const postsByDate = posts.reduce((acc, post) => {
-      const date = new Date(post.timestamp).toDateString();
-      acc[date] = (acc[date] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const postsByDate = posts.reduce(
+      (acc, post) => {
+        const date = new Date(post.timestamp).toDateString();
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     // Analyze engagement patterns
     const engagementData = posts
-      .filter(p => p.like_count !== undefined && p.comments_count !== undefined)
-      .map(p => ({
+      .filter((p) => p.like_count !== undefined && p.comments_count !== undefined)
+      .map((p) => ({
         likes: p.like_count || 0,
         comments: p.comments_count || 0,
         hour: new Date(p.timestamp).getHours(),
-        dayOfWeek: new Date(p.timestamp).getDay()
+        dayOfWeek: new Date(p.timestamp).getDay(),
       }));
 
-    const avgEngagement = engagementData.length > 0
-      ? engagementData.reduce((sum, data) => sum + data.likes + data.comments, 0) / engagementData.length
-      : 0;
+    const avgEngagement =
+      engagementData.length > 0
+        ? engagementData.reduce((sum, data) => sum + data.likes + data.comments, 0) /
+          engagementData.length
+        : 0;
 
     return {
       totalPosts,
@@ -423,13 +445,13 @@ export class InstagramAPI {
       topPerformingPosts,
       postingFrequency: {
         postsPerDay: Object.values(postsByDate),
-        avgPostsPerDay: totalPosts > 0 ? totalPosts / Object.keys(postsByDate).length : 0
+        avgPostsPerDay: totalPosts > 0 ? totalPosts / Object.keys(postsByDate).length : 0,
       },
       engagementPatterns: {
         avgEngagement: Math.round(avgEngagement),
         bestHours: this.findBestPostingHours(engagementData),
-        bestDays: this.findBestPostingDays(engagementData)
-      }
+        bestDays: this.findBestPostingDays(engagementData),
+      },
     };
   }
 
@@ -437,15 +459,18 @@ export class InstagramAPI {
    * Find best posting hours based on engagement
    */
   private findBestPostingHours(engagementData: any[]): number[] {
-    const hourlyEngagement = engagementData.reduce((acc, data) => {
-      const hour = data.hour;
-      if (!acc[hour]) {
-        acc[hour] = { total: 0, count: 0 };
-      }
-      acc[hour].total += data.likes + data.comments;
-      acc[hour].count += 1;
-      return acc;
-    }, {} as Record<number, { total: number; count: number }>);
+    const hourlyEngagement = engagementData.reduce(
+      (acc, data) => {
+        const hour = data.hour;
+        if (!acc[hour]) {
+          acc[hour] = { total: 0, count: 0 };
+        }
+        acc[hour].total += data.likes + data.comments;
+        acc[hour].count += 1;
+        return acc;
+      },
+      {} as Record<number, { total: number; count: number }>
+    );
 
     return Object.entries(hourlyEngagement)
       .map(([hour, data]) => {
@@ -455,27 +480,30 @@ export class InstagramAPI {
         }
         return {
           hour: parseInt(hour),
-          avgEngagement: (data as EngagementData).total / (data as EngagementData).count
+          avgEngagement: (data as EngagementData).total / (data as EngagementData).count,
         };
       })
       .sort((a, b) => b.avgEngagement - a.avgEngagement)
       .slice(0, 3)
-      .map(item => item.hour);
+      .map((item) => item.hour);
   }
 
   /**
    * Find best posting days based on engagement
    */
   private findBestPostingDays(engagementData: any[]): number[] {
-    const dailyEngagement = engagementData.reduce((acc, data) => {
-      const day = data.dayOfWeek;
-      if (!acc[day]) {
-        acc[day] = { total: 0, count: 0 };
-      }
-      acc[day].total += data.likes + data.comments;
-      acc[day].count += 1;
-      return acc;
-    }, {} as Record<number, { total: number; count: number }>);
+    const dailyEngagement = engagementData.reduce(
+      (acc, data) => {
+        const day = data.dayOfWeek;
+        if (!acc[day]) {
+          acc[day] = { total: 0, count: 0 };
+        }
+        acc[day].total += data.likes + data.comments;
+        acc[day].count += 1;
+        return acc;
+      },
+      {} as Record<number, { total: number; count: number }>
+    );
 
     return Object.entries(dailyEngagement)
       .map(([day, data]) => {
@@ -485,12 +513,12 @@ export class InstagramAPI {
         }
         return {
           day: parseInt(day),
-          avgEngagement: (data as EngagementData).total / (data as EngagementData).count
+          avgEngagement: (data as EngagementData).total / (data as EngagementData).count,
         };
       })
       .sort((a, b) => b.avgEngagement - a.avgEngagement)
       .slice(0, 3)
-      .map(item => item.day);
+      .map((item) => item.day);
   }
 
   /**
@@ -515,11 +543,7 @@ export class InstagramAPI {
       const styleAnalysis = await this.analyzeWritingStyle(userPosts);
 
       // Generate caption based on style
-      const caption = await this.generateStyledCaption(
-        styleAnalysis,
-        contentDescription,
-        options
-      );
+      const caption = await this.generateStyledCaption(styleAnalysis, contentDescription, options);
 
       // Extract hashtags from user's successful posts
       const suggestedHashtags = await this.suggestHashtags(userPosts, contentDescription);
@@ -528,7 +552,7 @@ export class InstagramAPI {
         caption: caption.text,
         hashtags: suggestedHashtags,
         styleMatch: caption.styleMatch,
-        confidence: caption.confidence
+        confidence: caption.confidence,
       };
     } catch (error) {
       logger.error('Failed to generate personalized caption:', error);
@@ -540,14 +564,14 @@ export class InstagramAPI {
    * Analyze user's writing style
    */
   private async analyzeWritingStyle(posts: InstagramPost[]): Promise<any> {
-    const captions = posts.filter(p => p.caption).map(p => p.caption!);
-    
+    const captions = posts.filter((p) => p.caption).map((p) => p.caption!);
+
     if (captions.length === 0) {
       return {
         dominantTone: 'casual',
         averageLength: 100,
         commonPhrases: [],
-        preferredHashtags: []
+        preferredHashtags: [],
       };
     }
 
@@ -556,12 +580,12 @@ export class InstagramAPI {
       professional: ['excited', 'pleased', 'proud', 'honored', 'delighted'],
       casual: ['hey', 'guys', 'love', 'awesome', 'amazing'],
       funny: ['lol', 'haha', 'funny', 'hilarious', 'joke'],
-      inspirational: ['dream', 'believe', 'achieve', 'inspire', 'motivate']
+      inspirational: ['dream', 'believe', 'achieve', 'inspire', 'motivate'],
     };
 
     const toneScores = Object.entries(toneKeywords).map(([tone, keywords]) => {
       const score = captions.reduce((sum, caption) => {
-        const matches = keywords.filter(keyword => 
+        const matches = keywords.filter((keyword) =>
           caption.toLowerCase().includes(keyword)
         ).length;
         return sum + matches;
@@ -569,19 +593,23 @@ export class InstagramAPI {
       return { tone, score };
     });
 
-    const dominantTone = toneScores.reduce((prev, current) => 
+    const dominantTone = toneScores.reduce((prev, current) =>
       current.score > prev.score ? current : prev
     ).tone;
 
     // Calculate average length
-    const averageLength = captions.reduce((sum, caption) => sum + caption.length, 0) / captions.length;
+    const averageLength =
+      captions.reduce((sum, caption) => sum + caption.length, 0) / captions.length;
 
     // Extract common phrases (simplified)
     const words = captions.join(' ').toLowerCase().split(/\s+/);
-    const wordCounts = words.reduce((acc, word) => {
-      acc[word] = (acc[word] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const wordCounts = words.reduce(
+      (acc, word) => {
+        acc[word] = (acc[word] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     const commonPhrases = Object.entries(wordCounts)
       .filter(([word, count]) => count > 2 && word.length > 3)
@@ -593,7 +621,7 @@ export class InstagramAPI {
       dominantTone,
       averageLength: Math.round(averageLength),
       commonPhrases,
-      preferredHashtags: []
+      preferredHashtags: [],
     };
   }
 
@@ -607,71 +635,76 @@ export class InstagramAPI {
   ): Promise<{ text: string; styleMatch: number; confidence: number }> {
     // This is a simplified implementation
     // In a real scenario, you'd use GPT-4 or similar AI service
-    
+
     const templates = {
       professional: [
-        "Excited to share this {content}! {emotion}",
-        "Proud to present {content}. {call_to_action}",
-        "Delighted to showcase {content}. {question}"
+        'Excited to share this {content}! {emotion}',
+        'Proud to present {content}. {call_to_action}',
+        'Delighted to showcase {content}. {question}',
       ],
       casual: [
-        "Hey everyone! Check out this {content} 😍 {emotion}",
-        "Love this {content}! {question}",
-        "Amazing {content} right here! {call_to_action}"
+        'Hey everyone! Check out this {content} 😍 {emotion}',
+        'Love this {content}! {question}',
+        'Amazing {content} right here! {call_to_action}',
       ],
       funny: [
-        "When you find the perfect {content} 😂 {joke}",
-        "This {content} had me like... {emotion}",
-        "Plot twist: this {content} is actually {funny_fact}"
+        'When you find the perfect {content} 😂 {joke}',
+        'This {content} had me like... {emotion}',
+        'Plot twist: this {content} is actually {funny_fact}',
       ],
       inspirational: [
-        "Every {content} tells a story. {inspiration}",
-        "Dream big, {content} bigger! {motivation}",
-        "This {content} reminds me that {life_lesson}"
-      ]
+        'Every {content} tells a story. {inspiration}',
+        'Dream big, {content} bigger! {motivation}',
+        'This {content} reminds me that {life_lesson}',
+      ],
     };
 
     const tone = options.tone || styleAnalysis.dominantTone;
     const template = templates[tone as keyof typeof templates]?.[0] || templates.casual[0];
-    
-    const caption = template || ''
-      .replace('{content}', contentDescription)
-      .replace('{emotion}', '✨')
-      .replace('{call_to_action}', 'What do you think?')
-      .replace('{question}', 'Would you live here?')
-      .replace('{joke}', 'Just kidding! 😄')
-      .replace('{funny_fact}', 'pretty awesome')
-      .replace('{inspiration}', 'Never give up on your dreams.')
-      .replace('{motivation}', 'You got this!')
-      .replace('{life_lesson}', 'anything is possible.');
+
+    const caption =
+      template ||
+      ''
+        .replace('{content}', contentDescription)
+        .replace('{emotion}', '✨')
+        .replace('{call_to_action}', 'What do you think?')
+        .replace('{question}', 'Would you live here?')
+        .replace('{joke}', 'Just kidding! 😄')
+        .replace('{funny_fact}', 'pretty awesome')
+        .replace('{inspiration}', 'Never give up on your dreams.')
+        .replace('{motivation}', 'You got this!')
+        .replace('{life_lesson}', 'anything is possible.');
 
     return {
       text: caption,
       styleMatch: 85, // Simplified scoring
-      confidence: 92
+      confidence: 92,
     };
   }
 
   /**
    * Suggest hashtags based on user's successful posts
    */
-  private async suggestHashtags(posts: InstagramPost[], contentDescription: string): Promise<string[]> {
+  private async suggestHashtags(
+    posts: InstagramPost[],
+    contentDescription: string
+  ): Promise<string[]> {
     // Extract hashtags from top performing posts
     const topPosts = posts
-      .filter(p => p.like_count !== undefined && p.caption)
+      .filter((p) => p.like_count !== undefined && p.caption)
       .sort((a, b) => (b.like_count || 0) - (a.like_count || 0))
       .slice(0, 10);
 
     const hashtags = new Set<string>();
-    
-    topPosts.forEach(post => {
+
+    topPosts.forEach((post) => {
       const postHashtags = post.caption!.match(/#\w+/g) || [];
-      postHashtags.forEach(hashtag => hashtags.add(String(hashtag).toLowerCase()));
+      postHashtags.forEach((hashtag) => hashtags.add(String(hashtag).toLowerCase()));
     });
 
     // Add content-specific hashtags
     const contentHashtags = this.generateContentHashtags(contentDescription);
-    contentHashtags.forEach(hashtag => hashtags.add(hashtag));
+    contentHashtags.forEach((hashtag) => hashtags.add(hashtag));
 
     return Array.from(hashtags).slice(0, 15);
   }
@@ -682,17 +715,17 @@ export class InstagramAPI {
   private generateContentHashtags(contentDescription: string): string[] {
     const keywords = contentDescription.toLowerCase().split(/\s+/);
     const hashtagMap: Record<string, string[]> = {
-      'house': ['#realestate', '#home', '#property', '#househunting'],
-      'apartment': ['#apartment', '#condo', '#rental', '#living'],
-      'kitchen': ['#kitchen', '#cooking', '#homedecor', '#interior'],
-      'bedroom': ['#bedroom', '#sleep', '#cozy', '#comfort'],
-      'bathroom': ['#bathroom', '#spa', '#luxury', '#design'],
-      'garden': ['#garden', '#outdoor', '#landscape', '#nature'],
-      'pool': ['#pool', '#swimming', '#summer', '#relaxation']
+      house: ['#realestate', '#home', '#property', '#househunting'],
+      apartment: ['#apartment', '#condo', '#rental', '#living'],
+      kitchen: ['#kitchen', '#cooking', '#homedecor', '#interior'],
+      bedroom: ['#bedroom', '#sleep', '#cozy', '#comfort'],
+      bathroom: ['#bathroom', '#spa', '#luxury', '#design'],
+      garden: ['#garden', '#outdoor', '#landscape', '#nature'],
+      pool: ['#pool', '#swimming', '#summer', '#relaxation'],
     };
 
     const hashtags: string[] = [];
-    keywords.forEach(keyword => {
+    keywords.forEach((keyword) => {
       if (hashtagMap[keyword]) {
         hashtags.push(...hashtagMap[keyword]);
       }
@@ -700,4 +733,4 @@ export class InstagramAPI {
 
     return hashtags;
   }
-} 
+}

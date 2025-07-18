@@ -12,7 +12,8 @@ export interface BackgroundAgent {
   errorCount: number;
   lastError?: string;
   type?: string; // Added type property for route compatibility
-  metrics?: { // Added metrics property for route compatibility
+  metrics?: {
+    // Added metrics property for route compatibility
     totalRuns: number;
     successfulRuns: number;
     failedRuns: number;
@@ -38,7 +39,7 @@ class BackgroundAgentsService {
         description: 'Schedules and processes automatic posts',
         status: 'active',
         runCount: 0,
-        errorCount: 0
+        errorCount: 0,
       },
       {
         id: 'engagement_tracker',
@@ -46,7 +47,7 @@ class BackgroundAgentsService {
         description: 'Tracks post engagement metrics',
         status: 'active',
         runCount: 0,
-        errorCount: 0
+        errorCount: 0,
       },
       {
         id: 'video_processor',
@@ -54,7 +55,7 @@ class BackgroundAgentsService {
         description: 'Processes uploaded videos',
         status: 'active',
         runCount: 0,
-        errorCount: 0
+        errorCount: 0,
       },
       {
         id: 'analytics_updater',
@@ -62,7 +63,7 @@ class BackgroundAgentsService {
         description: 'Updates analytics and reporting data',
         status: 'active',
         runCount: 0,
-        errorCount: 0
+        errorCount: 0,
       },
       {
         id: 'health_monitor',
@@ -70,11 +71,11 @@ class BackgroundAgentsService {
         description: 'Monitors system health and alerts',
         status: 'active',
         runCount: 0,
-        errorCount: 0
-      }
+        errorCount: 0,
+      },
     ];
 
-    defaultAgents.forEach(agent => {
+    defaultAgents.forEach((agent) => {
       this.agents.set(agent.id, agent);
     });
 
@@ -102,10 +103,9 @@ class BackgroundAgentsService {
 
       agent.status = 'active';
       agent.lastRun = new Date();
-      
+
       logger.info(`Agent ${agentId} started`);
       return true;
-
     } catch (error) {
       logger.error(`Error starting agent ${agentId}:`, error);
       return false;
@@ -122,10 +122,9 @@ class BackgroundAgentsService {
       }
 
       agent.status = 'stopped';
-      
+
       logger.info(`Agent ${agentId} stopped`);
       return true;
-
     } catch (error) {
       logger.error(`Error stopping agent ${agentId}:`, error);
       return false;
@@ -159,9 +158,9 @@ class BackgroundAgentsService {
   } {
     const agents = this.getAgents();
     const totalAgents = agents.length;
-    const activeAgents = agents.filter(a => a.status === 'active').length;
-    const stoppedAgents = agents.filter(a => a.status === 'stopped').length;
-    const errorAgents = agents.filter(a => a.status === 'error').length;
+    const activeAgents = agents.filter((a) => a.status === 'active').length;
+    const stoppedAgents = agents.filter((a) => a.status === 'stopped').length;
+    const errorAgents = agents.filter((a) => a.status === 'error').length;
 
     let overallStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
     if (errorAgents > 0) {
@@ -175,14 +174,14 @@ class BackgroundAgentsService {
       activeAgents,
       stoppedAgents,
       errorAgents,
-      overallStatus
+      overallStatus,
     };
   }
 
   // Check if critical agents are running
   checkCriticalAgents(): boolean {
     const criticalAgents = ['post_scheduler', 'health_monitor'];
-    return criticalAgents.every(agentId => {
+    return criticalAgents.every((agentId) => {
       const agent = this.agents.get(agentId);
       return agent && agent.status === 'active';
     });
@@ -192,7 +191,7 @@ class BackgroundAgentsService {
   async restartAllAgents(): Promise<boolean> {
     try {
       const agentIds = Array.from(this.agents.keys());
-      
+
       for (const agentId of agentIds) {
         await this.stopAgent(agentId);
         await this.startAgent(agentId);
@@ -200,7 +199,6 @@ class BackgroundAgentsService {
 
       logger.info('All agents restarted');
       return true;
-
     } catch (error) {
       logger.error('Error restarting agents:', error);
       return false;
@@ -219,12 +217,11 @@ class BackgroundAgentsService {
     const agent = this.agents.get(agentId);
     if (!agent) return null;
 
-    const successRate = agent.runCount > 0 ? 
-      ((agent.runCount - agent.errorCount) / agent.runCount) * 100 : 0;
+    const successRate =
+      agent.runCount > 0 ? ((agent.runCount - agent.errorCount) / agent.runCount) * 100 : 0;
 
     // Calculate uptime (simplified - just time since last run)
-    const uptime = agent.lastRun ? 
-      (Date.now() - agent.lastRun.getTime()) / (1000 * 60 * 60) : 0;
+    const uptime = agent.lastRun ? (Date.now() - agent.lastRun.getTime()) / (1000 * 60 * 60) : 0;
 
     return {
       runCount: agent.runCount,
@@ -232,7 +229,7 @@ class BackgroundAgentsService {
       successRate: Math.round(successRate * 100) / 100,
       uptime: Math.round(uptime * 100) / 100,
       lastRun: agent.lastRun,
-      lastError: agent.lastError
+      lastError: agent.lastError,
     };
   }
 
@@ -254,31 +251,33 @@ class BackgroundAgentsService {
       await connectToDatabase();
       checks.push({ name: 'Database Connection', status: 'pass' });
     } catch (error) {
-      checks.push({ 
-        name: 'Database Connection', 
-        status: 'fail', 
-        message: 'Cannot connect to database' 
+      checks.push({
+        name: 'Database Connection',
+        status: 'fail',
+        message: 'Cannot connect to database',
       });
       overallStatus = 'fail';
     }
 
     // Check critical agents
     const criticalOk = this.checkCriticalAgents();
-    checks.push({ 
-      name: 'Critical Agents', 
+    checks.push({
+      name: 'Critical Agents',
       status: criticalOk ? 'pass' : 'fail',
-      message: criticalOk ? undefined : 'Some critical agents are not running'
+      message: criticalOk ? undefined : 'Some critical agents are not running',
     });
 
     if (!criticalOk) overallStatus = 'fail';
 
     // Check system health
     const health = this.getSystemHealth();
-    checks.push({ 
-      name: 'System Health', 
+    checks.push({
+      name: 'System Health',
       status: health.overallStatus === 'healthy' ? 'pass' : 'fail',
-      message: health.overallStatus === 'healthy' ? undefined : 
-        `${health.errorAgents} agents in error state`
+      message:
+        health.overallStatus === 'healthy'
+          ? undefined
+          : `${health.errorAgents} agents in error state`,
     });
 
     if (health.overallStatus === 'critical') overallStatus = 'fail';
@@ -286,7 +285,7 @@ class BackgroundAgentsService {
     return {
       timestamp: new Date(),
       status: overallStatus,
-      checks
+      checks,
     };
   }
 
@@ -296,7 +295,7 @@ class BackgroundAgentsService {
     if (!agent) return false;
 
     // Simulate some work delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (shouldFail) {
       this.recordAgentRun(agentId, false, 'Simulated error for testing');
@@ -311,26 +310,26 @@ class BackgroundAgentsService {
   async runAgent(agentId: string): Promise<any> {
     try {
       logger.info(`Running background agent: ${agentId}`);
-      
+
       // Get agent configuration
       const agent = this.agents.get(agentId);
       if (!agent) {
         throw new Error(`Agent ${agentId} not found`);
       }
-      
+
       // Update agent status and run count
       agent.lastRun = new Date();
       agent.runCount++;
       agent.status = 'active';
-      
+
       // Record the run
       this.recordAgentRun(agentId, true);
-      
+
       return {
         agentId,
         status: 'completed',
         result: { processed: Math.floor(Math.random() * 50) + 10 },
-        executedAt: new Date()
+        executedAt: new Date(),
       };
     } catch (error) {
       logger.error(`Error running agent ${agentId}:`, error);
@@ -348,13 +347,15 @@ class BackgroundAgentsService {
   async getAgentReports(agentId?: string, limit: number = 50): Promise<any[]> {
     try {
       logger.info(`Getting agent reports${agentId ? ` for ${agentId}` : ''}`);
-      
+
       // Generate reports from existing agents
       const reports = [];
-      const targetAgents = agentId 
-        ? (this.agents.has(agentId) ? [agentId] : [])
+      const targetAgents = agentId
+        ? this.agents.has(agentId)
+          ? [agentId]
+          : []
         : Array.from(this.agents.keys());
-      
+
       for (const id of targetAgents.slice(0, limit)) {
         const agent = this.agents.get(id);
         if (agent) {
@@ -373,12 +374,12 @@ class BackgroundAgentsService {
               failedRuns: agent.errorCount,
               issuesFound: 0,
               issuesResolved: 0,
-              averageRunTime: Math.floor(Math.random() * 30000) + 1000
-            }
+              averageRunTime: Math.floor(Math.random() * 30000) + 1000,
+            },
           });
         }
       }
-      
+
       return reports;
     } catch (error) {
       logger.error('Error getting agent reports:', error);
@@ -389,10 +390,10 @@ class BackgroundAgentsService {
   async initialize(): Promise<void> {
     try {
       logger.info('Initializing background agents service');
-      
+
       // Agents are already initialized in constructor via initializeDefaultAgents
       // Just ensure they're properly set up
-      
+
       logger.info(`Background agents service initialized with ${this.agents.size} agents`);
     } catch (error) {
       logger.error('Error initializing background agents service:', error);
@@ -403,4 +404,4 @@ class BackgroundAgentsService {
 
 // Export singleton instance
 export const backgroundAgentsService = new BackgroundAgentsService();
-export default backgroundAgentsService; 
+export default backgroundAgentsService;

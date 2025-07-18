@@ -14,58 +14,64 @@ export interface IEngagementAnalytics extends Document {
   updatedAt: Date;
 }
 
-const EngagementAnalyticsSchema = new Schema<IEngagementAnalytics>({
-  platform: {
-    type: String,
-    required: true,
-    enum: ['instagram', 'tiktok', 'youtube']
+const EngagementAnalyticsSchema = new Schema<IEngagementAnalytics>(
+  {
+    platform: {
+      type: String,
+      required: true,
+      enum: ['instagram', 'tiktok', 'youtube'],
+    },
+    hour: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 23,
+    },
+    date: {
+      type: Date,
+      required: true,
+    },
+    engagementScore: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    postCount: {
+      type: Number,
+      required: true,
+      default: 1,
+    },
+    avgLikes: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    avgComments: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    avgShares: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    avgViews: {
+      type: Number,
+      default: 0,
+    },
   },
-  hour: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 23
-  },
-  date: {
-    type: Date,
-    required: true
-  },
-  engagementScore: {
-    type: Number,
-    required: true,
-    default: 0
-  },
-  postCount: {
-    type: Number,
-    required: true,
-    default: 1
-  },
-  avgLikes: {
-    type: Number,
-    required: true,
-    default: 0
-  },
-  avgComments: {
-    type: Number,
-    required: true,
-    default: 0
-  },
-  avgShares: {
-    type: Number,
-    required: true,
-    default: 0
-  },
-  avgViews: {
-    type: Number,
-    default: 0
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
 // Create compound index for efficient queries
 EngagementAnalyticsSchema.index({ platform: 1, date: 1, hour: 1 }, { unique: true });
 EngagementAnalyticsSchema.index({ platform: 1, date: 1 });
 EngagementAnalyticsSchema.index({ date: 1 });
 
-export const EngagementAnalyticsModel = mongoose.model<IEngagementAnalytics>('EngagementAnalytics', EngagementAnalyticsSchema); 
+export const EngagementAnalyticsModel = mongoose.model<IEngagementAnalytics>(
+  'EngagementAnalytics',
+  EngagementAnalyticsSchema
+);

@@ -44,38 +44,44 @@ export class InstagramService {
       }
 
       // Step 1: Create media object
-      const mediaResponse = await fetch(`${this.BASE_URL}/${this.GRAPH_API_VERSION}/${businessAccountId}/media`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          video_url: options.videoPath,
-          caption: `${options.caption}\n\n${options.hashtags.join(' ')}`,
-          access_token: options.accessToken
-        })
-      });
+      const mediaResponse = await fetch(
+        `${this.BASE_URL}/${this.GRAPH_API_VERSION}/${businessAccountId}/media`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            video_url: options.videoPath,
+            caption: `${options.caption}\n\n${options.hashtags.join(' ')}`,
+            access_token: options.accessToken,
+          }),
+        }
+      );
 
       const mediaData = await mediaResponse.json();
-      
+
       if (mediaData.error) {
         throw new Error(`Instagram API Error: ${mediaData.error.message}`);
       }
 
       // Step 2: Publish the media
-      const publishResponse = await fetch(`${this.BASE_URL}/${this.GRAPH_API_VERSION}/${businessAccountId}/media_publish`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          creation_id: mediaData.id,
-          access_token: options.accessToken
-        })
-      });
+      const publishResponse = await fetch(
+        `${this.BASE_URL}/${this.GRAPH_API_VERSION}/${businessAccountId}/media_publish`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            creation_id: mediaData.id,
+            access_token: options.accessToken,
+          }),
+        }
+      );
 
       const publishData = await publishResponse.json();
-      
+
       if (publishData.error) {
         throw new Error(`Instagram Publish Error: ${publishData.error.message}`);
       }
@@ -84,9 +90,8 @@ export class InstagramService {
       return {
         success: true,
         postId: publishData.id,
-        permalink: `https://www.instagram.com/p/${publishData.id}/`
+        permalink: `https://www.instagram.com/p/${publishData.id}/`,
       };
-
     } catch (error) {
       logger.error('Failed to post to Instagram:', error);
       return {
@@ -103,7 +108,9 @@ export class InstagramService {
     try {
       logger.info('Getting Instagram account info');
 
-      const response = await fetch(`${this.BASE_URL}/${this.GRAPH_API_VERSION}/me?fields=id,username,account_type,media_count&access_token=${accessToken}`);
+      const response = await fetch(
+        `${this.BASE_URL}/${this.GRAPH_API_VERSION}/me?fields=id,username,account_type,media_count&access_token=${accessToken}`
+      );
       const data = await response.json();
 
       if (data.error) {
@@ -115,7 +122,7 @@ export class InstagramService {
         username: data.username,
         accountType: data.account_type,
         mediaCount: data.media_count,
-        connected: true
+        connected: true,
       };
     } catch (error) {
       logger.error('Failed to get Instagram account info:', error);
@@ -130,9 +137,12 @@ export class InstagramService {
     try {
       logger.info('Refreshing Instagram access token');
 
-      const response = await fetch(`${this.BASE_URL}/oauth/access_token?grant_type=ig_refresh_token&access_token=${refreshToken}`, {
-        method: 'GET'
-      });
+      const response = await fetch(
+        `${this.BASE_URL}/oauth/access_token?grant_type=ig_refresh_token&access_token=${refreshToken}`,
+        {
+          method: 'GET',
+        }
+      );
 
       const data = await response.json();
 
@@ -152,7 +162,9 @@ export class InstagramService {
    */
   async getMedia(accessToken: string, limit: number = 20): Promise<any[]> {
     try {
-      const response = await fetch(`${this.BASE_URL}/${this.GRAPH_API_VERSION}/me/media?fields=id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count&limit=${limit}&access_token=${accessToken}`);
+      const response = await fetch(
+        `${this.BASE_URL}/${this.GRAPH_API_VERSION}/me/media?fields=id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count&limit=${limit}&access_token=${accessToken}`
+      );
       const data = await response.json();
 
       if (data.error) {
@@ -173,7 +185,9 @@ export class InstagramService {
     try {
       logger.info(`Getting Instagram insights for post: ${postId}`);
 
-      const response = await fetch(`${this.BASE_URL}/${this.GRAPH_API_VERSION}/${postId}/insights?metric=impressions,reach,likes,comments,shares,saves&access_token=${accessToken}`);
+      const response = await fetch(
+        `${this.BASE_URL}/${this.GRAPH_API_VERSION}/${postId}/insights?metric=impressions,reach,likes,comments,shares,saves&access_token=${accessToken}`
+      );
       const data = await response.json();
 
       if (data.error) {
@@ -192,7 +206,7 @@ export class InstagramService {
         saves: insights.saves || 0,
         reach: insights.reach || 0,
         impressions: insights.impressions || 0,
-        apiConfigured: true
+        apiConfigured: true,
       };
     } catch (error) {
       logger.error('Failed to get Instagram insights:', error);
@@ -210,7 +224,9 @@ export class InstagramService {
         throw new Error('Instagram Business Account ID not configured');
       }
 
-      const response = await fetch(`${this.BASE_URL}/${this.GRAPH_API_VERSION}/${businessAccountId}/insights?metric=audience_city,audience_country,audience_gender_age,audience_locale&period=lifetime&access_token=${accessToken}`);
+      const response = await fetch(
+        `${this.BASE_URL}/${this.GRAPH_API_VERSION}/${businessAccountId}/insights?metric=audience_city,audience_country,audience_gender_age,audience_locale&period=lifetime&access_token=${accessToken}`
+      );
       const data = await response.json();
 
       if (data.error) {
@@ -238,7 +254,9 @@ export class InstagramService {
         return false;
       }
 
-      const response = await fetch(`${this.BASE_URL}/${this.GRAPH_API_VERSION}/me?access_token=${accessToken}`);
+      const response = await fetch(
+        `${this.BASE_URL}/${this.GRAPH_API_VERSION}/me?access_token=${accessToken}`
+      );
       const data = await response.json();
 
       if (data.error) {
@@ -262,9 +280,11 @@ export class InstagramService {
     }
 
     try {
-      const response = await fetch(`${this.BASE_URL}/${this.GRAPH_API_VERSION}/me?access_token=${accessToken}`);
+      const response = await fetch(
+        `${this.BASE_URL}/${this.GRAPH_API_VERSION}/me?access_token=${accessToken}`
+      );
       const data = await response.json();
-      
+
       if (data.error) {
         logger.error('Instagram credentials validation failed:', data.error);
         return false;
@@ -289,4 +309,4 @@ export interface InstagramAccountInfo {
 
 // Create and export default instance
 const instagramService = new InstagramService();
-export default instagramService; 
+export default instagramService;

@@ -33,7 +33,7 @@ export class YouTubeAPI {
 
     this.youtube = google.youtube({
       version: 'v3',
-      auth: this.oauth2Client
+      auth: this.oauth2Client,
     });
   }
 
@@ -44,13 +44,13 @@ export class YouTubeAPI {
     const scopes = [
       'https://www.googleapis.com/auth/youtube.upload',
       'https://www.googleapis.com/auth/youtube',
-      'https://www.googleapis.com/auth/youtube.readonly'
+      'https://www.googleapis.com/auth/youtube.readonly',
     ];
 
     return this.oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
-      include_granted_scopes: true
+      include_granted_scopes: true,
     });
   }
 
@@ -65,13 +65,15 @@ export class YouTubeAPI {
     try {
       const { tokens } = await this.oauth2Client.getToken(code);
       this.oauth2Client.setCredentials(tokens);
-      
+
       logger.info('YouTube access token obtained successfully');
-      
+
       return {
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
-        expires_in: tokens.expiry_date ? Math.floor((tokens.expiry_date - Date.now()) / 1000) : 3600
+        expires_in: tokens.expiry_date
+          ? Math.floor((tokens.expiry_date - Date.now()) / 1000)
+          : 3600,
       };
     } catch (error) {
       logger.error('Error getting YouTube access token:', error);
@@ -85,7 +87,7 @@ export class YouTubeAPI {
   setAccessToken(accessToken: string, refreshToken?: string): void {
     this.oauth2Client.setCredentials({
       access_token: accessToken,
-      refresh_token: refreshToken
+      refresh_token: refreshToken,
     });
   }
 
@@ -93,7 +95,7 @@ export class YouTubeAPI {
    * Upload video to YouTube
    */
   async uploadVideo(
-    videoPath: string, 
+    videoPath: string,
     uploadOptions: YouTubeVideoUpload
   ): Promise<YouTubeUploadResult> {
     try {
@@ -115,14 +117,14 @@ export class YouTubeAPI {
           tags: uploadOptions.tags || [],
           categoryId: uploadOptions.categoryId || '22', // People & Blogs
           defaultLanguage: 'en',
-          defaultAudioLanguage: 'en'
+          defaultAudioLanguage: 'en',
         },
         status: {
           privacyStatus: uploadOptions.privacyStatus || 'public',
           embeddable: true,
           license: 'youtube',
-          publicStatsViewable: true
-        }
+          publicStatsViewable: true,
+        },
       };
 
       // Upload video
@@ -130,8 +132,8 @@ export class YouTubeAPI {
         part: ['snippet', 'status'],
         requestBody: videoMetadata,
         media: {
-          body: fs.createReadStream(videoPath)
-        }
+          body: fs.createReadStream(videoPath),
+        },
       });
 
       const videoId = response.data.id;
@@ -154,12 +156,11 @@ export class YouTubeAPI {
         success: true,
         videoId,
         videoUrl,
-        uploadTime: new Date()
+        uploadTime: new Date(),
       };
-
     } catch (error: any) {
       logger.error('YouTube upload failed:', error);
-      
+
       let errorMessage = 'Unknown upload error';
       if (error.response?.data?.error?.message) {
         errorMessage = error.response.data.error.message;
@@ -169,7 +170,7 @@ export class YouTubeAPI {
 
       return {
         success: false,
-        error: errorMessage
+        error: errorMessage,
       };
     }
   }
@@ -182,10 +183,10 @@ export class YouTubeAPI {
       await this.youtube.thumbnails.set({
         videoId: videoId,
         media: {
-          body: fs.createReadStream(thumbnailPath)
-        }
+          body: fs.createReadStream(thumbnailPath),
+        },
       });
-      
+
       logger.info(`Thumbnail uploaded for video: ${videoId}`);
     } catch (error) {
       logger.error('Thumbnail upload error:', error);
@@ -200,7 +201,7 @@ export class YouTubeAPI {
     try {
       const response = await this.youtube.videos.list({
         part: ['snippet', 'statistics', 'status'],
-        id: [videoId]
+        id: [videoId],
       });
 
       if (response.data.items && response.data.items.length > 0) {
@@ -227,7 +228,7 @@ export class YouTubeAPI {
       // Get channel info
       const channelResponse = await this.youtube.channels.list({
         part: ['statistics', 'snippet'],
-        mine: true
+        mine: true,
       });
 
       const channel = channelResponse.data.items[0];
@@ -239,14 +240,14 @@ export class YouTubeAPI {
         forMine: true,
         type: 'video',
         order: 'date',
-        maxResults: 10
+        maxResults: 10,
       });
 
       return {
         subscriberCount: parseInt(stats.subscriberCount) || 0,
         totalViews: parseInt(stats.viewCount) || 0,
         videoCount: parseInt(stats.videoCount) || 0,
-        recentVideos: videosResponse.data.items || []
+        recentVideos: videosResponse.data.items || [],
       };
     } catch (error) {
       logger.error('Error fetching channel analytics:', error);
@@ -254,7 +255,7 @@ export class YouTubeAPI {
         subscriberCount: 0,
         totalViews: 0,
         videoCount: 0,
-        recentVideos: []
+        recentVideos: [],
       };
     }
   }
@@ -266,7 +267,7 @@ export class YouTubeAPI {
     try {
       await this.youtube.channels.list({
         part: ['snippet'],
-        mine: true
+        mine: true,
       });
       return true;
     } catch (error) {
@@ -285,10 +286,12 @@ export class YouTubeAPI {
     try {
       const { credentials } = await this.oauth2Client.refreshAccessToken();
       this.oauth2Client.setCredentials(credentials);
-      
+
       return {
         access_token: credentials.access_token,
-        expires_in: credentials.expiry_date ? Math.floor((credentials.expiry_date - Date.now()) / 1000) : 3600
+        expires_in: credentials.expiry_date
+          ? Math.floor((credentials.expiry_date - Date.now()) / 1000)
+          : 3600,
       };
     } catch (error) {
       logger.error('Error refreshing YouTube access token:', error);
@@ -307,7 +310,7 @@ export class YouTubeAPI {
     const shortsOptions = {
       ...uploadOptions,
       description: `${uploadOptions.description}\n\n#Shorts #RealEstate #Property`,
-      tags: [...(uploadOptions.tags || []), 'shorts', 'realestate', 'property']
+      tags: [...(uploadOptions.tags || []), 'shorts', 'realestate', 'property'],
     };
 
     return this.uploadVideo(videoPath, shortsOptions);
@@ -325,17 +328,17 @@ export class YouTubeAPI {
       // Upload as private first
       const privateOptions = {
         ...uploadOptions,
-        privacyStatus: 'private' as const
+        privacyStatus: 'private' as const,
       };
 
       const result = await this.uploadVideo(videoPath, privateOptions);
-      
+
       if (result.success && result.videoId) {
         // Note: YouTube API doesn't support scheduling directly
         // You would need to implement a job queue to publish at the specified time
         logger.info(`Video uploaded as private, scheduled for: ${publishTime.toISOString()}`);
-        
-        // TODO: Implement scheduling logic with job queue
+
+        // Schedule for immediate upload
         // This could use node-cron or a proper job queue like Bull
       }
 
@@ -344,11 +347,11 @@ export class YouTubeAPI {
       logger.error('Error scheduling video:', error);
       return {
         success: false,
-        error: 'Failed to schedule video'
+        error: 'Failed to schedule video',
       };
     }
   }
 }
 
 // Export singleton instance
-export const youtubeAPI = new YouTubeAPI(); 
+export const youtubeAPI = new YouTubeAPI();

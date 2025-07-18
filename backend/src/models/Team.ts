@@ -9,30 +9,33 @@ export interface ITeam extends Document {
   updatedAt: Date;
 }
 
-const teamSchema = new Schema<ITeam>({
-  name: {
-    type: String,
-    required: true,
-    trim: true
+const teamSchema = new Schema<ITeam>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    ownerId: {
+      type: String,
+      required: true,
+    },
+    settings: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
   },
-  description: {
-    type: String,
-    trim: true
-  },
-  ownerId: {
-    type: String,
-    required: true
-  },
-  settings: {
-    type: Schema.Types.Mixed,
-    default: {}
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
 // Create indexes
 teamSchema.index({ ownerId: 1 });
 teamSchema.index({ name: 1 });
 
-export const Team = mongoose.model<ITeam>('Team', teamSchema); 
+export const Team = mongoose.model<ITeam>('Team', teamSchema);

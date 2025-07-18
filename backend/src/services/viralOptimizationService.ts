@@ -20,7 +20,7 @@ export interface ViralHook {
   platform: string[];
 }
 
-export type HookType = 
+export type HookType =
   | 'question'
   | 'controversy'
   | 'curiosity'
@@ -35,7 +35,14 @@ export type HookType =
 export interface TextPosition {
   x: number; // percentage from left
   y: number; // percentage from top
-  anchor: 'top-left' | 'top-center' | 'top-right' | 'center' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+  anchor:
+    | 'top-left'
+    | 'top-center'
+    | 'top-right'
+    | 'center'
+    | 'bottom-left'
+    | 'bottom-center'
+    | 'bottom-right';
 }
 
 export interface TextStyle {
@@ -51,7 +58,7 @@ export interface TextStyle {
   opacity: number;
 }
 
-export type AnimationType = 
+export type AnimationType =
   | 'fade-in'
   | 'slide-up'
   | 'slide-down'
@@ -114,12 +121,12 @@ class ViralOptimizationService {
         'Dream home or overpriced?',
         'Perfect family home?',
         'Investment or money pit?',
-        'Your next home?'
+        'Your next home?',
       ],
       platforms: ['tiktok', 'instagram', 'youtube'],
       effectiveness: 0.85,
       targetAudience: ['buyers', 'investors', 'general'],
-      examples: ['Would you live here for $1M?', 'Is this house worth the price?']
+      examples: ['Would you live here for $1M?', 'Is this house worth the price?'],
     },
     {
       id: 'real_estate_controversy',
@@ -132,12 +139,12 @@ class ViralOptimizationService {
         'Why this house will lose value',
         'Biggest mistake buyers make',
         'This neighborhood is changing',
-        'Hidden problems with this property'
+        'Hidden problems with this property',
       ],
       platforms: ['tiktok', 'instagram'],
       effectiveness: 0.78,
       targetAudience: ['buyers', 'investors'],
-      examples: ['This house is NOT worth $2M', 'Overpriced or fair market?']
+      examples: ['This house is NOT worth $2M', 'Overpriced or fair market?'],
     },
     {
       id: 'real_estate_curiosity',
@@ -146,16 +153,16 @@ class ViralOptimizationService {
       hookType: 'curiosity',
       textTemplates: [
         'Wait until you see inside...',
-        'You won\'t believe what\'s behind this door',
+        "You won't believe what's behind this door",
         'The secret room that changes everything',
         'This house has a hidden feature',
-        'What they don\'t tell you about this area',
-        'The surprising truth about this price'
+        "What they don't tell you about this area",
+        'The surprising truth about this price',
       ],
       platforms: ['tiktok', 'instagram', 'youtube'],
       effectiveness: 0.82,
       targetAudience: ['buyers', 'general'],
-      examples: ['Wait until you see inside...', 'You won\'t believe what\'s behind this door']
+      examples: ['Wait until you see inside...', "You won't believe what's behind this door"],
     },
     {
       id: 'real_estate_emotion',
@@ -166,14 +173,14 @@ class ViralOptimizationService {
         'This house will make you cry',
         'The home that changed my life',
         'Why this property broke my heart',
-        'The most beautiful home I\'ve seen',
+        "The most beautiful home I've seen",
         'This house has so much character',
-        'A home with incredible history'
+        'A home with incredible history',
       ],
       platforms: ['instagram', 'youtube'],
       effectiveness: 0.75,
       targetAudience: ['buyers', 'general'],
-      examples: ['This house will make you cry', 'The home that changed my life']
+      examples: ['This house will make you cry', 'The home that changed my life'],
     },
     {
       id: 'real_estate_transformation',
@@ -186,12 +193,12 @@ class ViralOptimizationService {
         'From disaster to dream home',
         'The transformation you need to see',
         'How we turned this around',
-        'The flip that changed everything'
+        'The flip that changed everything',
       ],
       platforms: ['tiktok', 'instagram', 'youtube'],
       effectiveness: 0.88,
       targetAudience: ['investors', 'general'],
-      examples: ['Before vs After: Mind blown', 'This renovation is incredible']
+      examples: ['Before vs After: Mind blown', 'This renovation is incredible'],
     },
     {
       id: 'real_estate_reveal',
@@ -200,17 +207,17 @@ class ViralOptimizationService {
       hookType: 'reveal',
       textTemplates: [
         'The price will shock you',
-        'You won\'t guess the square footage',
+        "You won't guess the square footage",
         'The age of this house is crazy',
         'This location is everything',
         'The story behind this property',
-        'What this house sold for'
+        'What this house sold for',
       ],
       platforms: ['tiktok', 'instagram', 'youtube'],
-      effectiveness: 0.80,
+      effectiveness: 0.8,
       targetAudience: ['buyers', 'investors', 'general'],
-      examples: ['The price will shock you', 'You won\'t guess the square footage']
-    }
+      examples: ['The price will shock you', "You won't guess the square footage"],
+    },
   ];
 
   private readonly DEFAULT_TEXT_STYLES: Record<string, TextStyle> = {
@@ -222,7 +229,7 @@ class ViralOptimizationService {
       shadow: true,
       bold: true,
       italic: false,
-      opacity: 1.0
+      opacity: 1.0,
     },
     modern_yellow: {
       fontFamily: 'Helvetica',
@@ -234,7 +241,7 @@ class ViralOptimizationService {
       shadow: true,
       bold: true,
       italic: false,
-      opacity: 1.0
+      opacity: 1.0,
     },
     clean_blue: {
       fontFamily: 'Arial',
@@ -244,7 +251,7 @@ class ViralOptimizationService {
       shadow: false,
       bold: true,
       italic: false,
-      opacity: 1.0
+      opacity: 1.0,
     },
     dramatic_red: {
       fontFamily: 'Impact',
@@ -254,8 +261,8 @@ class ViralOptimizationService {
       shadow: true,
       bold: true,
       italic: false,
-      opacity: 1.0
-    }
+      opacity: 1.0,
+    },
   };
 
   constructor() {
@@ -280,7 +287,7 @@ class ViralOptimizationService {
 
       // Get relevant templates based on platform and category
       const relevantTemplates = this.getRelevantTemplates(request);
-      
+
       // Generate hooks using templates and AI
       const hooks: ViralHook[] = [];
       const maxHooks = request.maxHooks || 3;
@@ -311,7 +318,7 @@ class ViralOptimizationService {
    */
   async optimizeVideo(request: ViralOptimizationRequest): Promise<ViralOptimizationResult> {
     const startTime = Date.now();
-    
+
     try {
       logger.info(`Starting viral optimization for video ${request.videoId}`);
 
@@ -323,7 +330,7 @@ class ViralOptimizationService {
 
       // Generate viral hooks
       const hooks = await this.generateViralHooks(request);
-      
+
       // Apply hooks to video
       const optimizedVideoPath = await this.applyHooksToVideo(video.filePath, hooks);
 
@@ -342,13 +349,15 @@ class ViralOptimizationService {
         originalVideoPath: video.filePath,
         processingTime,
         effectiveness,
-        recommendations
+        recommendations,
       };
 
       // Save optimization result to database
       await this.saveOptimizationResult(result);
 
-      logger.info(`Viral optimization completed for video ${request.videoId} in ${processingTime}ms`);
+      logger.info(
+        `Viral optimization completed for video ${request.videoId} in ${processingTime}ms`
+      );
       return result;
     } catch (error) {
       logger.error('Failed to optimize video:', error);
@@ -362,7 +371,7 @@ class ViralOptimizationService {
   private async applyHooksToVideo(videoPath: string, hooks: ViralHook[]): Promise<string> {
     return new Promise((resolve, reject) => {
       const outputPath = path.join(this.OUTPUT_DIR, `optimized_${Date.now()}.mp4`);
-      
+
       let command = ffmpeg(videoPath);
 
       // Build filter complex for text overlays
@@ -372,7 +381,7 @@ class ViralOptimizationService {
       hooks.forEach((hook, _index) => {
         const style = hook.style;
         const position = this.calculateTextPosition(hook.position);
-        
+
         // Create text overlay filter
         const textFilter = [
           `drawtext=text='${hook.text.replace(/'/g, "\\'")}':`,
@@ -380,18 +389,18 @@ class ViralOptimizationService {
           `fontsize=${style.fontSize}:`,
           `fontcolor=${style.color}:`,
           `x=${position.x}:y=${position.y}:`,
-          `enable='between(t,${hook.timing},${hook.timing + hook.duration})'`
+          `enable='between(t,${hook.timing},${hook.timing + hook.duration})'`,
         ].join('');
 
         if (style.backgroundColor) {
           // Add background box
-                     const boxFilter = [
-             `drawbox=x=(${position.x})-10:y=(${position.y})-10:`,
-             `w=text_w+20:h=text_h+20:`,
-             `color=${style.backgroundColor}:`,
-             `enable='between(t,${hook.timing},${hook.timing + hook.duration})'`
-           ].join('');
-          
+          const boxFilter = [
+            `drawbox=x=(${position.x})-10:y=(${position.y})-10:`,
+            `w=text_w+20:h=text_h+20:`,
+            `color=${style.backgroundColor}:`,
+            `enable='between(t,${hook.timing},${hook.timing + hook.duration})'`,
+          ].join('');
+
           filters.push(boxFilter);
         }
 
@@ -407,11 +416,7 @@ class ViralOptimizationService {
         .output(outputPath)
         .videoCodec('libx264')
         .audioCodec('aac')
-        .outputOptions([
-          '-preset fast',
-          '-crf 23',
-          '-movflags +faststart'
-        ])
+        .outputOptions(['-preset fast', '-crf 23', '-movflags +faststart'])
         .on('end', () => {
           logger.info(`Video optimization completed: ${outputPath}`);
           resolve(outputPath);
@@ -428,16 +433,16 @@ class ViralOptimizationService {
    * Get relevant templates based on request
    */
   private getRelevantTemplates(request: ViralOptimizationRequest): ViralTemplate[] {
-    let templates = this.VIRAL_TEMPLATES.filter(template => {
+    const templates = this.VIRAL_TEMPLATES.filter((template) => {
       // Filter by platform
       if (!template.platforms.includes(request.platform)) return false;
-      
+
       // Filter by category
       if (request.videoCategory && template.category !== request.videoCategory) return false;
-      
+
       // Filter by hook types if specified
       if (request.hookTypes && !request.hookTypes.includes(template.hookType)) return false;
-      
+
       return true;
     });
 
@@ -451,25 +456,27 @@ class ViralOptimizationService {
    * Generate hook from template
    */
   private async generateHookFromTemplate(
-    template: ViralTemplate, 
+    template: ViralTemplate,
     request: ViralOptimizationRequest
   ): Promise<ViralHook | null> {
     try {
       const hookId = `hook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Select random text from template
-      const text = template.textTemplates[Math.floor(Math.random() * template.textTemplates.length)] || 'Default text';
-      
+      const text =
+        template.textTemplates[Math.floor(Math.random() * template.textTemplates.length)] ||
+        'Default text';
+
       // Determine timing and duration
       const timing = this.calculateOptimalTiming(template.hookType);
       const duration = this.calculateOptimalDuration(template.hookType, text || '');
-      
+
       // Select appropriate style
       const style = this.selectTextStyle(template.hookType, request.platform);
-      
+
       // Calculate position
       const position = this.calculateOptimalPosition(template.hookType);
-      
+
       // Select animation
       const animation = this.selectAnimation(template.hookType);
 
@@ -484,7 +491,7 @@ class ViralOptimizationService {
         animation,
         category: template.category,
         effectiveness: template.effectiveness,
-        platform: [request.platform]
+        platform: [request.platform],
       };
 
       return hook;
@@ -508,7 +515,7 @@ class ViralOptimizationService {
       challenge: 0.6,
       countdown: 0.0,
       transformation: 0.5,
-      reveal: 1.0
+      reveal: 1.0,
     };
 
     return timingMap[hookType] || 0.5;
@@ -523,7 +530,7 @@ class ViralOptimizationService {
     const maxTime = 3.0;
 
     const adjustedTime = Math.max(minTime, Math.min(maxTime, baseTime));
-    
+
     // Adjust based on hook type
     const multipliers: Record<HookType, number> = {
       question: 1.2,
@@ -535,7 +542,7 @@ class ViralOptimizationService {
       challenge: 1.1,
       countdown: 0.7,
       transformation: 1.0,
-      reveal: 1.2
+      reveal: 1.2,
     };
 
     return adjustedTime * (multipliers[hookType] || 1.0);
@@ -555,10 +562,10 @@ class ViralOptimizationService {
       challenge: 'bold_white',
       countdown: 'dramatic_red',
       transformation: 'modern_yellow',
-      reveal: 'bold_white'
+      reveal: 'bold_white',
     };
 
-             const styleName = styleMap[hookType] || 'bold_white';
+    const styleName = styleMap[hookType] || 'bold_white';
     const baseStyle = this.DEFAULT_TEXT_STYLES[styleName];
     if (!baseStyle) {
       // Fallback to a default style if none found
@@ -569,7 +576,7 @@ class ViralOptimizationService {
         shadow: true,
         bold: true,
         italic: false,
-        opacity: 1.0
+        opacity: 1.0,
       };
     }
     return { ...baseStyle };
@@ -589,7 +596,7 @@ class ViralOptimizationService {
       challenge: { x: 50, y: 20, anchor: 'top-center' },
       countdown: { x: 50, y: 15, anchor: 'top-center' },
       transformation: { x: 50, y: 20, anchor: 'top-center' },
-      reveal: { x: 50, y: 85, anchor: 'bottom-center' }
+      reveal: { x: 50, y: 85, anchor: 'bottom-center' },
     };
 
     return positionMap[hookType] || { x: 50, y: 20, anchor: 'top-center' };
@@ -609,7 +616,7 @@ class ViralOptimizationService {
       challenge: 'pulse',
       countdown: 'typewriter',
       transformation: 'slide-left',
-      reveal: 'zoom-out'
+      reveal: 'zoom-out',
     };
 
     return animationMap[hookType] || 'fade-in';
@@ -621,7 +628,7 @@ class ViralOptimizationService {
   private calculateTextPosition(position: TextPosition): { x: string; y: string } {
     const x = `(w-text_w)*${position.x / 100}`;
     const y = `(h-text_h)*${position.y / 100}`;
-    
+
     return { x, y };
   }
 
@@ -630,10 +637,10 @@ class ViralOptimizationService {
    */
   private getFontPath(fontFamily: string): string {
     const fontMap: Record<string, string> = {
-      'Arial': path.join(this.FONT_DIR, 'arial.ttf'),
+      Arial: path.join(this.FONT_DIR, 'arial.ttf'),
       'Arial Black': path.join(this.FONT_DIR, 'arial-black.ttf'),
-      'Helvetica': path.join(this.FONT_DIR, 'helvetica.ttf'),
-      'Impact': path.join(this.FONT_DIR, 'impact.ttf')
+      Helvetica: path.join(this.FONT_DIR, 'helvetica.ttf'),
+      Impact: path.join(this.FONT_DIR, 'impact.ttf'),
     };
 
     return fontMap[fontFamily] || fontMap['Arial'] || path.join(this.FONT_DIR, 'arial.ttf');
@@ -657,7 +664,7 @@ class ViralOptimizationService {
    */
   private calculateOverallEffectiveness(hooks: ViralHook[]): number {
     if (hooks.length === 0) return 0;
-    
+
     const totalEffectiveness = hooks.reduce((sum, hook) => sum + hook.effectiveness, 0);
     return totalEffectiveness / hooks.length;
   }
@@ -674,16 +681,18 @@ class ViralOptimizationService {
     }
 
     const avgEffectiveness = this.calculateOverallEffectiveness(hooks);
-    
+
     if (avgEffectiveness < 0.6) {
-      recommendations.push('Consider using more engaging hook types like questions or transformations.');
+      recommendations.push(
+        'Consider using more engaging hook types like questions or transformations.'
+      );
     }
 
     if (avgEffectiveness > 0.8) {
       recommendations.push('Excellent hook selection! These should perform very well.');
     }
 
-    const hookTypes = hooks.map(h => h.type);
+    const hookTypes = hooks.map((h) => h.type);
     if (!hookTypes.includes('question')) {
       recommendations.push('Consider adding a question hook to increase engagement.');
     }
@@ -692,7 +701,7 @@ class ViralOptimizationService {
       recommendations.push('For TikTok, consider adding trend-based hooks.');
     }
 
-    if (hooks.some(h => h.timing > 1.5)) {
+    if (hooks.some((h) => h.timing > 1.5)) {
       recommendations.push('Consider moving hooks earlier in the video for better retention.');
     }
 
@@ -711,7 +720,7 @@ class ViralOptimizationService {
         originalVideoPath: result.originalVideoPath,
         processingTime: result.processingTime,
         effectiveness: result.effectiveness,
-        recommendations: result.recommendations
+        recommendations: result.recommendations,
       });
 
       await optimization.save();
@@ -724,27 +733,30 @@ class ViralOptimizationService {
   /**
    * Get optimization history for user
    */
-  async getOptimizationHistory(userId: string, limit: number = 10): Promise<ViralOptimizationResult[]> {
+  async getOptimizationHistory(
+    userId: string,
+    limit: number = 10
+  ): Promise<ViralOptimizationResult[]> {
     try {
       // First get videos for this user
       const userVideos = await Video.find({ userId }).select('_id');
-      const videoIds = userVideos.map(v => v._id.toString());
+      const videoIds = userVideos.map((v) => v._id.toString());
 
       // Then get optimization history for those videos
-      const optimizations = await ViralOptimization.find({ 
-        videoId: { $in: videoIds } 
+      const optimizations = await ViralOptimization.find({
+        videoId: { $in: videoIds },
       })
-      .sort({ createdAt: -1 })
-      .limit(limit);
+        .sort({ createdAt: -1 })
+        .limit(limit);
 
-      return optimizations.map(opt => ({
+      return optimizations.map((opt) => ({
         videoId: opt.videoId,
         hooks: opt.hooks as ViralHook[],
         optimizedVideoPath: opt.optimizedVideoPath,
         originalVideoPath: opt.originalVideoPath,
         processingTime: opt.processingTime,
         effectiveness: opt.effectiveness,
-        recommendations: opt.recommendations
+        recommendations: opt.recommendations,
       }));
     } catch (error) {
       logger.error('Failed to get optimization history:', error);
@@ -761,4 +773,4 @@ class ViralOptimizationService {
 }
 
 export const viralOptimizationService = new ViralOptimizationService();
-export default viralOptimizationService; 
+export default viralOptimizationService;

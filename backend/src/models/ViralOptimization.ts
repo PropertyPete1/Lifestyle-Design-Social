@@ -38,129 +38,137 @@ export interface IViralOptimization extends Document {
   updatedAt: Date;
 }
 
-const viralOptimizationSchema = new Schema<IViralOptimization>({
-  videoId: {
-    type: String,
-    required: true,
-    ref: 'Video'
-  },
-  hooks: [{
-    id: {
+const viralOptimizationSchema = new Schema<IViralOptimization>(
+  {
+    videoId: {
       type: String,
-      required: true
+      required: true,
+      ref: 'Video',
     },
-    type: {
+    hooks: [
+      {
+        id: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          required: true,
+        },
+        text: {
+          type: String,
+          required: true,
+        },
+        timing: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+        duration: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+        position: {
+          x: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 100,
+          },
+          y: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 100,
+          },
+          anchor: {
+            type: String,
+            required: true,
+          },
+        },
+        style: {
+          fontFamily: {
+            type: String,
+            required: true,
+          },
+          fontSize: {
+            type: Number,
+            required: true,
+            min: 8,
+          },
+          color: {
+            type: String,
+            required: true,
+          },
+          backgroundColor: String,
+          borderColor: String,
+          borderWidth: Number,
+          shadow: {
+            type: Boolean,
+            required: true,
+          },
+          bold: {
+            type: Boolean,
+            required: true,
+          },
+          italic: {
+            type: Boolean,
+            required: true,
+          },
+        },
+        animation: {
+          type: String,
+          required: true,
+        },
+        category: {
+          type: String,
+          required: true,
+        },
+        effectiveness: {
+          type: Number,
+          required: true,
+          min: 0,
+          max: 1,
+        },
+        platform: [String],
+      },
+    ],
+    optimizedVideoPath: {
       type: String,
-      required: true
+      required: true,
     },
-    text: {
+    originalVideoPath: {
       type: String,
-      required: true
+      required: true,
     },
-    timing: {
+    processingTime: {
       type: Number,
       required: true,
-      min: 0
-    },
-    duration: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    position: {
-      x: {
-        type: Number,
-        required: true,
-        min: 0,
-        max: 100
-      },
-      y: {
-        type: Number,
-        required: true,
-        min: 0,
-        max: 100
-      },
-      anchor: {
-        type: String,
-        required: true
-      }
-    },
-    style: {
-      fontFamily: {
-        type: String,
-        required: true
-      },
-      fontSize: {
-        type: Number,
-        required: true,
-        min: 8
-      },
-      color: {
-        type: String,
-        required: true
-      },
-      backgroundColor: String,
-      borderColor: String,
-      borderWidth: Number,
-      shadow: {
-        type: Boolean,
-        required: true
-      },
-      bold: {
-        type: Boolean,
-        required: true
-      },
-      italic: {
-        type: Boolean,
-        required: true
-      }
-    },
-    animation: {
-      type: String,
-      required: true
-    },
-    category: {
-      type: String,
-      required: true
+      min: 0,
     },
     effectiveness: {
       type: Number,
       required: true,
       min: 0,
-      max: 1
+      max: 1,
     },
-    platform: [String]
-  }],
-  optimizedVideoPath: {
-    type: String,
-    required: true
+    recommendations: [String],
   },
-  originalVideoPath: {
-    type: String,
-    required: true
-  },
-  processingTime: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  effectiveness: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 1
-  },
-  recommendations: [String]
-}, {
-  timestamps: true
-});
+  {
+    timestamps: true,
+  }
+);
 
 // Create indexes
 viralOptimizationSchema.index({ videoId: 1 });
 viralOptimizationSchema.index({ createdAt: -1 });
 viralOptimizationSchema.index({ effectiveness: -1 });
 
-export const ViralOptimization = mongoose.model<IViralOptimization>('ViralOptimization', viralOptimizationSchema);
+export const ViralOptimization = mongoose.model<IViralOptimization>(
+  'ViralOptimization',
+  viralOptimizationSchema
+);
 
 export interface ViralOptimizationCreateInput {
   videoId: string;
@@ -196,4 +204,4 @@ export interface ViralOptimizationCreateInput {
   processingTime: number;
   effectiveness: number;
   recommendations: string[];
-} 
+}

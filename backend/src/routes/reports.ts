@@ -11,20 +11,19 @@ const router = Router();
 router.get('/daily', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    
+
     const report = await dailyReportService.generateDailyReport(userId);
-    
+
     return res.json({
       success: true,
       data: report,
-      message: 'Daily report generated successfully'
+      message: 'Daily report generated successfully',
     });
-
   } catch (error) {
     logger.error('Daily report generation error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to generate daily report' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate daily report',
     });
   }
 });
@@ -36,24 +35,23 @@ router.get('/history', authenticateToken, async (req: Request, res: Response) =>
   try {
     const userId = (req as any).userId;
     const { days = 30 } = req.query;
-    
+
     const reports = await dailyReportService.getHistoricalReports(userId, parseInt(days as string));
-    
+
     return res.json({
       success: true,
       data: {
         reports,
         totalReports: reports.length,
-        timeframeDays: parseInt(days as string)
+        timeframeDays: parseInt(days as string),
       },
-      message: `Retrieved ${reports.length} historical reports`
+      message: `Retrieved ${reports.length} historical reports`,
     });
-
   } catch (error) {
     logger.error('Historical reports error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to retrieve historical reports' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve historical reports',
     });
   }
 });
@@ -65,28 +63,27 @@ router.post('/send-email', authenticateToken, async (req: Request, res: Response
   try {
     const userId = (req as any).userId;
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({ error: 'Email address is required' });
     }
 
     const report = await dailyReportService.generateDailyReport(userId);
-    
+
     return res.json({
       success: true,
       data: {
         reportDate: report.date,
         emailSent: true,
-        summary: report.summary
+        summary: report.summary,
       },
-      message: 'Daily report email sent successfully'
+      message: 'Daily report email sent successfully',
     });
-
   } catch (error) {
     logger.error('Email report error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to send email report' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to send email report',
     });
   }
 });
@@ -98,19 +95,18 @@ router.post('/start-scheduler', authenticateToken, async (_req: Request, res: Re
   try {
     // In a real app, you'd check for admin privileges here
     // For now, any authenticated user can start the scheduler
-    
+
     dailyReportService.startScheduler();
-    
+
     return res.json({
       success: true,
-      message: 'Daily report scheduler started successfully'
+      message: 'Daily report scheduler started successfully',
     });
-
   } catch (error) {
     logger.error('Scheduler start error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to start scheduler' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to start scheduler',
     });
   }
 });
@@ -121,17 +117,16 @@ router.post('/start-scheduler', authenticateToken, async (_req: Request, res: Re
 router.post('/check-failures', authenticateToken, async (_req: Request, res: Response) => {
   try {
     await dailyReportService.checkAndNotifyFailures();
-    
+
     return res.json({
       success: true,
-      message: 'Failure check completed and notifications sent'
+      message: 'Failure check completed and notifications sent',
     });
-
   } catch (error) {
     logger.error('Failure check error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to check failures' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check failures',
     });
   }
 });
@@ -142,9 +137,9 @@ router.post('/check-failures', authenticateToken, async (_req: Request, res: Res
 router.get('/summary', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    
+
     const report = await dailyReportService.generateDailyReport(userId);
-    
+
     // Return just the key metrics for dashboard display
     return res.json({
       success: true,
@@ -156,21 +151,20 @@ router.get('/summary', authenticateToken, async (req: Request, res: Response) =>
         platforms: {
           instagram: report.platforms.instagram,
           tiktok: report.platforms.tiktok,
-          youtube: report.platforms.youtube
+          youtube: report.platforms.youtube,
         },
         hasErrors: report.errors.length > 0,
-        topRecommendation: report.recommendations[0] || 'Everything looks good!'
+        topRecommendation: report.recommendations[0] || 'Everything looks good!',
       },
-      message: 'Summary generated successfully'
+      message: 'Summary generated successfully',
     });
-
   } catch (error) {
     logger.error('Summary generation error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to generate summary' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate summary',
     });
   }
 });
 
-export default router; 
+export default router;

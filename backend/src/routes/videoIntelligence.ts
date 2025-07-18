@@ -22,9 +22,9 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, `video-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
+  },
 });
 
 const upload = multer({
@@ -39,8 +39,8 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 500 * 1024 * 1024 // 500MB limit
-  }
+    fileSize: 500 * 1024 * 1024, // 500MB limit
+  },
 });
 
 // Using singleton service instances
@@ -62,21 +62,17 @@ router.post('/analyze', authenticateToken, upload.single('video'), async (req, r
     logger.info(`Starting comprehensive video analysis for: ${videoId}`);
 
     // Run all analyses in parallel for efficiency
-    const [
-      videoAnalysis,
-      thumbnailSelection,
-      audioMoodAnalysis,
-      compressionRecommendations
-    ] = await Promise.all([
-      videoIntelligenceService.analyzeVideo(videoId, videoPath),
-      thumbnailSelectionService.selectBestThumbnail(videoId, videoPath),
-      audioMoodMatchingService.analyzeAndMatchAudio(videoId, videoPath),
-      videoCompressionService.getCompressionRecommendations(
-        videoPath,
-        platforms[0] || 'instagram',
-        contentType
-      )
-    ]);
+    const [videoAnalysis, thumbnailSelection, audioMoodAnalysis, compressionRecommendations] =
+      await Promise.all([
+        videoIntelligenceService.analyzeVideo(videoId, videoPath),
+        thumbnailSelectionService.selectBestThumbnail(videoId, videoPath),
+        audioMoodMatchingService.analyzeAndMatchAudio(videoId, videoPath),
+        videoCompressionService.getCompressionRecommendations(
+          videoPath,
+          platforms[0] || 'instagram',
+          contentType
+        ),
+      ]);
 
     // Get music recommendations based on audio analysis
     const musicRecommendations = await trendingMusicService.getMusicRecommendations({
@@ -87,7 +83,7 @@ router.post('/analyze', authenticateToken, upload.single('video'), async (req, r
       audioTempo: audioMoodAnalysis.audioFeatures.tempo,
       audioEnergy: audioMoodAnalysis.audioFeatures.energy,
       targetPlatforms: platforms,
-      excludeExplicit: true
+      excludeExplicit: true,
     });
 
     const response = {
@@ -96,35 +92,34 @@ router.post('/analyze', authenticateToken, upload.single('video'), async (req, r
         scene: [], // Scene analysis data will be added when feature is implemented
         audio: audioMoodAnalysis,
         engagement: videoAnalysis.engagementPrediction,
-        optimization: videoAnalysis.optimizationSuggestions
+        optimization: videoAnalysis.optimizationSuggestions,
       },
       recommendations: {
         thumbnail: {
           best: thumbnailSelection.selectedThumbnail,
           alternatives: thumbnailSelection.alternatives,
           reasoning: thumbnailSelection.selectionReasoning,
-          processingTime: thumbnailSelection.processingTime
+          processingTime: thumbnailSelection.processingTime,
         },
         music: musicRecommendations.slice(0, 5), // Top 5 recommendations
         compression: compressionRecommendations.recommendations,
-        mixing: audioMoodAnalysis.mixingStrategy
+        mixing: audioMoodAnalysis.mixingStrategy,
       },
       warnings: [
         ...compressionRecommendations.warnings,
         ...videoAnalysis.optimizationSuggestions
-          .filter(s => s.impact === 'high')
-          .map(s => s.suggestion)
+          .filter((s) => s.impact === 'high')
+          .map((s) => s.suggestion),
       ],
-      processingTime: Date.now() - Date.now() // This would be calculated properly
+      processingTime: Date.now() - Date.now(), // This would be calculated properly
     };
 
     return res.json(response);
-
   } catch (error) {
     logger.error('Video analysis error:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Video analysis failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -136,20 +131,19 @@ router.post('/analyze', authenticateToken, upload.single('video'), async (req, r
 router.get('/thumbnails/:videoId', authenticateToken, async (req, res) => {
   try {
     const { videoId } = req.params;
-    
+
     if (!videoId) {
       return res.status(400).json({ error: 'Video ID is required' });
     }
-    
+
     const thumbnails = await thumbnailSelectionService.getThumbnailCandidates(videoId);
     const selected = await thumbnailSelectionService.getSelectedThumbnail(videoId);
 
     return res.json({
       selected,
       candidates: thumbnails,
-      totalCandidates: thumbnails.length
+      totalCandidates: thumbnails.length,
     });
-
   } catch (error) {
     logger.error('Error getting thumbnails:', error);
     return res.status(500).json({ error: 'Failed to get thumbnails' });
@@ -174,9 +168,8 @@ router.post('/thumbnails/:videoId/select', authenticateToken, async (req, res) =
     return res.json({
       success: true,
       message: 'Thumbnail selection updated',
-      selectedThumbnail: thumbnailId
+      selectedThumbnail: thumbnailId,
     });
-
   } catch (error) {
     logger.error('Error selecting thumbnail:', error);
     return res.status(500).json({ error: 'Failed to select thumbnail' });
@@ -197,11 +190,11 @@ router.get('/music/:videoId', authenticateToken, async (req, res) => {
     }
 
     const storedRecommendations = await trendingMusicService.getStoredRecommendations(videoId);
-    
+
     if (storedRecommendations.length === 0) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'No music recommendations found',
-        message: 'Please analyze the video first'
+        message: 'Please analyze the video first',
       });
     }
 
@@ -209,9 +202,8 @@ router.get('/music/:videoId', authenticateToken, async (req, res) => {
       recommendations: storedRecommendations,
       totalRecommendations: storedRecommendations.length,
       platform,
-      contentType
+      contentType,
     });
-
   } catch (error) {
     logger.error('Error getting music recommendations:', error);
     return res.status(500).json({ error: 'Failed to get music recommendations' });
@@ -236,7 +228,7 @@ router.get('/trending-music', authenticateToken, async (req, res) => {
         platform: 'spotify',
         trendingScore: 0.95,
         genre: 'ambient',
-        mood: 'professional'
+        mood: 'professional',
       },
       {
         id: 'trending_2',
@@ -245,17 +237,16 @@ router.get('/trending-music', authenticateToken, async (req, res) => {
         platform: 'tiktok',
         trendingScore: 0.92,
         genre: 'cinematic',
-        mood: 'inspiring'
-      }
+        mood: 'inspiring',
+      },
     ];
 
     return res.json({
       trending: trendingMusic,
       filters: { platform, genre, mood },
       totalTracks: trendingMusic.length,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     });
-
   } catch (error) {
     logger.error('Error getting trending music:', error);
     return res.status(500).json({ error: 'Failed to get trending music' });
@@ -279,11 +270,14 @@ router.post('/compress', authenticateToken, upload.single('video'), async (req, 
       targetFileSize,
       preserveAudio = true,
       enhanceVisuals = false,
-      optimizeForMobile = true
+      optimizeForMobile = true,
     } = req.body;
 
     const inputPath = req.file.path;
-    const outputPath = inputPath.replace(path.extname(inputPath), '_compressed' + path.extname(inputPath));
+    const outputPath = inputPath.replace(
+      path.extname(inputPath),
+      '_compressed' + path.extname(inputPath)
+    );
 
     const settings = {
       platform,
@@ -292,7 +286,7 @@ router.post('/compress', authenticateToken, upload.single('video'), async (req, 
       targetFileSize: targetFileSize ? parseInt(targetFileSize) : undefined,
       preserveAudio: preserveAudio === 'true',
       enhanceVisuals: enhanceVisuals === 'true',
-      optimizeForMobile: optimizeForMobile === 'true'
+      optimizeForMobile: optimizeForMobile === 'true',
     };
 
     const compressionResult = await videoCompressionService.compressVideo(
@@ -305,21 +299,20 @@ router.post('/compress', authenticateToken, upload.single('video'), async (req, 
       return res.json({
         success: true,
         result: compressionResult,
-        downloadUrl: `/api/video-intelligence/download/${path.basename(outputPath)}`
+        downloadUrl: `/api/video-intelligence/download/${path.basename(outputPath)}`,
       });
     } else {
       return res.status(500).json({
         success: false,
         error: 'Compression failed',
-        warnings: compressionResult.warnings
+        warnings: compressionResult.warnings,
       });
     }
-
   } catch (error) {
     logger.error('Video compression error:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Video compression failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -331,11 +324,11 @@ router.post('/compress', authenticateToken, upload.single('video'), async (req, 
 router.get('/download/:filename', authenticateToken, async (req, res) => {
   try {
     const { filename } = req.params;
-    
+
     if (!filename) {
       return res.status(400).json({ error: 'Filename is required' });
     }
-    
+
     const filePath = path.join(__dirname, '../../../uploads', filename);
 
     if (!fs.existsSync(filePath)) {
@@ -352,7 +345,6 @@ router.get('/download/:filename', authenticateToken, async (req, res) => {
       // Callback doesn't need explicit return
     });
     return; // Explicitly return after download
-
   } catch (error) {
     logger.error('Download error:', error);
     return res.status(500).json({ error: 'Download failed' });
@@ -366,17 +358,17 @@ router.get('/download/:filename', authenticateToken, async (req, res) => {
 router.get('/audio-analysis/:videoId', authenticateToken, async (req, res) => {
   try {
     const { videoId } = req.params;
-    
+
     if (!videoId) {
       return res.status(400).json({ error: 'Video ID is required' });
     }
-    
+
     const audioAnalysis = await audioMoodMatchingService.getStoredAudioAnalysis(videoId);
-    
+
     if (!audioAnalysis || audioAnalysis.length === 0) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'No audio analysis found',
-        message: 'Please analyze the video first'
+        message: 'Please analyze the video first',
       });
     }
 
@@ -388,10 +380,9 @@ router.get('/audio-analysis/:videoId', authenticateToken, async (req, res) => {
       recommendations: {
         music: latestAnalysis.recommendations?.suggestedMusicGenres || [],
         soundEffects: [], // Not implemented in current analysis
-        mixing: latestAnalysis.recommendations?.energyLevel || 'medium'
-      }
+        mixing: latestAnalysis.recommendations?.energyLevel || 'medium',
+      },
     });
-
   } catch (error) {
     logger.error('Error getting audio analysis:', error);
     return res.status(500).json({ error: 'Failed to get audio analysis' });
@@ -405,7 +396,7 @@ router.get('/audio-analysis/:videoId', authenticateToken, async (req, res) => {
 router.get('/optimization-suggestions/:videoId', authenticateToken, async (req, res) => {
   try {
     const { videoId } = req.params;
-    
+
     // This would get stored optimization suggestions
     // For now, return mock data
     const suggestions = [
@@ -414,31 +405,30 @@ router.get('/optimization-suggestions/:videoId', authenticateToken, async (req, 
         suggestion: 'Use thumbnail with better composition and brighter colors',
         impact: 'high',
         effort: 'easy',
-        estimatedImprovement: 15
+        estimatedImprovement: 15,
       },
       {
         category: 'audio',
         suggestion: 'Add background music to enhance engagement',
         impact: 'high',
         effort: 'moderate',
-        estimatedImprovement: 25
+        estimatedImprovement: 25,
       },
       {
         category: 'compression',
         suggestion: 'Optimize compression settings for better quality',
         impact: 'medium',
         effort: 'easy',
-        estimatedImprovement: 10
-      }
+        estimatedImprovement: 10,
+      },
     ];
 
     return res.json({
       videoId,
       suggestions,
       totalSuggestions: suggestions.length,
-      highImpactSuggestions: suggestions.filter(s => s.impact === 'high').length
+      highImpactSuggestions: suggestions.filter((s) => s.impact === 'high').length,
     });
-
   } catch (error) {
     logger.error('Error getting optimization suggestions:', error);
     return res.status(500).json({ error: 'Failed to get optimization suggestions' });
@@ -452,18 +442,18 @@ router.get('/optimization-suggestions/:videoId', authenticateToken, async (req, 
 router.delete('/cleanup/:videoId', authenticateToken, async (req, res) => {
   try {
     const { videoId } = req.params;
-    
+
     if (!videoId) {
       return res.status(400).json({ error: 'Video ID is required' });
     }
-    
+
     // Clean up temporary files
     const uploadDir = path.join(__dirname, '../../../uploads');
     const files = fs.readdirSync(uploadDir);
-    
+
     let deletedFiles = 0;
-    
-    files.forEach(file => {
+
+    files.forEach((file) => {
       if (file.includes(videoId)) {
         const filePath = path.join(uploadDir, file);
         try {
@@ -478,13 +468,12 @@ router.delete('/cleanup/:videoId', authenticateToken, async (req, res) => {
     return res.json({
       success: true,
       message: `Cleaned up ${deletedFiles} files for video ${videoId}`,
-      deletedFiles
+      deletedFiles,
     });
-
   } catch (error) {
     logger.error('Cleanup error:', error);
     return res.status(500).json({ error: 'Cleanup failed' });
   }
 });
 
-export default router; 
+export default router;

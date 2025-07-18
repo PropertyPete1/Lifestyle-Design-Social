@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { User } from '../models/User';
+import User from '../models/User';
 import { Video } from '../models/Video';
 import { Post } from '../models/Post';
 import { InstagramService } from './instagramService';
@@ -29,7 +29,6 @@ export interface SmartPostingOptions {
   useEngagementData?: boolean;
   avoidDuplicateContent?: boolean;
   optimizeTiming?: boolean;
-  testMode?: boolean;
 }
 
 export class AutoPostingService {
@@ -114,15 +113,14 @@ export class AutoPostingService {
   ): Promise<PostingResult> {
     try {
       // Get next available video
-      const video = await this.videoModel.findOne({ 
-        userId, 
-        isActive: true,
-        category: options.category || 'real-estate',
-        $or: [
-          { nextPostDate: { $lte: new Date() } },
-          { nextPostDate: null }
-        ]
-      }).sort({ lastPostedAt: 1 });
+      const video = await this.videoModel
+        .findOne({
+          userId,
+          isActive: true,
+          category: options.category || 'real-estate',
+          $or: [{ nextPostDate: { $lte: new Date() } }, { nextPostDate: null }],
+        })
+        .sort({ lastPostedAt: 1 });
 
       if (!video) {
         return {
@@ -194,7 +192,7 @@ export class AutoPostingService {
       const now = new Date();
       const scheduledPosts = await this.postModel.find({
         status: 'scheduled',
-        scheduledTime: { $lte: now }
+        scheduledTime: { $lte: now },
       });
 
       const results: PostingResult[] = [];
@@ -243,26 +241,6 @@ export class AutoPostingService {
         throw new Error('Video not found');
       }
 
-      // Check if in test mode
-      if (user.testMode) {
-        logger.info(`Test mode: Simulating post execution for post ${postId}`);
-        
-        // Mark as posted in test mode
-        await this.postModel.findByIdAndUpdate(postId, {
-          status: 'posted',
-          postedTime: new Date(),
-          externalPostId: 'success_id'
-        });
-
-        return {
-          success: true,
-          postId,
-          scheduledTime: post.scheduledTime,
-          videoId: post.videoId,
-          platform: post.platform,
-        };
-      }
-
       // Execute actual post
       const result = await this.instagramService.postVideo({
         videoPath: video.filePath,
@@ -276,12 +254,12 @@ export class AutoPostingService {
         // Mark as posted with engagement metrics
         await this.postModel.findByIdAndUpdate(postId, {
           status: 'posted',
-          postedTime: new Date()
+          postedTime: new Date(),
         });
-        
+
         await this.videoModel.findByIdAndUpdate(video._id, {
           postCount: (video.postCount || 0) + 1,
-          lastPostedAt: new Date()
+          lastPostedAt: new Date(),
         });
 
         // Update analytics
@@ -294,7 +272,7 @@ export class AutoPostingService {
         // Mark as failed
         await this.postModel.findByIdAndUpdate(postId, {
           status: 'failed',
-          errorMessage: result.error || 'Unknown error'
+          errorMessage: result.error || 'Unknown error',
         });
         logger.error(`Failed to post to Instagram: ${result.error}`);
       }
@@ -320,7 +298,7 @@ export class AutoPostingService {
   async getOptimalPostingTimes(userId: string): Promise<string[]> {
     try {
       const engagementData = await this.analyticsService.getBestPostingTimes(userId, 90);
-      
+
       if (engagementData && engagementData.bestTimes) {
         return engagementData.bestTimes.slice(0, 3); // Top 3 times
       }
@@ -336,16 +314,19 @@ export class AutoPostingService {
   /**
    * Smart video selection based on engagement and timing
    */
-  async selectNextVideo(userId: string, _category: string, options: SmartPostingOptions = {}): Promise<any> {
+  async selectNextVideo(
+    userId: string,
+    _category: string,
+    options: SmartPostingOptions = {}
+  ): Promise<any> {
     try {
-      const nextVideo = await this.videoModel.findOne({
-        userId,
-        isActive: true,
-        $or: [
-          { nextPostDate: { $lte: new Date() } },
-          { nextPostDate: null }
-        ]
-      }).sort({ lastPostedAt: 1 });
+      const nextVideo = await this.videoModel
+        .findOne({
+          userId,
+          isActive: true,
+          $or: [{ nextPostDate: { $lte: new Date() } }, { nextPostDate: null }],
+        })
+        .sort({ lastPostedAt: 1 });
 
       if (!nextVideo) {
         return null;
@@ -356,24 +337,26 @@ export class AutoPostingService {
         const recentPosts = await this.postModel.find({
           userId,
           status: 'posted',
-          postedTime: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+          postedTime: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
         });
 
-        const hasSimilarContent = recentPosts.some((post: any) => 
-          nextVideo && post.videoId === nextVideo.id && 
-          post.postedTime && new Date(post.postedTime).getTime() > Date.now() - (7 * 24 * 60 * 60 * 1000) // 7 days
+        const hasSimilarContent = recentPosts.some(
+          (post: any) =>
+            nextVideo &&
+            post.videoId === nextVideo.id &&
+            post.postedTime &&
+            new Date(post.postedTime).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000 // 7 days
         );
 
         if (hasSimilarContent && nextVideo) {
           // Get alternative video
-          const alternativeVideo = await this.videoModel.findOne({
-            userId,
-            isActive: true,
-            $or: [
-              { nextPostDate: { $lte: new Date() } },
-              { nextPostDate: null }
-            ]
-          }).sort({ lastPostedAt: 1 });
+          const alternativeVideo = await this.videoModel
+            .findOne({
+              userId,
+              isActive: true,
+              $or: [{ nextPostDate: { $lte: new Date() } }, { nextPostDate: null }],
+            })
+            .sort({ lastPostedAt: 1 });
           return alternativeVideo || null;
         }
       }
@@ -397,7 +380,7 @@ export class AutoPostingService {
         totalPosts,
         totalVideos,
         averageEngagement: 0, // Would calculate from actual engagement data
-        successRate: 0.95 // Would calculate from successful vs failed posts
+        successRate: 0.95, // Would calculate from successful vs failed posts
       };
     } catch (error) {
       logger.error('Failed to get posting stats:', error);
@@ -410,11 +393,13 @@ export class AutoPostingService {
    */
   private async getNextScheduledPost(userId: string): Promise<any> {
     try {
-      const nextPost = await this.postModel.findOne({
-        userId,
-        status: 'scheduled',
-        scheduledTime: { $gt: new Date() }
-      }).sort({ scheduledTime: 1 });
+      const nextPost = await this.postModel
+        .findOne({
+          userId,
+          status: 'scheduled',
+          scheduledTime: { $gt: new Date() },
+        })
+        .sort({ scheduledTime: 1 });
 
       return nextPost;
     } catch (error) {
@@ -429,7 +414,7 @@ export class AutoPostingService {
   async pauseAutoPosting(userId: string): Promise<void> {
     try {
       await this.userModel.findByIdAndUpdate(userId, {
-        autoPostingEnabled: false
+        autoPostingEnabled: false,
       });
       logger.info(`Auto-posting paused for user ${userId}`);
     } catch (error) {
@@ -444,7 +429,7 @@ export class AutoPostingService {
   async resumeAutoPosting(userId: string): Promise<void> {
     try {
       await this.userModel.findByIdAndUpdate(userId, {
-        autoPostingEnabled: true
+        autoPostingEnabled: true,
       });
       logger.info(`Auto-posting resumed for user ${userId}`);
     } catch (error) {
@@ -459,10 +444,10 @@ export class AutoPostingService {
   async manualPost(userId: string): Promise<PostingResult> {
     try {
       logger.info(`Manual post triggered for user ${userId}`);
-      
+
       // Get the next scheduled post for this user or create one
       const nextPost = await this.getNextScheduledPost(userId);
-      
+
       if (nextPost) {
         // Execute the scheduled post immediately
         return await this.executePost(nextPost.id);
@@ -476,14 +461,14 @@ export class AutoPostingService {
             return await this.executePost(newPost.id);
           }
         }
-        
+
         return {
           success: false,
           error: 'No videos available for posting',
           postId: '',
           scheduledTime: new Date(),
           videoId: '',
-          platform: 'instagram'
+          platform: 'instagram',
         };
       }
     } catch (error) {
@@ -494,7 +479,7 @@ export class AutoPostingService {
         postId: '',
         scheduledTime: new Date(),
         videoId: '',
-        platform: 'instagram'
+        platform: 'instagram',
       };
     }
   }
@@ -503,4 +488,4 @@ export class AutoPostingService {
 // Export singleton instance for backwards compatibility
 export const autoPostingService = new AutoPostingService();
 
-export default AutoPostingService; 
+export default AutoPostingService;

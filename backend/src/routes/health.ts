@@ -1,38 +1,30 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import { logger } from '../utils/logger';
+import express, { Request, Response } from 'express'
+import mongoose from 'mongoose'
 
-const router = express.Router();
+const router = express.Router()
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    // Check MongoDB connection
-    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    // Check database connection
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
     
-    const healthData = {
-      status: 'ok',
+    res.json({
+      success: true,
+      status: 'OK',
       timestamp: new Date().toISOString(),
+      database: dbStatus,
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-      database: {
-        status: dbStatus,
-        type: 'MongoDB'
-      },
       memory: process.memoryUsage(),
-      version: process.version
-    };
-
-    logger.info('Health check performed');
-    
-    return res.json(healthData);
+      version: process.env.npm_package_version || '1.0.0',
+    })
   } catch (error) {
-    logger.error('Health check failed:', error);
-    return res.status(500).json({
-      status: 'error',
+    res.status(500).json({
+      success: false,
+      status: 'ERROR',
       timestamp: new Date().toISOString(),
-      error: 'Health check failed'
-    });
+      error: 'Health check failed',
+    })
   }
-});
+})
 
-export default router; 
+export default router

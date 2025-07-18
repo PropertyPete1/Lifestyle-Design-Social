@@ -8,7 +8,6 @@ import { logger } from '../utils/logger';
 import { connectToDatabase } from '../config/database';
 import { ThumbnailSelection } from '../models/ThumbnailSelection';
 
-
 // Configure ffmpeg path
 import ffmpegStatic from 'ffmpeg-static';
 if (ffmpegStatic) {
@@ -100,9 +99,7 @@ export class ThumbnailSelectionService {
       const bestThumbnail = this.selectBestCandidate(analyzedCandidates);
 
       // Get alternatives (top 3 excluding selected)
-      const alternatives = analyzedCandidates
-        .filter(c => c.id !== bestThumbnail.id)
-        .slice(0, 3);
+      const alternatives = analyzedCandidates.filter((c) => c.id !== bestThumbnail.id).slice(0, 3);
 
       // Generate selection reasoning
       const selectionReasoning = this.generateSelectionReasoning(bestThumbnail, alternatives);
@@ -116,12 +113,13 @@ export class ThumbnailSelectionService {
         selectedThumbnail: bestThumbnail,
         alternatives,
         selectionReasoning,
-        processingTime
+        processingTime,
       };
 
-      logger.info(`Completed thumbnail selection for video: ${videoId}, selected thumbnail at ${bestThumbnail.timestamp}s`);
+      logger.info(
+        `Completed thumbnail selection for video: ${videoId}, selected thumbnail at ${bestThumbnail.timestamp}s`
+      );
       return result;
-
     } catch (error) {
       logger.error(`Error selecting thumbnail for video ${videoId}:`, error);
       throw error;
@@ -131,19 +129,25 @@ export class ThumbnailSelectionService {
   /**
    * Generate multiple thumbnail candidates from video
    */
-  private async generateThumbnailCandidates(videoId: string, videoPath: string): Promise<ThumbnailCandidate[]> {
+  private async generateThumbnailCandidates(
+    videoId: string,
+    videoPath: string
+  ): Promise<ThumbnailCandidate[]> {
     const candidates: ThumbnailCandidate[] = [];
-    
+
     try {
       // Get video duration
       const duration = await this.getVideoDuration(videoPath);
-      
+
       // Generate thumbnails at strategic timestamps
       const timestamps = this.calculateOptimalTimestamps(duration);
 
       for (let i = 0; i < timestamps.length; i++) {
         const timestamp = timestamps[i];
-        const outputPath = path.join(this.THUMBNAILS_DIR, `${videoId}_thumb_${i}_${timestamp}s.jpg`);
+        const outputPath = path.join(
+          this.THUMBNAILS_DIR,
+          `${videoId}_thumb_${i}_${timestamp}s.jpg`
+        );
 
         try {
           // Extract frame at timestamp
@@ -156,7 +160,7 @@ export class ThumbnailSelectionService {
             imagePath: outputPath,
             score: 0, // Will be calculated during analysis
             analysis: await this.getEmptyAnalysis(),
-            isSelected: false
+            isSelected: false,
           };
 
           candidates.push(candidate);
@@ -167,7 +171,6 @@ export class ThumbnailSelectionService {
 
       logger.info(`Generated ${candidates.length} thumbnail candidates for video: ${videoId}`);
       return candidates;
-
     } catch (error) {
       logger.error(`Error generating thumbnail candidates for video ${videoId}:`, error);
       throw error;
@@ -218,7 +221,11 @@ export class ThumbnailSelectionService {
   /**
    * Extract frame at specific timestamp
    */
-  private async extractFrameAtTimestamp(videoPath: string, timestamp: number, outputPath: string): Promise<void> {
+  private async extractFrameAtTimestamp(
+    videoPath: string,
+    timestamp: number,
+    outputPath: string
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       ffmpeg(videoPath)
         .seekInput(timestamp)
@@ -233,7 +240,9 @@ export class ThumbnailSelectionService {
   /**
    * Analyze thumbnail candidates using computer vision
    */
-  private async analyzeThumbnailCandidates(candidates: ThumbnailCandidate[]): Promise<ThumbnailCandidate[]> {
+  private async analyzeThumbnailCandidates(
+    candidates: ThumbnailCandidate[]
+  ): Promise<ThumbnailCandidate[]> {
     const analyzed: ThumbnailCandidate[] = [];
 
     for (const candidate of candidates) {
@@ -245,18 +254,17 @@ export class ThumbnailSelectionService {
 
         // Perform comprehensive analysis
         const analysis = await this.performThumbnailAnalysis(candidate.imagePath);
-        
+
         // Calculate overall score
         const score = this.calculateThumbnailScore(analysis);
 
         const analyzedCandidate: ThumbnailCandidate = {
           ...candidate,
           analysis,
-          score
+          score,
         };
 
         analyzed.push(analyzedCandidate);
-
       } catch (error) {
         logger.error(`Error analyzing thumbnail ${candidate.imagePath}:`, error);
       }
@@ -276,26 +284,26 @@ export class ThumbnailSelectionService {
 
       // Face detection (simplified - would use actual CV library in production)
       const faceDetection = await this.detectFaces(imagePath);
-      
+
       // Text detection (simplified)
       const textDetection = await this.detectText(imagePath);
-      
+
       // Color analysis
       const colorAnalysis = await this.analyzeColors(stats);
-      
+
       // Composition analysis
       const compositionScore = this.analyzeComposition(metadata, faceDetection);
-      
+
       // Quality metrics
       const qualityMetrics = await this.analyzeQuality(metadata, stats);
-      
+
       // Engagement prediction based on all factors
       const engagementPrediction = this.predictEngagement({
         faceCount: faceDetection.faces.length,
         textPresent: textDetection.hasText,
         colorAnalysis,
         compositionScore,
-        qualityMetrics
+        qualityMetrics,
       });
 
       // Generate reasoning
@@ -305,7 +313,7 @@ export class ThumbnailSelectionService {
         colorAnalysis,
         compositionScore,
         qualityMetrics,
-        engagementPrediction
+        engagementPrediction,
       });
 
       return {
@@ -317,9 +325,8 @@ export class ThumbnailSelectionService {
         compositionScore,
         engagementPrediction,
         reasoning,
-        qualityMetrics
+        qualityMetrics,
       };
-
     } catch (error) {
       logger.error(`Error performing thumbnail analysis on ${imagePath}:`, error);
       return this.getEmptyAnalysis();
@@ -364,7 +371,7 @@ export class ThumbnailSelectionService {
     // Sort by score and select highest
     const sorted = candidates.sort((a, b) => b.score - a.score);
     const bestCandidate = sorted[0];
-    
+
     if (!bestCandidate) {
       throw new Error('No candidates available for selection');
     }
@@ -377,7 +384,10 @@ export class ThumbnailSelectionService {
   /**
    * Generate selection reasoning
    */
-  private generateSelectionReasoning(best: ThumbnailCandidate, alternatives: ThumbnailCandidate[]): string {
+  private generateSelectionReasoning(
+    best: ThumbnailCandidate,
+    alternatives: ThumbnailCandidate[]
+  ): string {
     const reasons: string[] = [];
 
     if (best.analysis.faceCount > 0) {
@@ -401,9 +411,7 @@ export class ThumbnailSelectionService {
     }
 
     const nextBest = alternatives[0];
-    const scoreImprovement = nextBest 
-      ? ((best.score - nextBest.score) * 100).toFixed(1)
-      : '0';
+    const scoreImprovement = nextBest ? ((best.score - nextBest.score) * 100).toFixed(1) : '0';
 
     return `Selected for ${reasons.join(', ')}. Score: ${(best.score * 100).toFixed(1)}% (${scoreImprovement}% better than next best)`;
   }
@@ -411,7 +419,11 @@ export class ThumbnailSelectionService {
   /**
    * Store thumbnail selections in database
    */
-  private async storeThumbnailSelections(videoId: string, candidates: ThumbnailCandidate[], selectedId: string): Promise<void> {
+  private async storeThumbnailSelections(
+    videoId: string,
+    candidates: ThumbnailCandidate[],
+    selectedId: string
+  ): Promise<void> {
     try {
       await connectToDatabase();
 
@@ -419,7 +431,7 @@ export class ThumbnailSelectionService {
       await ThumbnailSelection.deleteMany({ videoId });
 
       // Insert new selections
-      const selections = candidates.map(candidate => ({
+      const selections = candidates.map((candidate) => ({
         videoId,
         thumbnailPath: candidate.imagePath,
         timestamp: candidate.timestamp,
@@ -430,7 +442,7 @@ export class ThumbnailSelectionService {
         compositionScore: candidate.analysis.compositionScore,
         engagementPrediction: candidate.analysis.engagementPrediction,
         reasoning: candidate.analysis.reasoning,
-        selected: candidate.id === selectedId
+        selected: candidate.id === selectedId,
       }));
 
       await ThumbnailSelection.insertMany(selections);
@@ -448,15 +460,15 @@ export class ThumbnailSelectionService {
     try {
       await connectToDatabase();
 
-      const selection = await ThumbnailSelection.findOne({ 
-        videoId: videoId, 
-        selected: true 
+      const selection = await ThumbnailSelection.findOne({
+        videoId: videoId,
+        selected: true,
       });
 
       if (!selection) {
         return null;
       }
-      
+
       return {
         id: `${videoId}_selected`,
         videoId,
@@ -472,9 +484,9 @@ export class ThumbnailSelectionService {
           compositionScore: selection.compositionScore,
           engagementPrediction: selection.engagementPrediction,
           reasoning: selection.reasoning,
-          qualityMetrics: this.getDefaultQualityMetrics()
+          qualityMetrics: this.getDefaultQualityMetrics(),
         },
-        isSelected: true
+        isSelected: true,
       };
     } catch (error) {
       logger.error('Error getting selected thumbnail:', error);
@@ -489,8 +501,7 @@ export class ThumbnailSelectionService {
     try {
       await connectToDatabase();
 
-      const selections = await ThumbnailSelection.find({ videoId })
-        .sort({ score: -1 });
+      const selections = await ThumbnailSelection.find({ videoId }).sort({ score: -1 });
 
       return selections.map((selection, index) => ({
         id: `${videoId}_thumb_${selection._id}`,
@@ -507,9 +518,9 @@ export class ThumbnailSelectionService {
           compositionScore: selection.compositionScore,
           engagementPrediction: selection.engagementPrediction,
           reasoning: selection.reasoning,
-          qualityMetrics: this.getDefaultQualityMetrics()
+          qualityMetrics: this.getDefaultQualityMetrics(),
         },
-        isSelected: selection.selected
+        isSelected: selection.selected,
       }));
     } catch (error) {
       logger.error('Error getting thumbnail candidates:', error);
@@ -554,14 +565,16 @@ export class ThumbnailSelectionService {
         y: Math.random() * 0.5,
         width: 0.2 + Math.random() * 0.2,
         height: 0.2 + Math.random() * 0.2,
-        confidence: 0.7 + Math.random() * 0.3
+        confidence: 0.7 + Math.random() * 0.3,
       });
     }
 
     return { faces };
   }
 
-  private async detectText(_imagePath: string): Promise<{ hasText: boolean; regions: TextRegion[] }> {
+  private async detectText(
+    _imagePath: string
+  ): Promise<{ hasText: boolean; regions: TextRegion[] }> {
     // Simplified text detection - would use OCR in production
     const hasText = Math.random() > 0.7;
     const regions: TextRegion[] = [];
@@ -573,7 +586,7 @@ export class ThumbnailSelectionService {
         y: Math.random() * 0.5,
         width: 0.3,
         height: 0.1,
-        confidence: 0.8 + Math.random() * 0.2
+        confidence: 0.8 + Math.random() * 0.2,
       });
     }
 
@@ -586,7 +599,7 @@ export class ThumbnailSelectionService {
       brightness: this.calculateBrightness(stats),
       contrast: this.calculateContrast(stats),
       saturation: this.calculateSaturation(stats),
-      warmth: this.calculateWarmth(['#ff6b35', '#004e89'])
+      warmth: this.calculateWarmth(['#ff6b35', '#004e89']),
     };
   }
 
@@ -601,7 +614,8 @@ export class ThumbnailSelectionService {
     // Aspect ratio consideration
     if (metadata.width && metadata.height) {
       const aspectRatio = metadata.width / metadata.height;
-      if (aspectRatio >= 1.7 && aspectRatio <= 1.8) { // 16:9 ish
+      if (aspectRatio >= 1.7 && aspectRatio <= 1.8) {
+        // 16:9 ish
         score += 0.1;
       }
     }
@@ -616,7 +630,7 @@ export class ThumbnailSelectionService {
         sharpness: 0.7 + Math.random() * 0.3,
         noise: Math.random() * 0.3,
         exposure: 0.6 + Math.random() * 0.3,
-        overallQuality: 0.6 + Math.random() * 0.3
+        overallQuality: 0.6 + Math.random() * 0.3,
       };
     } catch (error) {
       return this.getDefaultQualityMetrics();
@@ -678,7 +692,7 @@ export class ThumbnailSelectionService {
       compositionScore: 0.5,
       engagementPrediction: 0.3,
       reasoning: '',
-      qualityMetrics: this.getDefaultQualityMetrics()
+      qualityMetrics: this.getDefaultQualityMetrics(),
     };
   }
 
@@ -688,7 +702,7 @@ export class ThumbnailSelectionService {
       brightness: 0.5,
       contrast: 0.5,
       saturation: 0.5,
-      warmth: 0.5
+      warmth: 0.5,
     };
   }
 
@@ -697,7 +711,7 @@ export class ThumbnailSelectionService {
       sharpness: 0.7,
       noise: 0.2,
       exposure: 0.6,
-      overallQuality: 0.6
+      overallQuality: 0.6,
     };
   }
 
@@ -709,4 +723,4 @@ export class ThumbnailSelectionService {
 }
 
 export const thumbnailSelectionService = new ThumbnailSelectionService();
-export default ThumbnailSelectionService; 
+export default ThumbnailSelectionService;

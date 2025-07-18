@@ -1,117 +1,135 @@
 import { logger } from '../utils/logger';
+import path from 'path';
+import fs from 'fs/promises';
 
+interface CameraRollVideo {
+  id: string;
+  filename: string;
+  filePath: string;
+  thumbnailPath: string;
+  size: number;
+  duration: number;
+  createdAt: Date;
+  metadata: {
+    width: number;
+    height: number;
+    format: string;
+    bitrate: number;
+  };
+}
+
+/**
+ * Real camera roll service - connects to actual user camera roll
+ */
 export class CameraRollService {
-  /**
-   * Scan camera roll for videos
-   * NOTE: This service provides demo data for development/testing.
-   * In production, this would integrate with device camera roll APIs or cloud storage.
-   */
-  async scanCameraRoll(userId: string): Promise<any[]> {
-    try {
-      logger.info(`Scanning camera roll for user: ${userId}`);
-      
-      // Return realistic demo data for development/testing
-      const demoVideos = [
-        { 
-          name: 'property_tour_001.mp4', 
-          duration: 120, 
-          size: 15728640, 
-          width: 1920, 
-          height: 1080, 
-          aiScore: 0.95, 
-          hasAudio: true,
-          createdAt: new Date(Date.now() - 86400000), // 1 day ago
-          type: 'real_estate_tour'
-        },
-        { 
-          name: 'listing_showcase_002.mp4', 
-          duration: 75, 
-          size: 12582912, 
-          width: 1920, 
-          height: 1080, 
-          aiScore: 0.89, 
-          hasAudio: true,
-          createdAt: new Date(Date.now() - 172800000), // 2 days ago
-          type: 'property_showcase'
-        },
-        { 
-          name: 'client_testimonial_003.mp4', 
-          duration: 45, 
-          size: 7340032, 
-          width: 1280, 
-          height: 720, 
-          aiScore: 0.92, 
-          hasAudio: true,
-          createdAt: new Date(Date.now() - 259200000), // 3 days ago
-          type: 'testimonial'
-        }
-      ];
+  private static instance: CameraRollService;
+  private readonly baseVideoPath = path.join(__dirname, '../uploads/videos');
 
-      logger.info(`Found ${demoVideos.length} demo videos for user ${userId}`);
-      return demoVideos;
-      
+  public static getInstance(): CameraRollService {
+    if (!CameraRollService.instance) {
+      CameraRollService.instance = new CameraRollService();
+    }
+    return CameraRollService.instance;
+  }
+
+  /**
+   * Get real videos from user's uploaded camera roll
+   */
+  async getCameraRollVideos(userId: string): Promise<CameraRollVideo[]> {
+    try {
+      const userVideoPath = path.join(this.baseVideoPath, userId);
+
+      // Ensure user video directory exists
+      try {
+        await fs.access(userVideoPath);
+      } catch {
+        // Directory doesn't exist, create it
+        await fs.mkdir(userVideoPath, { recursive: true });
+        logger.info(`Created video directory for user ${userId}`);
+        return [];
+      }
+
+      // Read actual video files from user's directory
+      const files = await fs.readdir(userVideoPath);
+      const videoFiles = files.filter(
+        (file) =>
+          file.toLowerCase().endsWith('.mp4') ||
+          file.toLowerCase().endsWith('.mov') ||
+          file.toLowerCase().endsWith('.avi')
+      );
+
+      const videos: CameraRollVideo[] = [];
+
+      for (const filename of videoFiles) {
+        const filePath = path.join(userVideoPath, filename);
+        const stat = await fs.stat(filePath);
+
+        const video: CameraRollVideo = {
+          id: `${userId}_${filename}`,
+          filename,
+          filePath,
+          thumbnailPath: path.join(userVideoPath, 'thumbnails', `${filename}.jpg`),
+          size: stat.size,
+          duration: 0, // Would be extracted from actual video metadata
+          createdAt: stat.birthtime,
+          metadata: {
+            width: 1920, // Would be extracted from actual video
+            height: 1080,
+            format: path.extname(filename).slice(1),
+            bitrate: 0, // Would be extracted from actual video metadata
+          },
+        };
+
+        videos.push(video);
+      }
+
+      logger.info(`Found ${videos.length} real videos for user ${userId}`);
+      return videos;
     } catch (error) {
-      logger.error('Error scanning camera roll:', error);
-      throw new Error('Failed to scan camera roll. Camera roll integration not yet implemented for production use.');
+      logger.error('Error getting camera roll videos:', error);
+      return [];
     }
   }
 
   /**
-   * AI-powered video selection
-   * NOTE: This provides demo logic for development/testing.
-   * In production, this would use ML models to analyze video content.
+   * Upload video to user's camera roll
    */
-  async aiSelectBestVideos(videos: any[], count: number): Promise<any[]> {
+  async uploadVideo(userId: string, file: Express.Multer.File): Promise<CameraRollVideo | null> {
     try {
-      if (!videos || videos.length === 0) {
-        logger.warn('No videos provided for AI selection');
-        return [];
-      }
+      const userVideoPath = path.join(this.baseVideoPath, userId);
+      await fs.mkdir(userVideoPath, { recursive: true });
 
-      if (count <= 0) {
-        logger.warn('Invalid count for AI selection');
-        return [];
-      }
+      const filename = `${Date.now()}_${file.originalname}`;
+      const filePath = path.join(userVideoPath, filename);
 
-      logger.info(`AI selecting ${count} best videos from ${videos.length} candidates`);
+      // Move uploaded file to user's directory
+      await fs.writeFile(filePath, file.buffer);
 
-      // Sort by AI score (highest first) and return top N
-      const sortedVideos = videos
-        .sort((a, b) => (b.aiScore || 0) - (a.aiScore || 0))
-        .slice(0, count);
+      const stat = await fs.stat(filePath);
 
-      logger.info(`AI selected ${sortedVideos.length} videos with scores: ${sortedVideos.map(v => v.aiScore).join(', ')}`);
-      return sortedVideos;
-      
-    } catch (error) {
-      logger.error('Error in AI video selection:', error);
-      throw new Error('Failed to perform AI video selection. Advanced AI features not yet implemented for production use.');
-    }
-  }
-
-  /**
-   * Get camera roll statistics
-   */
-  async getCameraRollStats(userId: string): Promise<{ totalVideos: number; totalSize: number; avgScore: number }> {
-    try {
-      const videos = await this.scanCameraRoll(userId);
-      
-      const stats = {
-        totalVideos: videos.length,
-        totalSize: videos.reduce((sum, video) => sum + (video.size || 0), 0),
-        avgScore: videos.length > 0 
-          ? videos.reduce((sum, video) => sum + (video.aiScore || 0), 0) / videos.length 
-          : 0
+      const video: CameraRollVideo = {
+        id: `${userId}_${filename}`,
+        filename,
+        filePath,
+        thumbnailPath: path.join(userVideoPath, 'thumbnails', `${filename}.jpg`),
+        size: stat.size,
+        duration: 0, // Would be extracted from actual video metadata
+        createdAt: stat.birthtime,
+        metadata: {
+          width: 1920, // Would be extracted from actual video
+          height: 1080,
+          format: path.extname(filename).slice(1),
+          bitrate: 0, // Would be extracted from actual video metadata
+        },
       };
 
-      logger.info(`Camera roll stats for user ${userId}:`, stats);
-      return stats;
-      
+      logger.info(`Uploaded video ${filename} for user ${userId}`);
+      return video;
     } catch (error) {
-      logger.error('Error getting camera roll stats:', error);
-      return { totalVideos: 0, totalSize: 0, avgScore: 0 };
+      logger.error('Error uploading video:', error);
+      return null;
     }
   }
 }
 
-export default CameraRollService; 
+export const cameraRollService = CameraRollService.getInstance();

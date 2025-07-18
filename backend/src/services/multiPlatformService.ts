@@ -4,7 +4,7 @@ import { TikTokService } from './tiktokService';
 import { YouTubeService } from './youtubeService';
 import { CaptionGenerationService } from './captionGenerationService';
 import { VideoProcessingService } from './videoProcessingService';
-import { UserModel } from '../models/User';
+import User from '../models/User';
 
 export interface PlatformConfig {
   instagram: boolean;
@@ -64,7 +64,7 @@ export class MultiPlatformService {
   private youtubeService: YouTubeService;
   private captionService: CaptionGenerationService;
   private videoService: VideoProcessingService;
-  private userModel: typeof UserModel;
+  private userModel: typeof User;
 
   constructor() {
     this.instagramService = new InstagramService();
@@ -72,13 +72,15 @@ export class MultiPlatformService {
     this.youtubeService = new YouTubeService();
     this.captionService = new CaptionGenerationService();
     this.videoService = new VideoProcessingService();
-    this.userModel = UserModel;
+    this.userModel = User;
   }
 
   /**
    * Post video to multiple platforms
    */
-  async postToMultiplePlatforms(options: MultiPlatformPostOptions): Promise<MultiPlatformPostResult> {
+  async postToMultiplePlatforms(
+    options: MultiPlatformPostOptions
+  ): Promise<MultiPlatformPostResult> {
     try {
       logger.info(`Posting video to multiple platforms for user ${options.userId}`);
 
@@ -92,7 +94,10 @@ export class MultiPlatformService {
       let totalEngagement = 0;
 
       // Process video for each platform
-      const processedVideos = await this.processVideoForPlatforms(options.videoPath, options.platforms);
+      const processedVideos = await this.processVideoForPlatforms(
+        options.videoPath,
+        options.platforms
+      );
 
       // Post to Instagram
       if (options.platforms.instagram && user.instagramAccessToken) {
@@ -166,7 +171,9 @@ export class MultiPlatformService {
 
       const success = Object.keys(results).length > 0;
 
-      logger.info(`Multi-platform posting completed. Success: ${success}, Errors: ${errors.length}`);
+      logger.info(
+        `Multi-platform posting completed. Success: ${success}, Errors: ${errors.length}`
+      );
 
       return {
         success,
@@ -188,7 +195,10 @@ export class MultiPlatformService {
   /**
    * Process video for different platforms
    */
-  private async processVideoForPlatforms(videoPath: string, platforms: PlatformConfig): Promise<Record<string, string>> {
+  private async processVideoForPlatforms(
+    videoPath: string,
+    platforms: PlatformConfig
+  ): Promise<Record<string, string>> {
     const processedVideos: Record<string, string> = {};
 
     // Instagram processing (1:1 aspect ratio)
@@ -198,7 +208,7 @@ export class MultiPlatformService {
           maxDuration: 60,
           maxFileSize: 100 * 1024 * 1024, // 100MB
           supportedFormats: ['mp4', 'mov'],
-          aspectRatio: '9:16'
+          aspectRatio: '9:16',
         };
         const result = await this.videoService.processVideo(videoPath, 'system', {
           compressVideo: true,
@@ -253,7 +263,10 @@ export class MultiPlatformService {
   /**
    * Generate platform-specific captions
    */
-  private async generatePlatformCaption(platform: string, options: MultiPlatformPostOptions): Promise<{ caption: string; hashtags: string[] }> {
+  private async generatePlatformCaption(
+    platform: string,
+    options: MultiPlatformPostOptions
+  ): Promise<{ caption: string; hashtags: string[] }> {
     if (options.caption) {
       return {
         caption: options.caption,
@@ -271,7 +284,7 @@ export class MultiPlatformService {
     };
 
     const generatedCaption = await this.captionService.generateCaption(captionOptions);
-    
+
     // Add platform-specific hashtags
     const platformHashtags = this.getPlatformHashtags(platform, options.category || 'real-estate');
     const allHashtags = [...generatedCaption.hashtags, ...platformHashtags];
@@ -285,12 +298,17 @@ export class MultiPlatformService {
   /**
    * Generate YouTube-specific content
    */
-  private async generateYouTubeContent(options: MultiPlatformPostOptions): Promise<{ title: string; description: string; tags: string[] }> {
+  private async generateYouTubeContent(
+    options: MultiPlatformPostOptions
+  ): Promise<{ title: string; description: string; tags: string[] }> {
     const baseCaption = options.caption || 'Amazing real estate content!';
     const category = options.category || 'real-estate';
 
     const title = this.youtubeService.generateYouTubeTitle(baseCaption, category);
-    const description = this.youtubeService.generateYouTubeDescription(baseCaption, options.hashtags || []);
+    const description = this.youtubeService.generateYouTubeDescription(
+      baseCaption,
+      options.hashtags || []
+    );
     const tags = this.youtubeService.generateYouTubeTags(category);
 
     return { title, description, tags };
@@ -327,15 +345,15 @@ export class MultiPlatformService {
     const platformHashtags: Record<string, Record<string, string[]>> = {
       instagram: {
         'real-estate': ['#realestate', '#luxuryhomes', '#property'],
-        'cartoon': ['#realestatehumor', '#realtorlife', '#funny'],
+        cartoon: ['#realestatehumor', '#realtorlife', '#funny'],
       },
       tiktok: {
         'real-estate': ['#realestate', '#luxuryhomes', '#property', '#fyp', '#foryou'],
-        'cartoon': ['#realestatehumor', '#realtorlife', '#funny', '#fyp', '#foryou'],
+        cartoon: ['#realestatehumor', '#realtorlife', '#funny', '#fyp', '#foryou'],
       },
       youtube: {
         'real-estate': ['#realestate', '#luxuryhomes', '#property'],
-        'cartoon': ['#realestatehumor', '#realtorlife', '#funny'],
+        cartoon: ['#realestatehumor', '#realtorlife', '#funny'],
       },
     };
 
@@ -347,8 +365,13 @@ export class MultiPlatformService {
    */
   private calculateEngagement(metrics: any): number {
     if (!metrics) return 0;
-    
-    return (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0) + (metrics.views || 0) / 100;
+
+    return (
+      (metrics.likes || 0) +
+      (metrics.comments || 0) +
+      (metrics.shares || 0) +
+      (metrics.views || 0) / 100
+    );
   }
 
   /**
@@ -380,7 +403,9 @@ export class MultiPlatformService {
       const validations: Record<string, boolean> = {};
 
       if (user.instagramAccessToken) {
-        validations.instagram = await this.instagramService.validateCredentials(user.instagramAccessToken);
+        validations.instagram = await this.instagramService.validateCredentials(
+          user.instagramAccessToken
+        );
       }
 
       if (user.tiktokAccessToken) {
@@ -388,7 +413,9 @@ export class MultiPlatformService {
       }
 
       if (user.youtubeAccessToken) {
-        validations.youtube = await this.youtubeService.validateCredentials(user.youtubeAccessToken);
+        validations.youtube = await this.youtubeService.validateCredentials(
+          user.youtubeAccessToken
+        );
       }
 
       return validations;
@@ -397,7 +424,7 @@ export class MultiPlatformService {
       return {
         instagram: false,
         tiktok: false,
-        youtube: false
+        youtube: false,
       };
     }
   }
@@ -415,7 +442,9 @@ export class MultiPlatformService {
       const times: Record<string, string[]> = {};
 
       if (user.instagramAccessToken) {
-        times.instagram = await this.instagramService.getOptimalPostingTimes(user.instagramAccessToken);
+        times.instagram = await this.instagramService.getOptimalPostingTimes(
+          user.instagramAccessToken
+        );
       }
 
       if (user.tiktokAccessToken) {
@@ -432,7 +461,7 @@ export class MultiPlatformService {
       return {
         instagram: ['9:00 AM', '12:00 PM', '6:00 PM'],
         tiktok: ['6:00 AM', '10:00 AM', '7:00 PM'],
-        youtube: ['2:00 PM', '4:00 PM', '8:00 PM']
+        youtube: ['2:00 PM', '4:00 PM', '8:00 PM'],
       };
     }
   }
@@ -482,10 +511,10 @@ export class MultiPlatformService {
       return {
         instagram: { followers: 0, posts: 0, engagement: 0 },
         tiktok: { followers: 0, posts: 0, engagement: 0 },
-        youtube: { subscribers: 0, videos: 0, views: 0 }
+        youtube: { subscribers: 0, videos: 0, views: 0 },
       };
     }
   }
 }
 
-export default MultiPlatformService; 
+export default MultiPlatformService;

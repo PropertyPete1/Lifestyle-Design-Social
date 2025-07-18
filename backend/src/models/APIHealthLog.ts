@@ -9,30 +9,33 @@ export interface IAPIHealthLog extends Document {
   updatedAt: Date;
 }
 
-const APIHealthLogSchema = new Schema<IAPIHealthLog>({
-  platform: {
-    type: String,
-    required: true,
-    enum: ['instagram', 'tiktok', 'youtube']
+const APIHealthLogSchema = new Schema<IAPIHealthLog>(
+  {
+    platform: {
+      type: String,
+      required: true,
+      enum: ['instagram', 'tiktok', 'youtube'],
+    },
+    status: {
+      type: String,
+      required: true,
+      enum: ['healthy', 'degraded', 'failed'],
+    },
+    errorMessage: {
+      type: String,
+    },
+    responseTime: {
+      type: Number,
+      default: 0,
+    },
   },
-  status: {
-    type: String,
-    required: true,
-    enum: ['healthy', 'degraded', 'failed']
-  },
-  errorMessage: {
-    type: String
-  },
-  responseTime: {
-    type: Number,
-    default: 0
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
 // Index for efficient queries
 APIHealthLogSchema.index({ platform: 1, createdAt: -1 });
 APIHealthLogSchema.index({ createdAt: -1 });
 
-export const APIHealthLogModel = mongoose.model<IAPIHealthLog>('APIHealthLog', APIHealthLogSchema); 
+export const APIHealthLogModel = mongoose.model<IAPIHealthLog>('APIHealthLog', APIHealthLogSchema);

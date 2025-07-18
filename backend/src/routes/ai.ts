@@ -14,7 +14,7 @@ const captionService = captionGenerationService;
 router.post('/generate-caption', authenticateToken, async (req: Request, res: Response) => {
   try {
     await connectToDatabase();
-    
+
     const { videoId, platform = 'both', tone = 'professional' } = req.body;
     const userId = req.user!.id;
 
@@ -29,20 +29,17 @@ router.post('/generate-caption', authenticateToken, async (req: Request, res: Re
     }
 
     // Generate caption using AI service
-    const caption = await captionService.generateCaptionAndHashtags(
-      userId,
-      videoId,
-      platform,
-      { tone: 'professional' }
-    );
+    const caption = await captionService.generateCaptionAndHashtags(userId, videoId, platform, {
+      tone: 'professional',
+    });
 
     logger.info(`AI caption generated for video ${videoId} by user ${userId}`);
-    
+
     return res.json({
       message: 'Caption generated successfully',
       caption,
       platform,
-      tone
+      tone,
     });
   } catch (error) {
     logger.error('Generate caption error:', error);
@@ -67,12 +64,9 @@ router.post('/generate-hashtags', authenticateToken, async (req: Request, res: R
       return res.status(404).json({ error: 'Video not found or access denied' });
     }
 
-    const result = await captionService.generateCaptionAndHashtags(
-      userId,
-      videoId,
-      platform,
-      { tone: 'professional' }
-    );
+    const result = await captionService.generateCaptionAndHashtags(userId, videoId, platform, {
+      tone: 'professional',
+    });
 
     return res.json({ hashtags: result.hashtags });
   } catch (error) {
@@ -98,12 +92,9 @@ router.post('/generate-complete-post', authenticateToken, async (req: Request, r
       return res.status(404).json({ error: 'Video not found or access denied' });
     }
 
-    const postContent = await captionService.generateCaptionAndHashtags(
-      userId,
-      videoId,
-      platform,
-      { tone: 'professional' }
-    );
+    const postContent = await captionService.generateCaptionAndHashtags(userId, videoId, platform, {
+      tone: 'professional',
+    });
 
     return res.json({
       caption: postContent.caption,
@@ -129,7 +120,7 @@ router.get('/optimal-times', authenticateToken, async (_req: Request, res: Respo
       '18:00', // 6 PM - Evening commute
       '20:00', // 8 PM - Evening social media time
     ];
-    
+
     return res.json({ optimalTimes });
   } catch (error) {
     logger.error('Get optimal times error:', error);
@@ -148,21 +139,21 @@ router.post('/analyze-engagement', authenticateToken, async (req: Request, res: 
     // Basic analysis for now - can be enhanced with actual data analysis
     const analysis = {
       insights: [
-        "Your video content is performing well with consistent engagement",
-        "Consider posting during peak hours (9-11 AM or 7-9 PM) for better reach",
-        "Real estate content typically performs better on weekdays"
+        'Your video content is performing well with consistent engagement',
+        'Consider posting during peak hours (9-11 AM or 7-9 PM) for better reach',
+        'Real estate content typically performs better on weekdays',
       ],
       recommendations: [
-        "Add more location-specific hashtags",
-        "Include property details in captions",
-        "Use trending real estate hashtags"
+        'Add more location-specific hashtags',
+        'Include property details in captions',
+        'Use trending real estate hashtags',
       ],
       bestPostingTimes: ['09:00', '13:00', '18:00'],
       engagementTrends: {
         weekdays: 'higher',
         weekends: 'lower',
-        bestDay: 'Tuesday'
-      }
+        bestDay: 'Tuesday',
+      },
     };
 
     return res.json({ analysis });
@@ -172,4 +163,4 @@ router.post('/analyze-engagement', authenticateToken, async (req: Request, res: 
   }
 });
 
-export default router; 
+export default router;

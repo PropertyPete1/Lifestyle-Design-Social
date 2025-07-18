@@ -29,7 +29,6 @@ export interface UserPreferences {
   postingTimes: string[];
   pinnedHours: string[];
   excludedHours: string[];
-  testMode: boolean;
   notifications: NotificationSettings;
   privacy: PrivacySettings;
 }
@@ -114,8 +113,22 @@ export interface ThumbnailSuggestion {
   path: string;
 }
 
-export type VideoCategory = 'real-estate' | 'cartoon' | 'educational' | 'promotional' | 'testimonial';
+export type VideoCategory =
+  | 'real-estate'
+  | 'cartoon'
+  | 'educational'
+  | 'promotional'
+  | 'testimonial';
 export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+export interface VideoItem {
+  id: string
+  title: string
+  platform: 'instagram' | 'youtube' | 'tiktok'
+  url: string
+  type: 'real_estate' | 'cartoon'
+  scheduled?: boolean
+}
 
 // Post Types - Use unified types from shared package
 // Post interface removed to avoid duplication with shared package types
@@ -156,7 +169,13 @@ export interface EngagementMetrics {
   websiteClicks?: number;
 }
 
-export type SocialPlatform = 'instagram' | 'tiktok' | 'youtube' | 'facebook' | 'twitter' | 'linkedin';
+export type SocialPlatform =
+  | 'instagram'
+  | 'tiktok'
+  | 'youtube'
+  | 'facebook'
+  | 'twitter'
+  | 'linkedin';
 export type PostStatus = 'draft' | 'scheduled' | 'posting' | 'posted' | 'failed' | 'cancelled';
 
 // Social Platform Connection Types
@@ -223,8 +242,20 @@ export interface CaptionPerformance {
   bestPerformingPost?: string;
 }
 
-export type CaptionStyle = 'professional' | 'casual' | 'funny' | 'inspirational' | 'sales' | 'storytelling';
-export type CaptionTone = 'formal' | 'friendly' | 'excited' | 'confident' | 'empathetic' | 'humorous';
+export type CaptionStyle =
+  | 'professional'
+  | 'casual'
+  | 'funny'
+  | 'inspirational'
+  | 'sales'
+  | 'storytelling';
+export type CaptionTone =
+  | 'formal'
+  | 'friendly'
+  | 'excited'
+  | 'confident'
+  | 'empathetic'
+  | 'humorous';
 export type CaptionLength = 'short' | 'medium' | 'long';
 
 // Analytics Types
@@ -370,7 +401,14 @@ export interface RateLimit {
   resetTime: Date;
 }
 
-export type ApiService = 'openai' | 'instagram' | 'tiktok' | 'youtube' | 'facebook' | 'twitter' | 'linkedin';
+export type ApiService =
+  | 'openai'
+  | 'instagram'
+  | 'tiktok'
+  | 'youtube'
+  | 'facebook'
+  | 'twitter'
+  | 'linkedin';
 export type ApiPermission = 'read' | 'write' | 'admin';
 
 // Notification Types
@@ -389,7 +427,14 @@ export interface Notification {
   createdAt: Date;
 }
 
-export type NotificationType = 'post_success' | 'post_failure' | 'schedule_reminder' | 'limit_reached' | 'subscription_expiring' | 'new_feature' | 'maintenance';
+export type NotificationType =
+  | 'post_success'
+  | 'post_failure'
+  | 'schedule_reminder'
+  | 'limit_reached'
+  | 'subscription_expiring'
+  | 'new_feature'
+  | 'maintenance';
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type NotificationChannel = 'email' | 'push' | 'sms' | 'in_app';
 
@@ -576,7 +621,10 @@ export type PaginationParams = {
 };
 
 export type FilterParams<T> = {
-  [K in keyof T]?: T[K] | T[K][] | { operator: 'gt' | 'lt' | 'gte' | 'lte' | 'eq' | 'ne' | 'in' | 'nin' | 'like'; value: T[K] };
+  [K in keyof T]?:
+    | T[K]
+    | T[K][]
+    | { operator: 'gt' | 'lt' | 'gte' | 'lte' | 'eq' | 'ne' | 'in' | 'nin' | 'like'; value: T[K] };
 };
 
 // Service Response Types
@@ -625,4 +673,4 @@ export interface AnalyticsUpdateEvent extends SocketEvent {
     metrics: AnalyticsMetrics;
     date: Date;
   };
-} 
+}

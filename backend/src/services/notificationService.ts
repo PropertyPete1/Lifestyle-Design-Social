@@ -20,9 +20,9 @@ export interface NotificationData {
   updatedAt: Date;
 }
 
-export type NotificationType = 
+export type NotificationType =
   | 'post_success'
-  | 'post_failure' 
+  | 'post_failure'
   | 'daily_report'
   | 'weekly_report'
   | 'low_content_warning'
@@ -33,37 +33,23 @@ export type NotificationType =
   | 'content_approved'
   | 'content_rejected';
 
-export type NotificationChannel = 
-  | 'email'
-  | 'push'
-  | 'in_app'
-  | 'sms'
-  | 'webhook';
+export type NotificationChannel = 'email' | 'push' | 'in_app' | 'sms' | 'webhook';
 
-export type NotificationPriority = 
-  | 'low'
-  | 'normal'
-  | 'high'
-  | 'critical';
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'critical';
 
-export type NotificationStatus = 
-  | 'pending'
-  | 'sent'
-  | 'failed'
-  | 'cancelled';
+export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'cancelled';
 
 class NotificationService {
-
   async sendNotification(notification: Partial<NotificationData>): Promise<boolean> {
     try {
       await connectToDatabase();
-      
+
       logger.info(`Sending ${notification.type} notification to user ${notification.userId}`);
-      
+
       // For now, just log the notification
       // In a real implementation, this would send emails, push notifications, etc.
       logger.info(`Notification: ${notification.title} - ${notification.message}`);
-      
+
       return true;
     } catch (error) {
       logger.error('Error sending notification:', error);
@@ -74,10 +60,10 @@ class NotificationService {
   async getUserNotifications(userId: string, options: any = {}): Promise<NotificationData[]> {
     try {
       await connectToDatabase();
-      
+
       // Create basic notification data structure for real estate auto-posting
       const notifications: NotificationData[] = [];
-      
+
       // Add recent posting notifications
       notifications.push({
         id: `posting_${Date.now()}`,
@@ -94,14 +80,14 @@ class NotificationService {
         updatedAt: new Date(),
         data: {
           platform: 'instagram',
-          videoId: 'latest'
-        }
+          videoId: 'latest',
+        },
       });
 
       // Apply pagination if requested
       const limit = options.limit || 50;
       const offset = options.offset || 0;
-      
+
       return notifications.slice(offset, offset + limit);
     } catch (error) {
       logger.error('Error getting user notifications:', error);
@@ -112,7 +98,7 @@ class NotificationService {
   async markAsRead(notificationId: string): Promise<boolean> {
     try {
       await connectToDatabase();
-      
+
       // In real implementation would update notification status
       logger.info(`Marked notification ${notificationId} as read`);
       return true;
@@ -135,7 +121,7 @@ class NotificationService {
       retryCount: 0,
       maxRetries: 3,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 
@@ -151,7 +137,7 @@ class NotificationService {
       retryCount: 0,
       maxRetries: 3,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 
@@ -167,10 +153,10 @@ class NotificationService {
       retryCount: 0,
       maxRetries: 3,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 }
 
 export const notificationService = new NotificationService();
-export default notificationService; 
+export default notificationService;

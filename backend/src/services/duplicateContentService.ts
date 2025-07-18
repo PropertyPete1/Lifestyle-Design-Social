@@ -18,25 +18,24 @@ export interface SimilarityCheckResult {
 }
 
 class DuplicateContentService {
-  
   // Check caption similarity using simple text comparison
   async checkCaptionSimilarity(params: SimilarityCheckParams): Promise<SimilarityCheckResult> {
     try {
       await connectToDatabase();
-      
+
       const {
         userId,
         newCaption,
         platform,
         timeframeDays = 30,
-        similarityThreshold = 0.7
+        similarityThreshold = 0.7,
       } = params;
 
       if (!newCaption || newCaption.trim().length === 0) {
         return {
           isSimilar: false,
           similarity: 0,
-          recommendation: 'Caption is empty'
+          recommendation: 'Caption is empty',
         };
       }
 
@@ -48,7 +47,7 @@ class DuplicateContentService {
         userId,
         ...(platform && { platform }),
         createdAt: { $gte: cutoffDate },
-        status: { $in: ['posted', 'scheduled'] }
+        status: { $in: ['posted', 'scheduled'] },
       }).sort({ createdAt: -1 });
 
       let highestSimilarity = 0;
@@ -69,17 +68,16 @@ class DuplicateContentService {
         isSimilar,
         similarity: highestSimilarity,
         matchedCaption: isSimilar ? matchedCaption : undefined,
-        recommendation: isSimilar 
+        recommendation: isSimilar
           ? 'Caption is too similar to recent posts. Consider using different wording.'
-          : 'Caption is unique and ready to use.'
+          : 'Caption is unique and ready to use.',
       };
-
     } catch (error) {
       logger.error('Error checking caption similarity:', error);
       return {
         isSimilar: false,
         similarity: 0,
-        recommendation: 'Error checking similarity - proceeding with caution'
+        recommendation: 'Error checking similarity - proceeding with caution',
       };
     }
   }
@@ -89,11 +87,12 @@ class DuplicateContentService {
     if (!text1 || !text2) return 0;
 
     // Normalize text: lowercase, remove special chars, split into words
-    const normalize = (text: string) => 
-      text.toLowerCase()
-          .replace(/[^\w\s]/g, ' ')
-          .split(/\s+/)
-          .filter(word => word.length > 2); // Ignore short words
+    const normalize = (text: string) =>
+      text
+        .toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter((word) => word.length > 2); // Ignore short words
 
     const words1 = new Set(normalize(text1));
     const words2 = new Set(normalize(text2));
@@ -101,7 +100,7 @@ class DuplicateContentService {
     if (words1.size === 0 || words2.size === 0) return 0;
 
     // Calculate Jaccard similarity (intersection / union)
-    const intersection = new Set([...words1].filter(word => words2.has(word)));
+    const intersection = new Set([...words1].filter((word) => words2.has(word)));
     const union = new Set([...words1, ...words2]);
 
     return intersection.size / union.size;
@@ -111,13 +110,12 @@ class DuplicateContentService {
   async checkVideoDuplicate(userId: string, _videoHash: string): Promise<boolean> {
     try {
       await connectToDatabase();
-      
+
       // For now, just check if we have any videos with the same filename pattern
       // In a full implementation, this would use video hashing/fingerprinting
-      
+
       logger.info(`Checking video duplicate for user ${userId}`);
       return false; // For now, assume no duplicates
-
     } catch (error) {
       logger.error('Error checking video duplicate:', error);
       return false;
@@ -128,23 +126,22 @@ class DuplicateContentService {
   async getDuplicateStats(userId: string): Promise<any> {
     try {
       await connectToDatabase();
-      
+
       const totalPosts = await Post.countDocuments({ userId });
-      
+
       return {
         totalPosts,
         duplicatesFound: 0, // Simplified for now
         duplicateRate: 0,
-        lastCheck: new Date()
+        lastCheck: new Date(),
       };
-
     } catch (error) {
       logger.error('Error getting duplicate stats:', error);
       return {
         totalPosts: 0,
         duplicatesFound: 0,
         duplicateRate: 0,
-        lastCheck: new Date()
+        lastCheck: new Date(),
       };
     }
   }
@@ -154,42 +151,55 @@ class DuplicateContentService {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-      
+
       logger.info(`Cleanup completed - would remove records older than ${cutoffDate}`);
-      
     } catch (error) {
       logger.error('Error during cleanup:', error);
     }
   }
 
-      // Basic duplicate detection implementation
-  async regenerateCaptionIfSimilar(params: { userId: string; originalCaption: string; videoType: 'real_estate' | 'cartoon'; platform?: string; timeframeDays?: number; similarityThreshold?: number }): Promise<{ regenerated: boolean; newCaption?: string }> {
+  // Basic duplicate detection implementation
+  async regenerateCaptionIfSimilar(params: {
+    userId: string;
+    originalCaption: string;
+    videoType: 'real_estate' | 'cartoon';
+    platform?: string;
+    timeframeDays?: number;
+    similarityThreshold?: number;
+  }): Promise<{ regenerated: boolean; newCaption?: string }> {
     try {
-      const { userId, originalCaption, platform, timeframeDays = 30, similarityThreshold = 0.8 } = params;
-      
+      const {
+        userId,
+        originalCaption,
+        platform,
+        timeframeDays = 30,
+        similarityThreshold = 0.8,
+      } = params;
+
       // Check if the original caption is too similar to recent posts
       const similarityCheck = await this.checkCaptionSimilarity({
         userId,
         newCaption: originalCaption,
         platform,
         timeframeDays,
-        similarityThreshold
+        similarityThreshold,
       });
 
       if (similarityCheck.isSimilar) {
         // Generate a new caption using the caption generation service
-        logger.info(`Regenerating caption for user ${userId} - original was ${Math.round(similarityCheck.similarity * 100)}% similar`);
-        
+        logger.info(
+          `Regenerating caption for user ${userId} - original was ${Math.round(similarityCheck.similarity * 100)}% similar`
+        );
+
         return {
           regenerated: true,
-          newCaption: `${originalCaption} ✨`  // Simple modification for now
+          newCaption: `${originalCaption} ✨`, // Simple modification for now
         };
       }
 
       return {
-        regenerated: false
+        regenerated: false,
       };
-
     } catch (error) {
       logger.error('Error regenerating caption:', error);
       return { regenerated: false };
@@ -199,4 +209,4 @@ class DuplicateContentService {
 
 // Export singleton instance
 export const duplicateContentService = new DuplicateContentService();
-export default duplicateContentService; 
+export default duplicateContentService;

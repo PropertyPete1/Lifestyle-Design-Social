@@ -61,7 +61,8 @@ export const config = {
       graphApiTokenAustin: process.env.INSTAGRAM_GRAPH_API_TOKEN_AUSTIN || '',
       clientId: process.env.INSTAGRAM_CLIENT_ID || '',
       clientSecret: process.env.INSTAGRAM_CLIENT_SECRET || '',
-      redirectUri: process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:5001/api/auth/instagram/callback',
+      redirectUri:
+        process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:5001/api/auth/instagram/callback',
     },
     twitter: {
       apiKey: process.env.TWITTER_API_KEY || '',
@@ -73,12 +74,14 @@ export const config = {
     tiktok: {
       clientId: process.env.TIKTOK_CLIENT_ID || '',
       clientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
-      redirectUri: process.env.TIKTOK_REDIRECT_URI || 'http://localhost:5001/api/auth/tiktok/callback',
+      redirectUri:
+        process.env.TIKTOK_REDIRECT_URI || 'http://localhost:5001/api/auth/tiktok/callback',
     },
     youtube: {
       clientId: process.env.YOUTUBE_CLIENT_ID || '',
       clientSecret: process.env.YOUTUBE_CLIENT_SECRET || '',
-      redirectUri: process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:5001/api/auth/youtube/callback',
+      redirectUri:
+        process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:5001/api/auth/youtube/callback',
     },
   },
 
@@ -102,8 +105,21 @@ export const config = {
   // Posting configuration
   posting: {
     optimalTimes: {
-      twitter: process.env.OPTIMAL_TIMES_TWITTER?.split(',') || ['09:00', '12:00', '15:00', '18:00', '20:00'],
-      instagram: process.env.OPTIMAL_TIMES_INSTAGRAM?.split(',') || ['08:00', '11:00', '14:00', '17:00', '19:00', '21:00'],
+      twitter: process.env.OPTIMAL_TIMES_TWITTER?.split(',') || [
+        '09:00',
+        '12:00',
+        '15:00',
+        '18:00',
+        '20:00',
+      ],
+      instagram: process.env.OPTIMAL_TIMES_INSTAGRAM?.split(',') || [
+        '08:00',
+        '11:00',
+        '14:00',
+        '17:00',
+        '19:00',
+        '21:00',
+      ],
     },
     timezone: process.env.TIMEZONE || 'America/New_York',
   },
@@ -130,4 +146,4 @@ export const config = {
   },
 };
 
-export default config; 
+export default config;

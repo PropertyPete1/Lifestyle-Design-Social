@@ -30,106 +30,113 @@ export interface IHashtag extends Document {
   updatedAt: Date;
 }
 
-const hashtagSchema = new Schema<IHashtag>({
-  userId: {
-    type: String,
-    ref: 'User'
-  },
-  hashtag: {
-    type: String,
-    required: true,
-    trim: true,
-    lowercase: true,
-    validate: {
-      validator: function(v: string) {
-        return /^#[a-zA-Z0-9_]+$/.test(v);
-      },
-      message: 'Hashtag must start with # and contain only letters, numbers, and underscores'
-    }
-  },
-  category: {
-    type: String,
-    enum: ['real_estate', 'viral', 'trending', 'custom'],
-    required: true
-  },
-  platform: {
-    type: String,
-    enum: ['instagram', 'tiktok', 'facebook', 'youtube', 'twitter'],
-    required: true
-  },
-  performance: {
-    totalUses: {
-      type: Number,
-      default: 0
-    },
-    averageEngagement: {
-      type: Number,
-      default: 0
-    },
-    averageLikes: {
-      type: Number,
-      default: 0
-    },
-    averageComments: {
-      type: Number,
-      default: 0
-    },
-    averageShares: {
-      type: Number,
-      default: 0
-    },
-    averageReach: {
-      type: Number,
-      default: 0
-    },
-    lastUsed: {
-      type: Date
-    },
-    bestPerformingPost: {
+const hashtagSchema = new Schema<IHashtag>(
+  {
+    userId: {
       type: String,
-      ref: 'Post'
-    }
-  },
-  trendingData: {
-    trendingScore: {
-      type: Number,
-      min: 0,
-      max: 100
+      ref: 'User',
     },
-    popularity: {
-      type: Number,
-      min: 0,
-      max: 100
+    hashtag: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      validate: {
+        validator: function (v: string) {
+          return /^#[a-zA-Z0-9_]+$/.test(v);
+        },
+        message: 'Hashtag must start with # and contain only letters, numbers, and underscores',
+      },
     },
-    growthRate: {
-      type: Number
+    category: {
+      type: String,
+      enum: ['real_estate', 'viral', 'trending', 'custom'],
+      required: true,
     },
-    fetchedAt: {
-      type: Date
+    platform: {
+      type: String,
+      enum: ['instagram', 'tiktok', 'facebook', 'youtube', 'twitter'],
+      required: true,
     },
-    expiresAt: {
-      type: Date
-    }
+    performance: {
+      totalUses: {
+        type: Number,
+        default: 0,
+      },
+      averageEngagement: {
+        type: Number,
+        default: 0,
+      },
+      averageLikes: {
+        type: Number,
+        default: 0,
+      },
+      averageComments: {
+        type: Number,
+        default: 0,
+      },
+      averageShares: {
+        type: Number,
+        default: 0,
+      },
+      averageReach: {
+        type: Number,
+        default: 0,
+      },
+      lastUsed: {
+        type: Date,
+      },
+      bestPerformingPost: {
+        type: String,
+        ref: 'Post',
+      },
+    },
+    trendingData: {
+      trendingScore: {
+        type: Number,
+        min: 0,
+        max: 100,
+      },
+      popularity: {
+        type: Number,
+        min: 0,
+        max: 100,
+      },
+      growthRate: {
+        type: Number,
+      },
+      fetchedAt: {
+        type: Date,
+      },
+      expiresAt: {
+        type: Date,
+      },
+    },
+    isGlobal: {
+      type: Boolean,
+      default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    tags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    relatedHashtags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
   },
-  isGlobal: {
-    type: Boolean,
-    default: false
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  tags: [{
-    type: String,
-    trim: true
-  }],
-  relatedHashtags: [{
-    type: String,
-    trim: true
-  }]
-}, {
-  timestamps: true
-});
+  {
+    timestamps: true,
+  }
+);
 
 // Create indexes
 hashtagSchema.index({ hashtag: 1, platform: 1 }, { unique: true });
@@ -143,4 +150,4 @@ hashtagSchema.index({ isGlobal: 1, isActive: 1 });
 export const Hashtag = mongoose.model<IHashtag>('Hashtag', hashtagSchema);
 
 // Export model alias for service compatibility
-export const HashtagModel = Hashtag; 
+export const HashtagModel = Hashtag;

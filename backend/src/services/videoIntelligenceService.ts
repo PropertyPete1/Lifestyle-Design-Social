@@ -6,7 +6,6 @@ import axios from 'axios';
 import { logger } from '../utils/logger';
 import { VideoIntelligence } from '../models/VideoIntelligence';
 
-
 // Configure ffmpeg path
 import ffmpegStatic from 'ffmpeg-static';
 if (ffmpegStatic) {
@@ -115,13 +114,13 @@ export class VideoIntelligenceService {
         audioAnalysis,
         thumbnailOptions,
         musicRecommendations,
-        engagementPrediction
+        engagementPrediction,
       ] = await Promise.all([
         this.analyzeVideoScene(videoPath),
         this.analyzeVideoAudio(videoPath),
         this.generateThumbnailOptions(videoPath),
         this.getTrendingMusicRecommendations(videoPath),
-        this.predictEngagement(videoPath)
+        this.predictEngagement(videoPath),
       ]);
 
       // Generate optimization suggestions based on analysis
@@ -139,7 +138,7 @@ export class VideoIntelligenceService {
         thumbnailOptions,
         musicRecommendations,
         engagementPrediction,
-        optimizationSuggestions
+        optimizationSuggestions,
       };
 
       // Store analysis results in database
@@ -147,7 +146,6 @@ export class VideoIntelligenceService {
 
       logger.info(`Completed AI video analysis for video: ${videoId}`);
       return result;
-
     } catch (error) {
       logger.error(`Error analyzing video ${videoId}:`, error);
       throw error;
@@ -173,21 +171,21 @@ export class VideoIntelligenceService {
           timestamps: ['10%', '25%', '50%', '75%', '90%'],
           filename: 'frame_%i.jpg',
           folder: frameDir,
-          size: '1920x1080'
+          size: '1920x1080',
         })
         .on('end', async () => {
           try {
             // Analyze extracted frames
-            const frames = fs.readdirSync(frameDir).filter(f => f.endsWith('.jpg'));
+            const frames = fs.readdirSync(frameDir).filter((f) => f.endsWith('.jpg'));
             const frameAnalyses = await Promise.all(
-              frames.map(frame => this.analyzeFrame(path.join(frameDir, frame)))
+              frames.map((frame) => this.analyzeFrame(path.join(frameDir, frame)))
             );
 
             // Aggregate frame analyses
             const sceneAnalysis = this.aggregateFrameAnalyses(frameAnalyses);
 
             // Cleanup frames
-            frames.forEach(frame => {
+            frames.forEach((frame) => {
               try {
                 fs.unlinkSync(path.join(frameDir, frame));
               } catch (e) {
@@ -217,14 +215,14 @@ export class VideoIntelligenceService {
 
       // Color analysis
       const dominantColors = this.extractDominantColors(null); // Placeholder for actual analysis
-      
+
       // Brightness and contrast analysis
       const brightness = this.calculateBrightness(null); // Placeholder for actual analysis
       const contrast = this.calculateContrast(null); // Placeholder for actual analysis
 
       // Simple scene classification based on colors and brightness
       const sceneType = this.classifyScene(dominantColors, brightness);
-      
+
       // Property type detection (simplified)
       const propertyType = this.detectPropertyType(framePath);
 
@@ -234,7 +232,7 @@ export class VideoIntelligenceService {
         contrast,
         sceneType,
         propertyType,
-        qualityScore: this.calculateFrameQuality(brightness, contrast, dominantColors)
+        qualityScore: this.calculateFrameQuality(brightness, contrast, dominantColors),
       };
     } catch (error) {
       logger.error(`Error analyzing frame ${framePath}:`, error);
@@ -244,7 +242,7 @@ export class VideoIntelligenceService {
         contrast: 0.5,
         sceneType: 'mixed',
         propertyType: 'unknown',
-        qualityScore: 0.5
+        qualityScore: 0.5,
       };
     }
   }
@@ -253,38 +251,44 @@ export class VideoIntelligenceService {
    * Aggregate multiple frame analyses into scene analysis
    */
   private aggregateFrameAnalyses(frameAnalyses: Partial<SceneAnalysis>[]): SceneAnalysis {
-    const validAnalyses = frameAnalyses.filter(a => a.qualityScore && a.qualityScore > 0);
-    
+    const validAnalyses = frameAnalyses.filter((a) => a.qualityScore && a.qualityScore > 0);
+
     if (validAnalyses.length === 0) {
       return this.getDefaultSceneAnalysis();
     }
 
     // Aggregate dominant colors
-    const allColors = validAnalyses.flatMap(a => a.dominantColors || []);
-    const colorCounts = allColors.reduce((acc, color) => {
-      acc[color] = (acc[color] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
+    const allColors = validAnalyses.flatMap((a) => a.dominantColors || []);
+    const colorCounts = allColors.reduce(
+      (acc, color) => {
+        acc[color] = (acc[color] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
     const dominantColors = Object.entries(colorCounts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([color]) => color);
 
     // Average brightness and contrast
-    const avgBrightness = validAnalyses.reduce((sum, a) => sum + (a.brightness || 0), 0) / validAnalyses.length;
-    const avgContrast = validAnalyses.reduce((sum, a) => sum + (a.contrast || 0), 0) / validAnalyses.length;
+    const avgBrightness =
+      validAnalyses.reduce((sum, a) => sum + (a.brightness || 0), 0) / validAnalyses.length;
+    const avgContrast =
+      validAnalyses.reduce((sum, a) => sum + (a.contrast || 0), 0) / validAnalyses.length;
 
     // Most common scene type
-    const sceneTypes = validAnalyses.map(a => a.sceneType).filter(Boolean);
+    const sceneTypes = validAnalyses.map((a) => a.sceneType).filter(Boolean);
     const sceneType = this.getMostCommon(sceneTypes) || 'mixed';
 
     // Most common property type
-    const propertyTypes = validAnalyses.map(a => a.propertyType).filter(Boolean);
+    const propertyTypes = validAnalyses.map((a) => a.propertyType).filter(Boolean);
     const propertyType = this.getMostCommon(propertyTypes) || 'unknown';
 
     // Average quality score
-    const avgQualityScore = validAnalyses.reduce((sum, a) => sum + (a.qualityScore || 0), 0) / validAnalyses.length;
+    const avgQualityScore =
+      validAnalyses.reduce((sum, a) => sum + (a.qualityScore || 0), 0) / validAnalyses.length;
 
     return {
       dominantColors,
@@ -296,7 +300,7 @@ export class VideoIntelligenceService {
       hasFaces: false, // Would need face detection API
       faceCount: 0,
       objectsDetected: [], // Would need object detection API
-      qualityScore: avgQualityScore
+      qualityScore: avgQualityScore,
     };
   }
 
@@ -311,8 +315,8 @@ export class VideoIntelligenceService {
           return;
         }
 
-        const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
-        
+        const audioStream = metadata.streams.find((stream) => stream.codec_type === 'audio');
+
         if (!audioStream) {
           resolve({
             hasAudio: false,
@@ -323,7 +327,7 @@ export class VideoIntelligenceService {
             backgroundNoise: 0,
             speechDetected: false,
             musicDetected: false,
-            recommendedMusicGenre: ['ambient']
+            recommendedMusicGenre: ['ambient'],
           });
           return;
         }
@@ -371,7 +375,7 @@ export class VideoIntelligenceService {
       backgroundNoise: 0.2, // Would need noise detection
       speechDetected: channels >= 1, // Simplified detection
       musicDetected: bitrate > 96000, // Simplified detection
-      recommendedMusicGenre
+      recommendedMusicGenre,
     };
   }
 
@@ -387,23 +391,23 @@ export class VideoIntelligenceService {
 
       // Generate thumbnails at strategic timestamps
       const timestamps = ['5%', '15%', '25%', '35%', '50%', '65%', '75%', '85%', '95%'];
-      
+
       ffmpeg(videoPath)
         .screenshots({
           timestamps,
           filename: 'thumb_%i.jpg',
           folder: thumbnailDir,
-          size: '1080x1080'
+          size: '1080x1080',
         })
         .on('end', async () => {
           try {
-            const thumbnailFiles = fs.readdirSync(thumbnailDir).filter(f => f.endsWith('.jpg'));
+            const thumbnailFiles = fs.readdirSync(thumbnailDir).filter((f) => f.endsWith('.jpg'));
             const thumbnailOptions = await Promise.all(
               thumbnailFiles.map(async (file, index) => {
                 const filePath = path.join(thumbnailDir, file);
                 const score = await this.scoreThumbnail(filePath);
                 const timestamp = (index + 1) * (100 / timestamps.length);
-                
+
                 return {
                   timestamp,
                   imagePath: filePath,
@@ -413,7 +417,7 @@ export class VideoIntelligenceService {
                   textPresent: score.textPresent,
                   colorScore: score.colorScore,
                   compositionScore: score.compositionScore,
-                  engagementPrediction: score.engagementPrediction
+                  engagementPrediction: score.engagementPrediction,
                 };
               })
             );
@@ -450,16 +454,20 @@ export class VideoIntelligenceService {
 
       // Color analysis
       const colorScore = this.scoreThumbnailColors(null); // Placeholder for actual analysis
-      
+
       // Composition analysis
       const compositionScore = this.scoreThumbnailComposition(null); // Placeholder for actual analysis
-      
+
       // Engagement prediction based on visual elements
       const engagementPrediction = (colorScore + compositionScore) / 2;
-      
-      const overall = (colorScore * 0.4 + compositionScore * 0.4 + engagementPrediction * 0.2);
-      
-      const reasoning = this.generateThumbnailReasoning(colorScore, compositionScore, engagementPrediction);
+
+      const overall = colorScore * 0.4 + compositionScore * 0.4 + engagementPrediction * 0.2;
+
+      const reasoning = this.generateThumbnailReasoning(
+        colorScore,
+        compositionScore,
+        engagementPrediction
+      );
 
       return {
         overall,
@@ -468,7 +476,7 @@ export class VideoIntelligenceService {
         textPresent: false, // Would need OCR
         colorScore,
         compositionScore,
-        engagementPrediction
+        engagementPrediction,
       };
     } catch (error) {
       logger.error(`Error scoring thumbnail ${imagePath}:`, error);
@@ -479,7 +487,7 @@ export class VideoIntelligenceService {
         textPresent: false,
         colorScore: 0.5,
         compositionScore: 0.5,
-        engagementPrediction: 0.5
+        engagementPrediction: 0.5,
       };
     }
   }
@@ -491,28 +499,25 @@ export class VideoIntelligenceService {
     try {
       // Get audio analysis for music matching
       const audioAnalysis = await this.analyzeVideoAudio(videoPath);
-      
+
       // Get trending music from multiple sources
       const [spotifyTrending, tiktokTrending, customRecommendations] = await Promise.all([
         this.getSpotifyTrendingMusic(audioAnalysis),
         this.getTikTokTrendingMusic(audioAnalysis),
-        this.getCustomMusicRecommendations(audioAnalysis)
+        this.getCustomMusicRecommendations(audioAnalysis),
       ]);
 
       // Combine and score recommendations
       const allRecommendations = [...spotifyTrending, ...tiktokTrending, ...customRecommendations];
-      
+
       // Score each recommendation based on video content match
-      const scoredRecommendations = allRecommendations.map(rec => ({
+      const scoredRecommendations = allRecommendations.map((rec) => ({
         ...rec,
-        matchScore: this.calculateMusicMatchScore(rec, audioAnalysis)
+        matchScore: this.calculateMusicMatchScore(rec, audioAnalysis),
       }));
 
       // Sort by match score and return top recommendations
-      return scoredRecommendations
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, 10);
-
+      return scoredRecommendations.sort((a, b) => b.matchScore - a.matchScore).slice(0, 10);
     } catch (error) {
       logger.error('Error getting music recommendations:', error);
       return this.getDefaultMusicRecommendations();
@@ -522,20 +527,23 @@ export class VideoIntelligenceService {
   /**
    * Get trending music from Spotify
    */
-  private async getSpotifyTrendingMusic(audioAnalysis: AudioAnalysis): Promise<MusicRecommendation[]> {
+  private async getSpotifyTrendingMusic(
+    audioAnalysis: AudioAnalysis
+  ): Promise<MusicRecommendation[]> {
     try {
       if (!this.SPOTIFY_CLIENT_ID || !this.SPOTIFY_CLIENT_SECRET) {
         return [];
       }
 
       // Get Spotify access token
-      const tokenResponse = await axios.post('https://accounts.spotify.com/api/token', 
+      const tokenResponse = await axios.post(
+        'https://accounts.spotify.com/api/token',
         'grant_type=client_credentials',
         {
           headers: {
-            'Authorization': `Basic ${Buffer.from(`${this.SPOTIFY_CLIENT_ID}:${this.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
+            Authorization: `Basic ${Buffer.from(`${this.SPOTIFY_CLIENT_ID}:${this.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         }
       );
 
@@ -543,11 +551,14 @@ export class VideoIntelligenceService {
 
       // Search for trending tracks based on audio mood
       const searchQuery = this.buildSpotifySearchQuery(audioAnalysis);
-      const searchResponse = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=20`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      const searchResponse = await axios.get(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=20`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
+      );
 
       return searchResponse.data.tracks.items.map((track: any) => ({
         trackId: track.id,
@@ -560,9 +571,8 @@ export class VideoIntelligenceService {
         trendingScore: track.popularity / 100,
         matchScore: 0, // Will be calculated later
         previewUrl: track.preview_url,
-        platform: 'spotify' as const
+        platform: 'spotify' as const,
       }));
-
     } catch (error) {
       logger.error('Error getting Spotify trending music:', error);
       return [];
@@ -572,7 +582,9 @@ export class VideoIntelligenceService {
   /**
    * Get trending music from TikTok
    */
-  private async getTikTokTrendingMusic(audioAnalysis: AudioAnalysis): Promise<MusicRecommendation[]> {
+  private async getTikTokTrendingMusic(
+    audioAnalysis: AudioAnalysis
+  ): Promise<MusicRecommendation[]> {
     try {
       // TikTok trending music API would go here
       // For now, return mock trending music
@@ -587,8 +599,8 @@ export class VideoIntelligenceService {
           popularity: 95,
           trendingScore: 0.95,
           matchScore: 0,
-          platform: 'tiktok' as const
-        }
+          platform: 'tiktok' as const,
+        },
       ];
     } catch (error) {
       logger.error('Error getting TikTok trending music:', error);
@@ -599,7 +611,9 @@ export class VideoIntelligenceService {
   /**
    * Get custom music recommendations
    */
-  private async getCustomMusicRecommendations(audioAnalysis: AudioAnalysis): Promise<MusicRecommendation[]> {
+  private async getCustomMusicRecommendations(
+    audioAnalysis: AudioAnalysis
+  ): Promise<MusicRecommendation[]> {
     const customTracks = [
       {
         trackId: 'custom_1',
@@ -611,7 +625,7 @@ export class VideoIntelligenceService {
         popularity: 80,
         trendingScore: 0.8,
         matchScore: 0,
-        platform: 'custom' as const
+        platform: 'custom' as const,
       },
       {
         trackId: 'custom_2',
@@ -623,13 +637,14 @@ export class VideoIntelligenceService {
         popularity: 85,
         trendingScore: 0.85,
         matchScore: 0,
-        platform: 'custom' as const
-      }
+        platform: 'custom' as const,
+      },
     ];
 
-    return customTracks.filter(track => 
-      track.mood === audioAnalysis.mood || 
-      audioAnalysis.recommendedMusicGenre.includes(track.genre)
+    return customTracks.filter(
+      (track) =>
+        track.mood === audioAnalysis.mood ||
+        audioAnalysis.recommendedMusicGenre.includes(track.genre)
     );
   }
 
@@ -640,26 +655,27 @@ export class VideoIntelligenceService {
     try {
       // This would use ML models to predict engagement
       // For now, using heuristic-based prediction
-      
+
       const metadata = await this.getVideoMetadata(videoPath);
       const factors = {
         thumbnailQuality: 0.8, // Would be calculated from thumbnail analysis
         audioQuality: metadata.hasAudio ? 0.9 : 0.3,
         visualAppeal: 0.7, // Would be calculated from scene analysis
         contentRelevance: 0.8, // Would be calculated from content analysis
-        trendAlignment: 0.6 // Would be calculated from trending analysis
+        trendAlignment: 0.6, // Would be calculated from trending analysis
       };
 
-      const overallScore = Object.values(factors).reduce((sum, score) => sum + score, 0) / Object.keys(factors).length;
-      
+      const overallScore =
+        Object.values(factors).reduce((sum, score) => sum + score, 0) / Object.keys(factors).length;
+
       const recommendations = this.generateEngagementRecommendations(factors);
-      
+
       return {
         overallScore,
         factors,
         recommendations,
         expectedViews: Math.round(overallScore * 10000),
-        expectedEngagementRate: overallScore * 0.05
+        expectedEngagementRate: overallScore * 0.05,
       };
     } catch (error) {
       logger.error('Error predicting engagement:', error);
@@ -685,7 +701,7 @@ export class VideoIntelligenceService {
         suggestion: 'Consider using a thumbnail with better composition and brighter colors',
         impact: 'high',
         effort: 'easy',
-        estimatedImprovement: 15
+        estimatedImprovement: 15,
       });
     }
 
@@ -696,7 +712,7 @@ export class VideoIntelligenceService {
         suggestion: 'Improve audio quality or add background music',
         impact: 'high',
         effort: 'moderate',
-        estimatedImprovement: 25
+        estimatedImprovement: 25,
       });
     }
 
@@ -707,7 +723,7 @@ export class VideoIntelligenceService {
         suggestion: 'Optimize video compression settings for better quality',
         impact: 'medium',
         effort: 'easy',
-        estimatedImprovement: 10
+        estimatedImprovement: 10,
       });
     }
 
@@ -718,7 +734,7 @@ export class VideoIntelligenceService {
         suggestion: 'Improve lighting or brightness in future videos',
         impact: 'medium',
         effort: 'moderate',
-        estimatedImprovement: 12
+        estimatedImprovement: 12,
       });
     }
 
@@ -739,7 +755,7 @@ export class VideoIntelligenceService {
           thumbnailOptions: results.thumbnailOptions,
           musicRecommendations: results.musicRecommendations,
           engagementPrediction: results.engagementPrediction,
-          optimizationSuggestions: results.optimizationSuggestions
+          optimizationSuggestions: results.optimizationSuggestions,
         },
         { upsert: true, new: true }
       );
@@ -768,12 +784,14 @@ export class VideoIntelligenceService {
     return brightness > 0.6 ? 'outdoor' : 'indoor';
   }
 
-  private detectPropertyType(_framePath: string): 'house' | 'apartment' | 'commercial' | 'land' | 'unknown' {
+  private detectPropertyType(
+    _framePath: string
+  ): 'house' | 'apartment' | 'commercial' | 'land' | 'unknown' {
     return 'house'; // Simplified
   }
 
   private calculateFrameQuality(brightness: number, contrast: number, colors: string[]): number {
-    return (brightness + contrast + (colors.length / 10)) / 3;
+    return (brightness + contrast + colors.length / 10) / 3;
   }
 
   private getDefaultSceneAnalysis(): SceneAnalysis {
@@ -787,23 +805,30 @@ export class VideoIntelligenceService {
       hasFaces: false,
       faceCount: 0,
       objectsDetected: [],
-      qualityScore: 0.5
+      qualityScore: 0.5,
     };
   }
 
   private getMostCommon<T>(array: T[]): T | null {
     if (array.length === 0) return null;
-    const counts = array.reduce((acc, item) => {
-      acc[String(item)] = (acc[String(item)] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
+    const counts = array.reduce(
+      (acc, item) => {
+        acc[String(item)] = (acc[String(item)] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
     const maxCount = Math.max(...Object.values(counts));
-    const mostCommon = Object.keys(counts).find(key => counts[key] === maxCount);
+    const mostCommon = Object.keys(counts).find((key) => counts[key] === maxCount);
     return mostCommon as T;
   }
 
-  private estimateAudioMood(bitrate: number, channels: number, sampleRate: number): AudioAnalysis['mood'] {
+  private estimateAudioMood(
+    bitrate: number,
+    channels: number,
+    sampleRate: number
+  ): AudioAnalysis['mood'] {
     if (bitrate > 128000) return 'professional';
     if (channels > 1) return 'upbeat';
     if (sampleRate > 44100) return 'energetic';
@@ -811,18 +836,18 @@ export class VideoIntelligenceService {
   }
 
   private estimateTempo(bitrate: number, sampleRate: number): number {
-    return Math.round(60 + (bitrate / 1000) + (sampleRate / 1000));
+    return Math.round(60 + bitrate / 1000 + sampleRate / 1000);
   }
 
   private recommendMusicGenres(mood: string, _tempo: number, _quality: string): string[] {
     const genreMap: Record<string, string[]> = {
-      'energetic': ['electronic', 'pop', 'rock'],
-      'calm': ['ambient', 'classical', 'jazz'],
-      'professional': ['corporate', 'ambient', 'minimal'],
-      'upbeat': ['pop', 'electronic', 'indie'],
-      'dramatic': ['cinematic', 'orchestral', 'epic']
+      energetic: ['electronic', 'pop', 'rock'],
+      calm: ['ambient', 'classical', 'jazz'],
+      professional: ['corporate', 'ambient', 'minimal'],
+      upbeat: ['pop', 'electronic', 'indie'],
+      dramatic: ['cinematic', 'orchestral', 'epic'],
     };
-    
+
     return genreMap[mood] || ['ambient'];
   }
 
@@ -834,14 +859,18 @@ export class VideoIntelligenceService {
     return Math.random() * 0.4 + 0.6; // Simplified
   }
 
-  private generateThumbnailReasoning(colorScore: number, compositionScore: number, engagementPrediction: number): string {
+  private generateThumbnailReasoning(
+    colorScore: number,
+    compositionScore: number,
+    engagementPrediction: number
+  ): string {
     const scores = [
       { name: 'colors', score: colorScore },
       { name: 'composition', score: compositionScore },
-      { name: 'engagement potential', score: engagementPrediction }
+      { name: 'engagement potential', score: engagementPrediction },
     ];
-    
-    const best = scores.reduce((max, current) => current.score > max.score ? current : max);
+
+    const best = scores.reduce((max, current) => (current.score > max.score ? current : max));
     return `Good ${best.name} with score of ${(best.score * 100).toFixed(0)}%`;
   }
 
@@ -850,22 +879,25 @@ export class VideoIntelligenceService {
     return `genre:${genres} mood:${audioAnalysis.mood}`;
   }
 
-  private calculateMusicMatchScore(recommendation: MusicRecommendation, audioAnalysis: AudioAnalysis): number {
+  private calculateMusicMatchScore(
+    recommendation: MusicRecommendation,
+    audioAnalysis: AudioAnalysis
+  ): number {
     let score = 0;
-    
+
     // Mood match
     if (recommendation.mood === audioAnalysis.mood) score += 0.4;
-    
+
     // Genre match
     if (audioAnalysis.recommendedMusicGenre.includes(recommendation.genre)) score += 0.3;
-    
+
     // Tempo match
     const tempoDiff = Math.abs(recommendation.tempo - audioAnalysis.tempo);
     if (tempoDiff < 20) score += 0.2;
-    
+
     // Popularity/trending score
     score += recommendation.trendingScore * 0.1;
-    
+
     return Math.min(score, 1.0);
   }
 
@@ -881,34 +913,34 @@ export class VideoIntelligenceService {
         popularity: 70,
         trendingScore: 0.7,
         matchScore: 0.8,
-        platform: 'custom'
-      }
+        platform: 'custom',
+      },
     ];
   }
 
   private generateEngagementRecommendations(factors: EngagementPrediction['factors']): string[] {
     const recommendations: string[] = [];
-    
+
     if (factors.thumbnailQuality < 0.7) {
       recommendations.push('Improve thumbnail selection with better composition');
     }
-    
+
     if (factors.audioQuality < 0.7) {
       recommendations.push('Add background music or improve audio quality');
     }
-    
+
     if (factors.visualAppeal < 0.7) {
       recommendations.push('Enhance visual appeal with better lighting');
     }
-    
+
     if (factors.contentRelevance < 0.7) {
       recommendations.push('Focus on more relevant real estate content');
     }
-    
+
     if (factors.trendAlignment < 0.7) {
       recommendations.push('Align content with current trending topics');
     }
-    
+
     return recommendations;
   }
 
@@ -920,11 +952,11 @@ export class VideoIntelligenceService {
         audioQuality: 0.6,
         visualAppeal: 0.6,
         contentRelevance: 0.6,
-        trendAlignment: 0.6
+        trendAlignment: 0.6,
       },
       recommendations: ['Improve overall video quality'],
       expectedViews: 6000,
-      expectedEngagementRate: 0.03
+      expectedEngagementRate: 0.03,
     };
   }
 
@@ -935,16 +967,16 @@ export class VideoIntelligenceService {
           reject(err);
           return;
         }
-        
-        const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
-        const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
-        
+
+        const videoStream = metadata.streams.find((stream) => stream.codec_type === 'video');
+        const audioStream = metadata.streams.find((stream) => stream.codec_type === 'audio');
+
         resolve({
           duration: parseFloat(String(metadata.format.duration || '0')),
           hasAudio: !!audioStream,
           hasVideo: !!videoStream,
           width: videoStream?.width || 0,
-          height: videoStream?.height || 0
+          height: videoStream?.height || 0,
         });
       });
     });
@@ -956,14 +988,17 @@ export class VideoIntelligenceService {
   async getBestThumbnail(videoId: string): Promise<ThumbnailOption | null> {
     try {
       const intelligence = await VideoIntelligence.findOne({ videoId });
-      
-      if (!intelligence || !intelligence.thumbnailOptions || intelligence.thumbnailOptions.length === 0) {
+
+      if (
+        !intelligence ||
+        !intelligence.thumbnailOptions ||
+        intelligence.thumbnailOptions.length === 0
+      ) {
         return null;
       }
-      
+
       // Return the first thumbnail option (highest score)
       return intelligence.thumbnailOptions[0] || null;
-      
     } catch (error) {
       logger.error('Error getting best thumbnail:', error);
       return null;
@@ -976,13 +1011,12 @@ export class VideoIntelligenceService {
   async getMusicRecommendations(videoId: string): Promise<MusicRecommendation[]> {
     try {
       const intelligence = await VideoIntelligence.findOne({ videoId });
-      
+
       if (!intelligence || !intelligence.musicRecommendations) {
         return [];
       }
-      
+
       return intelligence.musicRecommendations;
-      
     } catch (error) {
       logger.error('Error getting music recommendations:', error);
       return [];
@@ -995,13 +1029,12 @@ export class VideoIntelligenceService {
   async getEngagementPrediction(videoId: string): Promise<EngagementPrediction | null> {
     try {
       const intelligence = await VideoIntelligence.findOne({ videoId });
-      
+
       if (!intelligence || !intelligence.engagementPrediction) {
         return null;
       }
-      
+
       return intelligence.engagementPrediction;
-      
     } catch (error) {
       logger.error('Error getting engagement prediction:', error);
       return null;
@@ -1010,4 +1043,4 @@ export class VideoIntelligenceService {
 }
 
 export const videoIntelligenceService = new VideoIntelligenceService();
-export default VideoIntelligenceService; 
+export default VideoIntelligenceService;

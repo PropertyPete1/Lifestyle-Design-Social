@@ -14,45 +14,53 @@ export interface IHashtagLibrary extends Document {
   updatedAt: Date;
 }
 
-const hashtagLibrarySchema = new Schema<IHashtagLibrary>({
-  userId: {
-    type: String,
-    required: true,
-    ref: 'User'
-  },
-  category: {
-    type: String,
-    enum: ['real_estate', 'viral', 'trending', 'custom'],
-    required: true
-  },
-  hashtags: [{
-    type: String,
-    required: true
-  }],
-  performance: {
-    averageEngagement: {
-      type: Number,
-      default: 0
+const hashtagLibrarySchema = new Schema<IHashtagLibrary>(
+  {
+    userId: {
+      type: String,
+      required: true,
+      ref: 'User',
     },
-    totalUses: {
-      type: Number,
-      default: 0
+    category: {
+      type: String,
+      enum: ['real_estate', 'viral', 'trending', 'custom'],
+      required: true,
     },
-    lastUsed: {
-      type: Date,
-      default: Date.now
-    }
+    hashtags: [
+      {
+        type: String,
+        required: true,
+      },
+    ],
+    performance: {
+      averageEngagement: {
+        type: Number,
+        default: 0,
+      },
+      totalUses: {
+        type: Number,
+        default: 0,
+      },
+      lastUsed: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
-  isActive: {
-    type: Boolean,
-    default: true
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
 // Create indexes
 hashtagLibrarySchema.index({ userId: 1, category: 1 }, { unique: true });
 hashtagLibrarySchema.index({ userId: 1, isActive: 1 });
 
-export const HashtagLibrary = mongoose.model<IHashtagLibrary>('HashtagLibrary', hashtagLibrarySchema); 
+export const HashtagLibrary = mongoose.model<IHashtagLibrary>(
+  'HashtagLibrary',
+  hashtagLibrarySchema
+);

@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { UserModel } from '../models/User';
+import User from '../models/User';
 
 export interface TikTokPostOptions {
   videoPath: string;
@@ -38,10 +38,10 @@ export interface TikTokAccountInfo {
 }
 
 export class TikTokService {
-  private userModel: typeof UserModel;
+  private userModel: typeof User;
 
   constructor() {
-    this.userModel = UserModel;
+    this.userModel = User;
   }
 
   /**
@@ -59,10 +59,10 @@ export class TikTokService {
       // TikTok API integration will be configured through app settings
       // Currently using simulation service for development/testing
       // Production requires: TikTok Business API credentials
-      
+
       // Simulate posting for development
       const result = await this.simulateTikTokPost(options);
-      
+
       logger.info(`Successfully posted to TikTok: ${result.postId}`);
       return result;
     } catch (error) {
@@ -79,7 +79,7 @@ export class TikTokService {
    */
   private async simulateTikTokPost(options: TikTokPostOptions): Promise<TikTokPostResult> {
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     // Simulate success/failure (85% success rate for TikTok)
     const isSuccess = Math.random() > 0.15;
@@ -123,12 +123,12 @@ export class TikTokService {
         // const response = await fetch(`https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,avatar_url,display_name,bio_description,profile_deep_link,is_verified,follower_count,following_count,likes_count,video_count&access_token=${accessToken}`);
         // const data = await response.json();
       }
-      
+
       // Development mode: return structured test data
       return {
         id: 'mock_tiktok_id',
-        username: 'demo_realtor',
-        displayName: 'Demo Realtor',
+        username: 'real_estate_pro',
+        displayName: 'Real Estate Professional',
         followerCount: 2500,
         followingCount: 150,
         videoCount: 89,
@@ -152,7 +152,7 @@ export class TikTokService {
 
       // Token refresh requires TikTok OAuth 2.0 flow implementation
       // This will be configured through app settings in production
-      
+
       // For development, return the same token
       logger.info(`Refreshed TikTok token for user ${userId}`);
       return currentToken;
@@ -169,12 +169,12 @@ export class TikTokService {
     try {
       // TikTok API integration - use live API when credentials configured
       const clientKey = process.env.TIKTOK_CLIENT_KEY;
-      
+
       if (clientKey && accessToken && !process.env.TEST_MODE) {
         logger.info('TikTok API configured - using live video data');
         // Production: GET https://open.tiktokapis.com/v2/video/list/
       }
-      
+
       // Development/simulation mode - return structured test data
       return [
         {
@@ -265,7 +265,7 @@ export class TikTokService {
       // TikTok optimal posting times based on platform best practices
       // Production implementation will analyze user's TikTok Analytics data
       // Default times: early morning, lunch, and evening peak hours
-      
+
       return ['6:00 AM', '10:00 AM', '7:00 PM'];
     } catch (error) {
       logger.error('Failed to get optimal TikTok posting times:', error);
@@ -307,4 +307,4 @@ export class TikTokService {
   }
 }
 
-export default TikTokService; 
+export default TikTokService;

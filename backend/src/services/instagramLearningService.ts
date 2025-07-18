@@ -2,7 +2,7 @@ import { logger } from '../utils/logger';
 import { connectToDatabase } from '../config/database';
 import { InstagramLearning } from '../models/InstagramLearning';
 import { UserInsights } from '../models/UserInsights';
-import { User } from '../models/User';
+import User from '../models/User';
 import { Post } from '../models/Post';
 
 export interface InstagramPost {
@@ -53,7 +53,7 @@ class InstagramLearningService {
 
       // Get user's Instagram credentials
       const credentials = await this.getUserInstagramCredentials(userId);
-      
+
       if (!credentials?.instagramAccessToken) {
         logger.warn(`No Instagram credentials found for user ${userId}`);
         return;
@@ -61,7 +61,7 @@ class InstagramLearningService {
 
       // Fetch recent Instagram posts
       const instagramPosts = await this.fetchInstagramPosts(credentials.instagramAccessToken);
-      
+
       // Store posts and analyze performance
       for (const post of instagramPosts) {
         await this.storeInstagramPost(userId, post);
@@ -70,8 +70,9 @@ class InstagramLearningService {
       // Analyze overall performance and generate insights
       await this.analyzePostPerformance(userId);
 
-      logger.info(`Completed Instagram sync for user ${userId}: ${instagramPosts.length} posts processed`);
-
+      logger.info(
+        `Completed Instagram sync for user ${userId}: ${instagramPosts.length} posts processed`
+      );
     } catch (error) {
       logger.error(`Error syncing Instagram posts for user ${userId}:`, error);
       throw error;
@@ -84,7 +85,7 @@ class InstagramLearningService {
       // Instagram Basic Display API implementation would go here
       // For now, return mock data to maintain service functionality
       logger.info('Fetching Instagram posts (mock data)');
-      
+
       return [
         {
           id: 'sample_post_1',
@@ -100,13 +101,12 @@ class InstagramLearningService {
             shares: 10,
             saves: 8,
             reach: 1200,
-            impressions: 1500
+            impressions: 1500,
           },
           engagementRate: 0.128,
-          isHighPerforming: true
-        }
+          isHighPerforming: true,
+        },
       ];
-
     } catch (error) {
       logger.error('Error fetching Instagram posts:', error);
       return [];
@@ -131,11 +131,10 @@ class InstagramLearningService {
           timestamp: post.timestamp,
           engagementData: post.engagement,
           engagementRate: post.engagementRate,
-          isHighPerforming: post.isHighPerforming
+          isHighPerforming: post.isHighPerforming,
         },
         { upsert: true, new: true }
       );
-
     } catch (error) {
       logger.error('Error storing Instagram post:', error);
       throw error;
@@ -143,11 +142,19 @@ class InstagramLearningService {
   }
 
   // Generate caption variations based on high-performing posts
-  async generateCaptionVariations(userId: string, videoKeywords: string[], videoType: 'real_estate' | 'cartoon'): Promise<CaptionVariation[]> {
+  async generateCaptionVariations(
+    userId: string,
+    videoKeywords: string[],
+    videoType: 'real_estate' | 'cartoon'
+  ): Promise<CaptionVariation[]> {
     try {
       // Get high-performing posts similar to the video
-      const similarPosts = await this.findSimilarHighPerformingPosts(userId, videoKeywords, videoType);
-      
+      const similarPosts = await this.findSimilarHighPerformingPosts(
+        userId,
+        videoKeywords,
+        videoType
+      );
+
       if (similarPosts.length === 0) {
         logger.info(`No similar high-performing posts found for user ${userId}`);
         return [];
@@ -156,19 +163,23 @@ class InstagramLearningService {
       const variations: CaptionVariation[] = [];
 
       // Generate variations for each high-performing caption
-      for (const post of similarPosts.slice(0, 3)) { // Top 3 similar posts
-        const captionVariations = await this.createCaptionVariations(post.caption, videoKeywords, videoType);
-        
+      for (const post of similarPosts.slice(0, 3)) {
+        // Top 3 similar posts
+        const captionVariations = await this.createCaptionVariations(
+          post.caption,
+          videoKeywords,
+          videoType
+        );
+
         variations.push({
           originalCaption: post.caption,
           variations: captionVariations,
           similarity: this.calculateSimilarity(videoKeywords.join(' '), post.caption),
-          engagementScore: post.engagementRate
+          engagementScore: post.engagementRate,
         });
       }
 
       return variations;
-
     } catch (error) {
       logger.error('Error generating caption variations:', error);
       return [];
@@ -176,7 +187,11 @@ class InstagramLearningService {
   }
 
   // Find similar high-performing posts
-  private async findSimilarHighPerformingPosts(userId: string, keywords: string[], _videoType: string): Promise<any[]> {
+  private async findSimilarHighPerformingPosts(
+    userId: string,
+    keywords: string[],
+    _videoType: string
+  ): Promise<any[]> {
     try {
       await connectToDatabase();
 
@@ -187,23 +202,22 @@ class InstagramLearningService {
         userId: userId,
         isHighPerforming: true,
         mediaType: 'VIDEO',
-        createdAt: { $gte: ninetyDaysAgo }
+        createdAt: { $gte: ninetyDaysAgo },
       })
-      .sort({ engagementRate: -1 })
-      .limit(20);
+        .sort({ engagementRate: -1 })
+        .limit(20);
 
       // Score posts based on keyword similarity
-      const scoredPosts = posts.map(post => ({
+      const scoredPosts = posts.map((post) => ({
         ...post.toObject(),
         similarity: this.calculateSimilarity(keywords.join(' '), post.caption),
-        engagementRate: post.engagementRate
+        engagementRate: post.engagementRate,
       }));
 
       // Filter by similarity threshold and sort by engagement rate
       return scoredPosts
-        .filter(post => post.similarity > 0.3)
+        .filter((post) => post.similarity > 0.3)
         .sort((a, b) => b.engagementRate - a.engagementRate);
-
     } catch (error) {
       logger.error('Error finding similar high-performing posts:', error);
       return [];
@@ -211,7 +225,11 @@ class InstagramLearningService {
   }
 
   // Create caption variations using AI
-  private async createCaptionVariations(originalCaption: string, keywords: string[], videoType: string): Promise<string[]> {
+  private async createCaptionVariations(
+    originalCaption: string,
+    keywords: string[],
+    videoType: string
+  ): Promise<string[]> {
     try {
       if (!this.OPENAI_API_KEY) {
         logger.warn('OpenAI API key not configured, using template variations');
@@ -221,7 +239,6 @@ class InstagramLearningService {
       // OpenAI API implementation would go here
       // For now, return template-based variations
       return this.createTemplateVariations(originalCaption, keywords, videoType);
-
     } catch (error) {
       logger.error('Error creating caption variations:', error);
       return this.createTemplateVariations(originalCaption, keywords, videoType);
@@ -229,13 +246,17 @@ class InstagramLearningService {
   }
 
   // Create template-based caption variations
-  private createTemplateVariations(originalCaption: string, keywords: string[], videoType: string): string[] {
+  private createTemplateVariations(
+    originalCaption: string,
+    keywords: string[],
+    videoType: string
+  ): string[] {
     const variations: string[] = [];
-    
+
     // Extract hashtags from original
     const hashtagMatch = originalCaption.match(/#\w+/g) || [];
     const baseCaption = originalCaption.replace(/#\w+/g, '').trim();
-    
+
     if (videoType === 'real_estate') {
       variations.push(
         `${baseCaption} Perfect for ${keywords.join(' and ')}! ${hashtagMatch.join(' ')}`,
@@ -249,18 +270,18 @@ class InstagramLearningService {
         `${baseCaption} Your thoughts? ${hashtagMatch.join(' ')}`
       );
     }
-    
-    return variations.filter(v => v.length > 10);
+
+    return variations.filter((v) => v.length > 10);
   }
 
   // Calculate text similarity using Jaccard similarity
   private calculateSimilarity(text1: string, text2: string): number {
     const words1 = new Set(text1.toLowerCase().split(/\s+/));
     const words2 = new Set(text2.toLowerCase().split(/\s+/));
-    
-    const intersection = new Set([...words1].filter(x => words2.has(x)));
+
+    const intersection = new Set([...words1].filter((x) => words2.has(x)));
     const union = new Set([...words1, ...words2]);
-    
+
     return intersection.size / union.size;
   }
 
@@ -275,13 +296,13 @@ class InstagramLearningService {
       const recentPosts = await Post.find({
         userId: userId,
         createdAt: { $gte: sixtyDaysAgo },
-        status: { $in: ['posted', 'scheduled'] }
+        status: { $in: ['posted', 'scheduled'] },
       })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .select('caption');
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .select('caption');
 
-      const recentCaptions = recentPosts.map(post => post.content || '');
+      const recentCaptions = recentPosts.map((post) => post.content || '');
 
       // Check similarity against recent captions
       for (const recentCaption of recentCaptions) {
@@ -293,7 +314,6 @@ class InstagramLearningService {
       }
 
       return true; // Caption is unique enough
-
     } catch (error) {
       logger.error('Error checking caption similarity:', error);
       return true; // Default to allowing the caption
@@ -304,7 +324,7 @@ class InstagramLearningService {
   private async analyzePostPerformance(userId: string): Promise<void> {
     try {
       const insights = await this.generateLearningInsights(userId);
-      
+
       // Store insights in database
       await connectToDatabase();
 
@@ -315,7 +335,6 @@ class InstagramLearningService {
       );
 
       logger.info(`Generated learning insights for user ${userId}`);
-
     } catch (error) {
       logger.error('Error analyzing post performance:', error);
     }
@@ -331,9 +350,8 @@ class InstagramLearningService {
 
       const posts = await InstagramLearning.find({
         userId: userId,
-        createdAt: { $gte: ninetyDaysAgo }
-      })
-      .sort({ engagementRate: -1 });
+        createdAt: { $gte: ninetyDaysAgo },
+      }).sort({ engagementRate: -1 });
 
       if (posts.length === 0) {
         return this.getDefaultInsights();
@@ -373,15 +391,15 @@ class InstagramLearningService {
       const bestHours = Object.entries(hourlyPerformance)
         .map(([hour, rates]) => ({
           hour: parseInt(hour),
-          avgRate: rates.reduce((a, b) => a + b, 0) / rates.length
+          avgRate: rates.reduce((a, b) => a + b, 0) / rates.length,
         }))
         .sort((a, b) => b.avgRate - a.avgRate)
         .slice(0, 3)
-        .map(h => h.hour);
+        .map((h) => h.hour);
 
       // Get top hashtags
       const topHashtags = Object.entries(hashtagCounts)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 10)
         .map(([hashtag]) => hashtag);
 
@@ -389,12 +407,12 @@ class InstagramLearningService {
       const avgLength = captionLengths.reduce((a, b) => a + b, 0) / captionLengths.length;
       const optimalLength = {
         min: Math.max(50, Math.floor(avgLength * 0.8)),
-        max: Math.min(500, Math.ceil(avgLength * 1.2))
+        max: Math.min(500, Math.ceil(avgLength * 1.2)),
       };
 
       // Get high engagement words
       const highEngagementWords = Object.entries(engagementWords)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 10)
         .map(([word]) => word);
 
@@ -408,10 +426,9 @@ class InstagramLearningService {
           'What do you think?',
           'Tag someone who',
           'Comment below',
-          'Double tap if you agree'
-        ]
+          'Double tap if you agree',
+        ],
       };
-
     } catch (error) {
       logger.error('Error generating learning insights:', error);
       return this.getDefaultInsights();
@@ -419,7 +436,8 @@ class InstagramLearningService {
   }
 
   private calculateEngagementRate(post: any): number {
-    const totalEngagement = (post.like_count || 0) + (post.comments_count || 0) + (post.shares_count || 0);
+    const totalEngagement =
+      (post.like_count || 0) + (post.comments_count || 0) + (post.shares_count || 0);
     const reach = post.reach || post.impressions || 1;
     return totalEngagement / reach;
   }
@@ -427,8 +445,10 @@ class InstagramLearningService {
   private async getUserInstagramCredentials(userId: string): Promise<any> {
     try {
       await connectToDatabase();
-      
-      const user = await User.findById(userId).select('instagramAccessToken instagramRefreshToken instagramUserId');
+
+      const user = await User.findById(userId).select(
+        'instagramAccessToken instagramRefreshToken instagramUserId'
+      );
       return user;
     } catch (error) {
       logger.error('Error getting user Instagram credentials:', error);
@@ -443,7 +463,7 @@ class InstagramLearningService {
       bestCaptionPatterns: ['question', 'call_to_action'],
       optimalCaptionLength: { min: 100, max: 300 },
       highEngagementWords: ['home', 'dream', 'perfect', 'stunning', 'amazing'],
-      callToActionPatterns: ['What do you think?', 'Tag someone who', 'Comment below']
+      callToActionPatterns: ['What do you think?', 'Tag someone who', 'Comment below'],
     };
   }
 
@@ -451,15 +471,14 @@ class InstagramLearningService {
   async getUserInsights(userId: string): Promise<LearningInsight> {
     try {
       await connectToDatabase();
-      
+
       const userInsights = await UserInsights.findOne({ userId });
-      
+
       if (userInsights?.insightsData) {
         return userInsights.insightsData;
       }
-      
-      return this.getDefaultInsights();
 
+      return this.getDefaultInsights();
     } catch (error) {
       logger.error('Error getting user insights:', error);
       return this.getDefaultInsights();
@@ -467,4 +486,4 @@ class InstagramLearningService {
   }
 }
 
-export const instagramLearningService = new InstagramLearningService(); 
+export const instagramLearningService = new InstagramLearningService();

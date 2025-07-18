@@ -11,23 +11,22 @@ const router = Router();
 router.get('/agents', authenticateToken, async (_req: Request, res: Response) => {
   try {
     const agents = backgroundAgentsService.getAgents();
-    
+
     return res.json({
       success: true,
       data: {
         agents,
         totalAgents: agents.length,
-        activeAgents: agents.filter(a => a.status === 'active').length,
-        stoppedAgents: agents.filter(a => a.status === 'stopped').length
+        activeAgents: agents.filter((a) => a.status === 'active').length,
+        stoppedAgents: agents.filter((a) => a.status === 'stopped').length,
       },
-      message: `Retrieved ${agents.length} background agents`
+      message: `Retrieved ${agents.length} background agents`,
     });
-
   } catch (error) {
     logger.error('Background agents retrieval error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to retrieve background agents' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve background agents',
     });
   }
 });
@@ -38,31 +37,30 @@ router.get('/agents', authenticateToken, async (_req: Request, res: Response) =>
 router.get('/agent/:agentId', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { agentId } = req.params;
-    
+
     if (!agentId) {
       return res.status(400).json({ error: 'Agent ID is required' });
     }
 
     const agent = backgroundAgentsService.getAgent(agentId);
-    
+
     if (!agent) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Background agent not found' 
+      return res.status(404).json({
+        success: false,
+        error: 'Background agent not found',
       });
     }
 
     return res.json({
       success: true,
       data: agent,
-      message: 'Background agent retrieved successfully'
+      message: 'Background agent retrieved successfully',
     });
-
   } catch (error) {
     logger.error('Background agent retrieval error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to retrieve background agent' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve background agent',
     });
   }
 });
@@ -73,23 +71,22 @@ router.get('/agent/:agentId', authenticateToken, async (req: Request, res: Respo
 router.post('/agent/:agentId/start', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { agentId } = req.params;
-    
+
     if (!agentId) {
       return res.status(400).json({ error: 'Agent ID is required' });
     }
 
     await backgroundAgentsService.startAgent(agentId);
-    
+
     return res.json({
       success: true,
-      message: 'Background agent started successfully'
+      message: 'Background agent started successfully',
     });
-
   } catch (error) {
     logger.error('Background agent start error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to start background agent' 
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to start background agent',
     });
   }
 });
@@ -100,23 +97,22 @@ router.post('/agent/:agentId/start', authenticateToken, async (req: Request, res
 router.post('/agent/:agentId/stop', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { agentId } = req.params;
-    
+
     if (!agentId) {
       return res.status(400).json({ error: 'Agent ID is required' });
     }
 
     await backgroundAgentsService.stopAgent(agentId);
-    
+
     return res.json({
       success: true,
-      message: 'Background agent stopped successfully'
+      message: 'Background agent stopped successfully',
     });
-
   } catch (error) {
     logger.error('Background agent stop error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to stop background agent' 
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to stop background agent',
     });
   }
 });
@@ -127,24 +123,23 @@ router.post('/agent/:agentId/stop', authenticateToken, async (req: Request, res:
 router.post('/agent/:agentId/run', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { agentId } = req.params;
-    
+
     if (!agentId) {
       return res.status(400).json({ error: 'Agent ID is required' });
     }
 
     const report = await backgroundAgentsService.runAgent(agentId);
-    
+
     return res.json({
       success: true,
       data: report,
-      message: 'Background agent executed successfully'
+      message: 'Background agent executed successfully',
     });
-
   } catch (error) {
     logger.error('Background agent execution error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to execute background agent' 
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to execute background agent',
     });
   }
 });
@@ -155,26 +150,25 @@ router.post('/agent/:agentId/run', authenticateToken, async (req: Request, res: 
 router.get('/reports', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { agentId, limit = 50 } = req.query;
-    
+
     const reports = await backgroundAgentsService.getAgentReports(
-      agentId as string, 
+      agentId as string,
       parseInt(limit as string)
     );
-    
+
     return res.json({
       success: true,
       data: {
         reports,
-        totalReports: reports.length
+        totalReports: reports.length,
       },
-      message: `Retrieved ${reports.length} agent reports`
+      message: `Retrieved ${reports.length} agent reports`,
     });
-
   } catch (error) {
     logger.error('Agent reports retrieval error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to retrieve agent reports' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve agent reports',
     });
   }
 });
@@ -185,17 +179,16 @@ router.get('/reports', authenticateToken, async (req: Request, res: Response) =>
 router.post('/initialize', authenticateToken, async (_req: Request, res: Response) => {
   try {
     await backgroundAgentsService.initialize();
-    
+
     return res.json({
       success: true,
-      message: 'Background agents system initialized successfully'
+      message: 'Background agents system initialized successfully',
     });
-
   } catch (error) {
     logger.error('Background agents initialization error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to initialize background agents system' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to initialize background agents system',
     });
   }
 });
@@ -206,39 +199,38 @@ router.post('/initialize', authenticateToken, async (_req: Request, res: Respons
 router.get('/status', authenticateToken, async (_req: Request, res: Response) => {
   try {
     const agents = backgroundAgentsService.getAgents();
-    
+
     const systemStatus = {
       initialized: agents.length > 0,
       totalAgents: agents.length,
-      activeAgents: agents.filter(a => a.status === 'active').length,
-      pausedAgents: agents.filter(a => a.status === 'paused').length,
-      stoppedAgents: agents.filter(a => a.status === 'stopped').length,
+      activeAgents: agents.filter((a) => a.status === 'active').length,
+      pausedAgents: agents.filter((a) => a.status === 'paused').length,
+      stoppedAgents: agents.filter((a) => a.status === 'stopped').length,
       agentTypes: {
-        codebase_scanner: agents.filter(a => a.type === 'codebase_scanner').length,
-        error_detector: agents.filter(a => a.type === 'error_detector').length,
-        performance_monitor: agents.filter(a => a.type === 'performance_monitor').length,
-        security_scanner: agents.filter(a => a.type === 'security_scanner').length,
-        optimization_finder: agents.filter(a => a.type === 'optimization_finder').length
+        codebase_scanner: agents.filter((a) => a.type === 'codebase_scanner').length,
+        error_detector: agents.filter((a) => a.type === 'error_detector').length,
+        performance_monitor: agents.filter((a) => a.type === 'performance_monitor').length,
+        security_scanner: agents.filter((a) => a.type === 'security_scanner').length,
+        optimization_finder: agents.filter((a) => a.type === 'optimization_finder').length,
       },
-      lastActivity: agents.length > 0 
-        ? Math.max(...agents.map(a => a.lastRun?.getTime() || 0))
-        : null,
-      nextScheduledRun: agents.length > 0
-        ? Math.min(...agents.filter(a => a.nextRun).map(a => a.nextRun!.getTime()))
-        : null
+      lastActivity:
+        agents.length > 0 ? Math.max(...agents.map((a) => a.lastRun?.getTime() || 0)) : null,
+      nextScheduledRun:
+        agents.length > 0
+          ? Math.min(...agents.filter((a) => a.nextRun).map((a) => a.nextRun!.getTime()))
+          : null,
     };
-    
+
     return res.json({
       success: true,
       data: systemStatus,
-      message: 'Background agents system status retrieved successfully'
+      message: 'Background agents system status retrieved successfully',
     });
-
   } catch (error) {
     logger.error('Background agents status error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to retrieve background agents status' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve background agents status',
     });
   }
 });
@@ -250,77 +242,103 @@ router.get('/analytics', authenticateToken, async (_req: Request, res: Response)
   try {
     const agents = backgroundAgentsService.getAgents();
     const reports = await backgroundAgentsService.getAgentReports(undefined, 100);
-    
+
     // Calculate analytics
     const totalRuns = agents.reduce((sum, agent) => sum + (agent.metrics?.totalRuns || 0), 0);
-    const totalSuccessfulRuns = agents.reduce((sum, agent) => sum + (agent.metrics?.successfulRuns || 0), 0);
-    const totalFailedRuns = agents.reduce((sum, agent) => sum + (agent.metrics?.failedRuns || 0), 0);
-    const totalIssuesFound = agents.reduce((sum, agent) => sum + (agent.metrics?.issuesFound || 0), 0);
-    const totalIssuesResolved = agents.reduce((sum, agent) => sum + (agent.metrics?.issuesResolved || 0), 0);
-    
+    const totalSuccessfulRuns = agents.reduce(
+      (sum, agent) => sum + (agent.metrics?.successfulRuns || 0),
+      0
+    );
+    const totalFailedRuns = agents.reduce(
+      (sum, agent) => sum + (agent.metrics?.failedRuns || 0),
+      0
+    );
+    const totalIssuesFound = agents.reduce(
+      (sum, agent) => sum + (agent.metrics?.issuesFound || 0),
+      0
+    );
+    const totalIssuesResolved = agents.reduce(
+      (sum, agent) => sum + (agent.metrics?.issuesResolved || 0),
+      0
+    );
+
     const successRate = totalRuns > 0 ? Math.round((totalSuccessfulRuns / totalRuns) * 100) : 0;
-    const resolutionRate = totalIssuesFound > 0 ? Math.round((totalIssuesResolved / totalIssuesFound) * 100) : 0;
-    
+    const resolutionRate =
+      totalIssuesFound > 0 ? Math.round((totalIssuesResolved / totalIssuesFound) * 100) : 0;
+
     // Recent activity
     const recentReports = reports.slice(0, 10);
-    const criticalFindings = reports.reduce((sum, report) => 
-      sum + report.findings.filter((f: any) => f.severity === 'critical').length, 0
+    const criticalFindings = reports.reduce(
+      (sum, report) => sum + report.findings.filter((f: any) => f.severity === 'critical').length,
+      0
     );
-    
+
     // Performance metrics
-    const averageRunTime = agents.length > 0 
-      ? Math.round(agents.reduce((sum, agent) => sum + (agent.metrics?.averageRunTime || 0), 0) / agents.length)
-      : 0;
-    
+    const averageRunTime =
+      agents.length > 0
+        ? Math.round(
+            agents.reduce((sum, agent) => sum + (agent.metrics?.averageRunTime || 0), 0) /
+              agents.length
+          )
+        : 0;
+
     const analytics = {
       overview: {
         totalAgents: agents.length,
-        activeAgents: agents.filter(a => a.status === 'active').length,
+        activeAgents: agents.filter((a) => a.status === 'active').length,
         totalRuns,
         successRate,
-        averageRunTime
+        averageRunTime,
       },
       performance: {
         totalSuccessfulRuns,
         totalFailedRuns,
         averageRunTime,
-        fastestAgent: agents.reduce((fastest, agent) => 
-          !fastest || (agent.metrics?.averageRunTime || 0) < (fastest.metrics?.averageRunTime || 0) ? agent : fastest, 
-          null as any
-        )?.name || 'N/A'
+        fastestAgent:
+          agents.reduce(
+            (fastest, agent) =>
+              !fastest ||
+              (agent.metrics?.averageRunTime || 0) < (fastest.metrics?.averageRunTime || 0)
+                ? agent
+                : fastest,
+            null as any
+          )?.name || 'N/A',
       },
       issues: {
         totalIssuesFound,
         totalIssuesResolved,
         resolutionRate,
         criticalFindings,
-        mostActiveAgent: agents.reduce((most, agent) => 
-          !most || (agent.metrics?.issuesFound || 0) > (most.metrics?.issuesFound || 0) ? agent : most,
-          null as any
-        )?.name || 'N/A'
+        mostActiveAgent:
+          agents.reduce(
+            (most, agent) =>
+              !most || (agent.metrics?.issuesFound || 0) > (most.metrics?.issuesFound || 0)
+                ? agent
+                : most,
+            null as any
+          )?.name || 'N/A',
       },
-      recentActivity: recentReports.map(report => ({
-        agentName: agents.find(a => a.id === report.agentId)?.name || 'Unknown',
+      recentActivity: recentReports.map((report) => ({
+        agentName: agents.find((a) => a.id === report.agentId)?.name || 'Unknown',
         status: report.status,
         findings: report.findings.length,
         duration: report.duration,
-        timestamp: report.startTime
-      }))
+        timestamp: report.startTime,
+      })),
     };
-    
+
     return res.json({
       success: true,
       data: analytics,
-      message: 'Background agents analytics retrieved successfully'
+      message: 'Background agents analytics retrieved successfully',
     });
-
   } catch (error) {
     logger.error('Background agents analytics error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to retrieve background agents analytics' 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve background agents analytics',
     });
   }
 });
 
-export default router; 
+export default router;

@@ -1,21 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
-  const isLoggedIn = request.cookies.get('auth')?.value === 'true'
-  const isLoginRoute = request.nextUrl.pathname === '/login'
-
-  if (!isLoggedIn && !isLoginRoute) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (isLoggedIn && isLoginRoute) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  return NextResponse.next()
+export function middleware() {
+  // Future: add edge protection here.
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*', '/login'],
-} 
+  matcher: ['/dashboard'],
+}; 

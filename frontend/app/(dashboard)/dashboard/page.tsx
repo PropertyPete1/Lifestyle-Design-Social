@@ -1,15 +1,10 @@
-'use client';
-import ProtectedPage from '@/components/ProtectedPage'
-import Header from '@/components/Header'
+// app/(dashboard)/dashboard/page.tsx
 
-export default function DashboardHome() {
+export default function DashboardPage() {
   return (
-    <ProtectedPage>
-      <Header />
-      <main className="p-4">
-        <h2 className="text-xl font-semibold mb-2">Welcome to Your Dashboard</h2>
-        <p>Use the menu to upload or view videos.</p>
-      </main>
-    </ProtectedPage>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Welcome to the Dashboard</h1>
+      <p className="mt-2 text-gray-600">Use the sidebar to navigate through your tools.</p>
+    </div>
   )
 } 

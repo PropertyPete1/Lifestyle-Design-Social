@@ -2,19 +2,24 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectToDatabase } from './lib/mongo';
-import routes from './routes';
-import { errorHandler } from './middleware/errorHandler';
+import cartoonRoutes from './routes/cartoons';
+import analyticsRoutes from './routes/analytics';
+import videoRoutes from './routes/videos';
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
 
-app.use('/api', routes);
-app.use(errorHandler);
+app.use('/cartoons', cartoonRoutes);
+app.use('/analytics', analyticsRoutes);
+app.use('/videos', videoRoutes);
+
+const PORT = process.env['PORT'] || 5001;
 
 connectToDatabase().then(() => {
-  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-});
+  app.listen(PORT, () => {
+    console.log(`Backend server running on port ${PORT}`);
+  });
+}); 

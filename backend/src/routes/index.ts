@@ -1,10 +1,10 @@
-import express from 'express';
-import analyticsRoutes from './analytics';
-import healthRoutes from './health';
+import { Router } from 'express';
+import statusRoutes from './status';
+import cartoonRoutes from './cartoons';
 
-const router = express.Router();
+const router = Router();
 
-router.use('/analytics', analyticsRoutes);
-router.use('/health', healthRoutes);
+router.use('/', statusRoutes);
+router.use('/cartoons', cartoonRoutes);
 
 export default router; 

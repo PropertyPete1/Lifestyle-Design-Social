@@ -3,7 +3,7 @@ import { writeFile } from 'fs/promises';
 import path from 'path';
 import { mkdir } from 'fs/promises';
 import { extractVideoMetadata } from '@/lib/video/extractMetadata';
-import { connectToDB } from '@/lib/mongoose';
+import { connectToDatabase } from '@/lib/mongo';
 import Video from '@/models/Video';
 
 export async function POST(req: Request) {
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const filepath = path.join(uploadDir, filename);
   await writeFile(filepath, buffer);
 
-  await connectToDB();
+  await connectToDatabase();
 
   const metadata = await extractVideoMetadata(filepath);
 

@@ -1,15 +1,12 @@
 type Props = {
-  src: string;
-};
+  videoUrl: string
+}
 
-export default function VideoPreview({ src }: Props) {
+export default function VideoPreview({ videoUrl }: Props) {
   return (
-    <video
-      src={src}
-      controls
-      muted
-      autoPlay
-      className="rounded-md shadow-md max-w-full h-auto"
-    />
-  );
+    <video controls className="w-full rounded-lg shadow-md mt-4">
+      <source src={videoUrl} type="video/mp4" />
+      Your browser does not support the video tag.
+    </video>
+  )
 } 

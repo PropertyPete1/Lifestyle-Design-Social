@@ -1,7 +1,6 @@
-export interface YouTubePostPayload {
-  videoUrl: string;
-  title: string;
-  description: string;
-  tags?: string[];
-  categoryId?: string;
+export interface YouTubeVideo {
+  title: string
+  description: string
+  videoUrl: string
+  scheduledAt?: string
 } 

@@ -1,35 +1,41 @@
-import axios from 'axios';
-import { INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_USER_ID } from './constants';
+import { InstagramPostPayload } from './types'
 
-interface InstagramPublishPayload {
-  videoUrl: string;
-  caption: string;
-}
+export async function publishToInstagram({
+  videoUrl,
+  caption,
+  accessToken,
+  userId,
+}: InstagramPostPayload): Promise<{ success: boolean }> {
+  try {
+    const createContainerRes = await fetch(
+      `https://graph.facebook.com/v18.0/${userId}/media`,
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          media_type: 'REEL',
+          video_url: videoUrl,
+          caption,
+          access_token: accessToken,
+        }),
+      }
+    )
 
-export async function publishInstagramVideo(payload: InstagramPublishPayload) {
-  const { videoUrl, caption } = payload;
+    const { id } = await createContainerRes.json()
 
-  // Step 1: Upload the video container
-  const containerRes = await axios.post(
-    `https://graph.facebook.com/v19.0/${INSTAGRAM_USER_ID}/media`,
-    {
-      video_url: videoUrl,
-      caption,
-      media_type: 'VIDEO',
-      access_token: INSTAGRAM_ACCESS_TOKEN,
-    }
-  );
+    const publishRes = await fetch(
+      `https://graph.facebook.com/v18.0/${userId}/media_publish`,
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          creation_id: id,
+          access_token: accessToken,
+        }),
+      }
+    )
 
-  const containerId = containerRes.data.id;
-
-  // Step 2: Publish the container
-  const publishRes = await axios.post(
-    `https://graph.facebook.com/v19.0/${INSTAGRAM_USER_ID}/media_publish`,
-    {
-      creation_id: containerId,
-      access_token: INSTAGRAM_ACCESS_TOKEN,
-    }
-  );
-
-  return publishRes.data;
+    return { success: publishRes.ok }
+  } catch (err) {
+    console.error('[Instagram Publish Error]', err)
+    return { success: false }
+  }
 } 

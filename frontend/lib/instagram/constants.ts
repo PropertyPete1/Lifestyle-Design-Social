@@ -1,2 +1,2 @@
-export const INSTAGRAM_ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN!;
-export const INSTAGRAM_USER_ID = process.env.INSTAGRAM_USER_ID!; 
+export const IG_ACCESS_TOKEN = process.env.IG_ACCESS_TOKEN!
+export const IG_USER_ID = process.env.IG_USER_ID! 

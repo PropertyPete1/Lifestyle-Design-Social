@@ -1,11 +1,6 @@
-import Video from '../db/models/Video'
-import Caption from '../db/models/Caption'
+import { InstagramMediaItem } from '../types/instagram'
 
-export async function getCaptionForVideo(videoId: string): Promise<string> {
-  const video = await Video.findById(videoId).populate('captionId')
-  if (video?.captionId && typeof video.captionId !== 'string') {
-    const cap = video.captionId as any
-    return `${cap.caption}\n\n${cap.hashtags.map((h: string) => `#${h}`).join(' ')}`
-  }
-  return ''
+export async function postToInstagram(post: InstagramMediaItem) {
+  console.log('Posting to Instagram:', post.caption)
+  // TODO: Add Instagram publishing logic
 } 

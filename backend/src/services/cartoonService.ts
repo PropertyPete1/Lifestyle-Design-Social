@@ -1,36 +1,19 @@
-import { db } from '../lib/mongo';
+// 🛠️ Instructions:
+// Create or replace this file at the exact path above.
+// This file connects to MongoDB and safely saves or fetches cartoon video records.
 
-const collection = db.collection('cartoons');
+import { connectToMongo } from '../lib/mongo';
 
-export async function saveCartoonMetadata(metadata: {
-  userId: string;
-  prompt: string;
-  aspectRatio: string;
-  videoUrl: string;
-}) {
-  return await collection.insertOne({
-    ...metadata,
-    posted: false,
-    createdAt: new Date(),
-  });
+export async function saveCartoonVideo(videoData: any) {
+  const db = await connectToMongo();
+  const collection = db.collection('cartoonVideos');
+  const result = await collection.insertOne(videoData);
+  return result.insertedId;
 }
 
-export async function getCartoonQueue(userId: string) {
-  return await collection
-    .find({ userId, posted: false })
-    .sort({ createdAt: 1 })
-    .toArray();
-}
-
-export async function markCartoonAsPosted(id: string) {
-  return await collection.updateOne(
-    { _id: new (require('mongodb').ObjectId)(id) },
-    { $set: { posted: true } }
-  );
-}
-
-export async function deleteCartoonById(id: string) {
-  return await collection.deleteOne({
-    _id: new (require('mongodb').ObjectId)(id),
-  });
+export async function getAllCartoonVideos() {
+  const db = await connectToMongo();
+  const collection = db.collection('cartoonVideos');
+  const videos = await collection.find({}).toArray();
+  return videos;
 } 

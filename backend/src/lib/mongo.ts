@@ -1,25 +1,21 @@
-// ✅ File path: backend/lib/mongo.ts
 // 🛠️ Instructions:
-// • This version logs an error if MONGODB_URI is missing
-// • Helps you debug where it's going wrong
+// Create or replace this file at the exact path above.
+// This file safely connects to MongoDB using the URI from your .env.local file.
 
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { MongoClient, Db } from 'mongodb';
 
-dotenv.config({ path: '../../.env' }); // 👈 Points to .env at project root
+let db: Db;
 
-export default async function connectDB() {
+export async function connectToMongo(): Promise<Db> {
+  if (db) return db;
+
   const uri = process.env.MONGODB_URI;
-
   if (!uri) {
-    console.error('❌ MONGODB_URI is missing. Did you load the right .env file?');
-    return;
+    throw new Error('Missing MONGODB_URI in environment');
   }
 
-  try {
-    await mongoose.connect(uri);
-    console.log('✅ Connected to MongoDB');
-  } catch (err) {
-    console.error('❌ MongoDB connection failed:', err);
-  }
+  const client = new MongoClient(uri);
+  await client.connect();
+  db = client.db('lifestyledesign'); // 👈 name your DB anything here
+  return db;
 } 

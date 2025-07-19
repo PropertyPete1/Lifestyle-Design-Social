@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectToDatabase } from './lib/mongo';
+import { connectToMongo } from './lib/mongo';
 import cartoonRoutes from './routes/cartoons';
 import analyticsRoutes from './routes/analytics';
 import videoRoutes from './routes/videos';
@@ -18,7 +18,7 @@ app.use('/videos', videoRoutes);
 
 const PORT = process.env['PORT'] || 5001;
 
-connectToDatabase().then(() => {
+connectToMongo().then(() => {
   app.listen(PORT, () => {
     console.log(`Backend server running on port ${PORT}`);
   });

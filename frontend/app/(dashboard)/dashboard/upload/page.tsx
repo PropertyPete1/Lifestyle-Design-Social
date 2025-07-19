@@ -1,17 +1,10 @@
 'use client';
 
-import ProtectedPage from '@/components/ProtectedPage'
-import Header from '@/components/Header'
-import UploadForm from '@/components/UploadForm'
-
 export default function UploadPage() {
   return (
-    <ProtectedPage>
-      <Header />
-      <main className="p-4">
-        <h2 className="text-xl font-semibold mb-4">Upload New Video</h2>
-        <UploadForm />
-      </main>
-    </ProtectedPage>
-  )
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Upload Page</h1>
+      <p>Upload form goes here.</p>
+    </div>
+  );
 } 

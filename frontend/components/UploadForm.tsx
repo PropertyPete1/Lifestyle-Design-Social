@@ -1,63 +1,39 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
+import { useState } from 'react'
 
 export default function UploadForm() {
-  const [video, setVideo] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState('');
+  const [file, setFile] = useState<File | null>(null)
+  const [message, setMessage] = useState('')
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type === 'video/mp4') {
-      setVideo(file);
-      setMessage('');
-    } else {
-      setMessage('Please upload an MP4 video.');
-    }
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file) return
 
-  const handleUpload = async () => {
-    if (!video) return;
+    const formData = new FormData()
+    formData.append('file', file)
 
-    setUploading(true);
-    setProgress(0);
-
-    const formData = new FormData();
-    formData.append('video', video);
-
-    const response = await fetch('/api/videos/upload', {
+    const res = await fetch('/api/upload', {
       method: 'POST',
       body: formData,
-    });
+    })
 
-    if (response.ok) {
-      setMessage('✅ Upload successful!');
-    } else {
-      setMessage('❌ Upload failed.');
-    }
-
-    setUploading(false);
-  };
+    const data = await res.json()
+    setMessage(data.message || 'Upload complete')
+  }
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow-md">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <input
         type="file"
         accept="video/mp4"
-        onChange={handleFileChange}
-        className="mb-4"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        className="block w-full"
       />
-      {video && <p className="mb-2 text-sm text-gray-300">{video.name}</p>}
-      <button
-        onClick={handleUpload}
-        disabled={!video || uploading}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
-        {uploading ? 'Uploading...' : 'Upload'}
+      <button type="submit" className="bg-white text-black px-4 py-2 rounded">
+        Upload
       </button>
-      {message && <p className="mt-4 text-sm text-yellow-400">{message}</p>}
-    </div>
-  );
+      {message && <p className="text-green-400">{message}</p>}
+    </form>
+  )
 } 

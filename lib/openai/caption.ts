@@ -1,15 +1,15 @@
-import OpenAI from "openai";
+import { openai } from '../utils/openaiClient';
 
-const openai = new OpenAI();
+export async function generateCaptionWithHashtags(videoType: 'real' | 'cartoon', filename: string): Promise<string> {
+  const prompt =
+    videoType === 'real'
+      ? `You're helping a real estate agent write a caption. Use clear, engaging language and include relevant hashtags. Filename: ${filename}`
+      : `You're creating a fun cartoon-style caption for real estate marketing. Include humor and trending hashtags. Filename: ${filename}`;
 
-export async function generateCaption(description: string): Promise<string> {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [
-      { role: "system", content: "You are a social media caption expert." },
-      { role: "user", content: `Write an engaging caption for: ${description}` },
-    ],
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: prompt }],
   });
 
-  return res.choices[0].message.content || "";
+  return response.choices[0].message.content || '';
 } 

@@ -1,13 +1,15 @@
 'use client';
-import ProtectedRoute from './ProtectedRoute';
+import ProtectedPage from '@/components/ProtectedPage'
+import Header from '@/components/Header'
 
 export default function DashboardHome() {
   return (
-    <ProtectedRoute>
-      <div>
-        <h2 className="text-xl font-semibold">Welcome back 👋</h2>
-        <p className="text-gray-400 mt-2">This is your social media automation control panel.</p>
-      </div>
-    </ProtectedRoute>
-  );
+    <ProtectedPage>
+      <Header />
+      <main className="p-4">
+        <h2 className="text-xl font-semibold mb-2">Welcome to Your Dashboard</h2>
+        <p>Use the menu to upload or view videos.</p>
+      </main>
+    </ProtectedPage>
+  )
 } 

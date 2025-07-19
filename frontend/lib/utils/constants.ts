@@ -1,0 +1,1 @@
+export const POST_TIMES = ['8:00 AM', '12:00 PM', '6:00 PM'] 

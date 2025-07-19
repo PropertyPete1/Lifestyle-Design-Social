@@ -1,15 +1,25 @@
-import OpenAI from "openai";
+import { Configuration, OpenAIApi } from 'openai';
 
-const openai = new OpenAI();
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-export async function generateCaption(description: string): Promise<string> {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4",
+const openai = new OpenAIApi(configuration);
+
+export async function generateCaptionWithHashtags(prompt: string): Promise<string> {
+  const response = await openai.createChatCompletion({
+    model: 'gpt-4',
     messages: [
-      { role: "system", content: "You are a social media caption expert." },
-      { role: "user", content: `Write an engaging caption for: ${description}` },
+      {
+        role: 'system',
+        content: 'You are a helpful assistant that writes Instagram captions with trending hashtags.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
     ],
   });
 
-  return res.choices[0].message.content || "";
+  return response.data.choices[0]?.message?.content?.trim() || '';
 } 

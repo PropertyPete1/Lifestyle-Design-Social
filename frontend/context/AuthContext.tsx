@@ -1,57 +1,43 @@
-'use client';
+'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { createContext, useContext, useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 
-interface AuthContextType {
-  user: any;
-  token: string | null;
-  login: (token: string, userData: any) => void;
-  logout: () => void;
+type AuthContextType = {
+  isAuthed: boolean
+  setAuthed: (value: boolean) => void
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  isAuthed: false,
+  setAuthed: () => {},
+})
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const router = useRouter();
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [isAuthed, setAuthed] = useState(false)
+  const pathname = usePathname()
+  const router = useRouter()
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  const login = (token: string, userData: any) => {
-    setToken(token);
-    setUser(userData);
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    router.push('/dashboard');
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/login');
-  };
+    fetch('/api/session')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.loggedIn) {
+          setAuthed(false)
+          if (pathname !== '/login') router.push('/login')
+        } else {
+          setAuthed(true)
+        }
+      })
+  }, [pathname, router])
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ isAuthed, setAuthed }}>
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-}; 
+export function useAuth() {
+  return useContext(AuthContext)
+} 

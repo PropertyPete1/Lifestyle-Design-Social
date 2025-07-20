@@ -1,0 +1,1 @@
+{"version":3,"file":"analyzeTopCaptions.d.ts","sourceRoot":"/","sources":["lib/captions/analyzeTopCaptions.ts"],"names":[],"mappings":"AAOA,UAAU,YAAY;IACpB,IAAI,EAAE,MAAM,CAAC;IACb,KAAK,EAAE,MAAM,CAAC;IACd,QAAQ,EAAE,MAAM,CAAC;IACjB,KAAK,EAAE,MAAM,CAAC;IACd,eAAe,EAAE,MAAM,CAAC;CACzB;AAoBD,wBAAsB,kBAAkB,CAAC,KAAK,SAAK,GAAG,OAAO,CAAC,YAAY,EAAE,CAAC,CAgB5E"}

@@ -1,0 +1,2 @@
+export declare function postToYouTube(title: string, description: string, filePath: string, accessToken: string): Promise<import("googleapis").youtube_v3.Schema$Video>;
+//# sourceMappingURL=youtubePublisher.d.ts.map

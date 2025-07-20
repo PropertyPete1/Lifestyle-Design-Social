@@ -1,0 +1,1 @@
+{"version":3,"file":"fileLimitGuard.js","sourceRoot":"/","sources":["lib/utils/fileLimitGuard.ts"],"names":[],"mappings":";;AAAA,kDAEC;AAFD,SAAgB,mBAAmB,CAAC,KAAY;IAC9C,OAAO,KAAK,CAAC,MAAM,IAAI,EAAE,CAAC;AAC5B,CAAC","sourcesContent":["export function validateUploadLimit(files: any[]): boolean {\n  return files.length <= 30;\n} "]}

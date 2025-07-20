@@ -1,0 +1,1 @@
+{"version":3,"file":"settings.js","sourceRoot":"/","sources":["lib/tiktok/settings.ts"],"names":[],"mappings":";;AAAA,gDAEC;AAFD,SAAgB,kBAAkB;IAChC,OAAO,OAAO,CAAC,GAAG,CAAC,cAAc,IAAI,IAAI,CAAC;AAC5C,CAAC","sourcesContent":["export function getTikTokAccessKey(): string | null {\n  return process.env.TIKTOK_API_KEY || null;\n} "]}

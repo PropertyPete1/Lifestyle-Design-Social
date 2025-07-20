@@ -1,0 +1,1 @@
+{"version":3,"file":"openaiClient.js","sourceRoot":"/","sources":["lib/ai/openaiClient.ts"],"names":[],"mappings":";;;;;;AAAA,oDAA4B;AAEf,QAAA,MAAM,GAAG,IAAI,gBAAM,CAAC;IAC/B,MAAM,EAAE,OAAO,CAAC,GAAG,CAAC,cAAc;CACnC,CAAC,CAAC","sourcesContent":["import OpenAI from 'openai';\n\nexport const openai = new OpenAI({\n  apiKey: process.env.OPENAI_API_KEY,\n}); "]}

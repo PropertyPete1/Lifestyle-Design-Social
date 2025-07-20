@@ -1,5 +1,6 @@
 import { cleanOldVideos } from './s3Cleaner';
 import { checkStorageUsage } from '../utils/storageMonitor';
+import * as Sentry from '@sentry/node';
 
 export async function runScheduledCleanup() {
   try {
@@ -27,6 +28,9 @@ export async function runScheduledCleanup() {
     
   } catch (err) {
     console.error('❌ Cleanup failed:', err);
+    Sentry.captureException(err, {
+      tags: { component: 'cleanupCron', operation: 'runScheduledCleanup' }
+    });
     throw err; // Re-throw for external schedulers to handle
   }
 }
@@ -49,6 +53,9 @@ export async function runStorageCheck() {
     
   } catch (err) {
     console.error('❌ Storage check failed:', err);
+    Sentry.captureException(err, {
+      tags: { component: 'cleanupCron', operation: 'runStorageCheck' }
+    });
     throw err;
   }
 }
@@ -67,6 +74,9 @@ export async function runFullMaintenance() {
     
   } catch (err) {
     console.error('❌ Full maintenance failed:', err);
+    Sentry.captureException(err, {
+      tags: { component: 'cleanupCron', operation: 'runFullMaintenance' }
+    });
     throw err;
   }
 } 

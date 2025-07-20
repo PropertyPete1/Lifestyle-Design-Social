@@ -1,5 +1,6 @@
 import AWS from "aws-sdk";
 import { randomUUID } from "crypto";
+import * as Sentry from '@sentry/node';
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
@@ -8,15 +9,23 @@ const s3 = new AWS.S3({
 });
 
 export async function uploadToS3(buffer: Buffer, filename: string, mimeType: string): Promise<string> {
-  const key = `videos/${randomUUID()}-${filename}`;
+  try {
+    const key = `videos/${randomUUID()}-${filename}`;
 
-  await s3.putObject({
-    Bucket: process.env.AWS_S3_BUCKET!,
-    Key: key,
-    Body: buffer,
-    ContentType: mimeType,
-    ACL: "public-read",
-  }).promise();
+    await s3.putObject({
+      Bucket: process.env.AWS_S3_BUCKET!,
+      Key: key,
+      Body: buffer,
+      ContentType: mimeType,
+      ACL: "public-read",
+    }).promise();
 
-  return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: 'uploadToS3' },
+      extra: { filename, mimeType, bufferSize: buffer.length }
+    });
+    throw err;
+  }
 } 

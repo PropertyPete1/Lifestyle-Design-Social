@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as Sentry from '@sentry/node';
 
 export async function callOpenAI(prompt: string): Promise<string> {
   try {
@@ -26,6 +27,10 @@ export async function callOpenAI(prompt: string): Promise<string> {
     return response.data.choices[0].message.content;
   } catch (error) {
     console.error('OpenAI API call failed:', error);
+    Sentry.captureException(error, {
+      tags: { component: 'callOpenAI', api: 'openai' },
+      extra: { prompt: prompt.substring(0, 100) + '...' }
+    });
     throw new Error('Failed to generate caption with OpenAI');
   }
 } 

@@ -1,4 +1,5 @@
 import AWS from "aws-sdk";
+import * as Sentry from '@sentry/node';
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
@@ -49,10 +50,18 @@ export async function cleanOldVideos() {
     
     if (deleteResult.Errors && deleteResult.Errors.length > 0) {
       console.error('Some objects failed to delete:', deleteResult.Errors);
+      Sentry.captureMessage('Some S3 objects failed to delete during cleanup', {
+        level: 'warning',
+        tags: { component: 's3Cleaner' },
+        extra: { errors: deleteResult.Errors }
+      });
     }
     
   } catch (error) {
     console.error('S3 cleanup error:', error);
+    Sentry.captureException(error, {
+      tags: { component: 's3Cleaner', operation: 'cleanOldVideos' }
+    });
     throw error;
   }
 } 

@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/node';
+
 interface VideoItem {
   title: string;
   url: string;
@@ -8,20 +10,49 @@ let pointer = 0;
 let queue: VideoItem[] = [];
 
 export function getNextInQueue(): "user" | "cartoon" {
-  const value = pointer % 2 === 0 ? "user" : "cartoon";
-  pointer++;
-  return value;
+  try {
+    const value = pointer % 2 === 0 ? "user" : "cartoon";
+    pointer++;
+    return value;
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: 'queueManager', operation: 'getNextInQueue' }
+    });
+    throw err;
+  }
 }
 
 export function resetQueue() {
-  pointer = 0;
+  try {
+    pointer = 0;
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: 'queueManager', operation: 'resetQueue' }
+    });
+    throw err;
+  }
 }
 
 export async function enqueueVideo(video: VideoItem) {
-  queue.push(video);
-  return video;
+  try {
+    queue.push(video);
+    return video;
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: 'queueManager', operation: 'enqueueVideo' },
+      extra: { videoTitle: video.title, videoType: video.type }
+    });
+    throw err;
+  }
 }
 
 export function getQueue() {
-  return queue;
+  try {
+    return queue;
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: 'queueManager', operation: 'getQueue' }
+    });
+    throw err;
+  }
 } 

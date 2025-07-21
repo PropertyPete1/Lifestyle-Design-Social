@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Video } from '@/types';
-import { groupVideosByDate } from '@/lib/scheduler/schedulerHelpers';
-import CalendarCell from '@/components/Scheduler/CalendarCell';
-import UnscheduledVideoTray from '@/components/Scheduler/UnscheduledVideoTray';
+import { Video } from '../../types';
+import { groupVideosByDate } from '../../lib/scheduler/schedulerHelpers';
+import CalendarCell from '../../components/Scheduler/CalendarCell';
+import UnscheduledVideoTray from '../../components/Scheduler/UnscheduledVideoTray';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
@@ -14,12 +14,13 @@ export default function SchedulerPage() {
   useEffect(() => {
     fetch('/api/scheduler/schedule')
       .then((res) => res.json())
-      .then(setVideos);
+      .then(setVideos)
+      .catch(() => setVideos([])); // Handle errors gracefully
   }, []);
 
-  const handleDrop = (video: Video, date: string) => {
+  const handleVideoDrop = (videoId: string, date: string) => {
     const updated = videos.map((v) =>
-      v.id === video.id ? { ...v, scheduledDate: date } : v
+      v.id === videoId ? { ...v, scheduledDate: date } : v
     );
     setVideos(updated);
   };
@@ -37,7 +38,7 @@ export default function SchedulerPage() {
               key={date}
               date={date}
               videos={grouped[date]}
-              onDrop={handleDrop}
+              onVideoDrop={handleVideoDrop}
             />
           ))}
         </div>

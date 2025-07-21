@@ -4,9 +4,10 @@ import path from 'path';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
   try {
+    const params = await context.params;
     const thumbnailPath = params.path.join('/');
     
     // Construct the path to the backend's thumbnails directory

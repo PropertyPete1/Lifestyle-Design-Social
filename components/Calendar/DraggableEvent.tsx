@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useDrag } from 'react-dnd';
 
 interface DraggableEventProps {
@@ -9,6 +9,8 @@ interface DraggableEventProps {
 }
 
 const DraggableEvent: React.FC<DraggableEventProps> = ({ title, id }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'event',
     item: { id, title },
@@ -17,9 +19,11 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ title, id }) => {
     }),
   }));
 
+  drag(ref);
+
   return (
     <div
-      ref={drag}
+      ref={ref}
       className={`cursor-move p-2 rounded-md shadow-md text-sm ${
         isDragging ? 'opacity-40' : 'bg-white'
       }`}

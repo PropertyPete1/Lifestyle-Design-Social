@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useDrag } from 'react-dnd';
 
 type Props = {
@@ -6,6 +6,8 @@ type Props = {
 };
 
 export default function ScheduledPostCard({ post }: Props) {
+  const ref = useRef<HTMLDivElement>(null);
+  
   const [{ isDragging }, drag] = useDrag({
     type: 'POST',
     item: { id: post.id },
@@ -14,9 +16,11 @@ export default function ScheduledPostCard({ post }: Props) {
     }),
   });
 
+  drag(ref);
+
   return (
     <div
-      ref={drag}
+      ref={ref}
       className={`bg-blue-600 text-white text-sm p-2 rounded shadow ${
         isDragging ? 'opacity-50' : 'opacity-100'
       }`}

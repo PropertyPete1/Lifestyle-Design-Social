@@ -1,7 +1,7 @@
 'use client';
 
 import { useDrop } from 'react-dnd';
-import { FC } from 'react';
+import { FC, useRef } from 'react';
 
 interface DropCalendarProps {
   onDropEvent: (item: any, date: string) => void;
@@ -9,6 +9,8 @@ interface DropCalendarProps {
 }
 
 const DropCalendar: FC<DropCalendarProps> = ({ onDropEvent, date }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'event',
     drop: (item: any) => onDropEvent(item, date),
@@ -17,9 +19,11 @@ const DropCalendar: FC<DropCalendarProps> = ({ onDropEvent, date }) => {
     }),
   }));
 
+  drop(ref);
+
   return (
     <div
-      ref={drop}
+      ref={ref}
       className={`border rounded-md p-4 min-h-[100px] ${
         isOver ? 'bg-blue-100' : 'bg-white'
       }`}

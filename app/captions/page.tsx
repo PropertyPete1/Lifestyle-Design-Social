@@ -1,4 +1,4 @@
-import { CaptionEnhancer } from '../../components/CaptionEnhancer';
+import CaptionEnhancer from '../../components/CaptionEnhancer';
 
 export default function CaptionPage() {
   return (

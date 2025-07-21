@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import ScheduledPostCard from './ScheduledPostCard';
 import { useCalendar } from './CalendarContext';
@@ -9,6 +9,7 @@ type Props = {
 
 export default function DayCell({ index }: Props) {
   const { assignments, assignPost } = useCalendar();
+  const ref = useRef<HTMLDivElement>(null);
 
   const [{ isOver }, drop] = useDrop({
     accept: 'POST',
@@ -20,11 +21,13 @@ export default function DayCell({ index }: Props) {
     }),
   });
 
+  drop(ref);
+  
   const posts = assignments[index] || [];
 
   return (
     <div
-      ref={drop}
+      ref={ref}
       className={`p-2 border border-gray-600 min-h-[100px] ${
         isOver ? 'bg-green-700' : 'bg-gray-800'
       }`}

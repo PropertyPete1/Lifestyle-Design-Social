@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import cors from 'cors';
 import indexRouter from './src/routes/index';
+import { initializeScheduledJobs } from './src/lib/youtube/schedulePostJob';
+import { migrateFilePaths } from './src/lib/youtube/migrateFilePaths';
 import * as fs from 'fs';
 
 const app = express();
@@ -58,5 +60,15 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api', indexRouter);
+
+// Run migration and initialize scheduled jobs on server start
+(async () => {
+  try {
+    await migrateFilePaths();
+    await initializeScheduledJobs();
+  } catch (error) {
+    console.error('❌ Failed to initialize backend:', error);
+  }
+})();
 
 export default app;

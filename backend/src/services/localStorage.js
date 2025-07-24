@@ -33,36 +33,47 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadToDropbox = uploadToDropbox;
-const dropbox_1 = require("dropbox");
+exports.saveToLocal = saveToLocal;
+exports.getLocalFilePath = getLocalFilePath;
+exports.listLocalFiles = listLocalFiles;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
-let dropboxApiKey = process.env.DROPBOX_API_KEY || '';
-if (!dropboxApiKey && fs.existsSync(settingsPath)) {
+/**
+ * Local file storage service as fallback when Dropbox is unavailable
+ */
+const UPLOAD_DIR = path.resolve(__dirname, '../../../uploads');
+// Ensure upload directory exists
+if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    console.log(`Created uploads directory: ${UPLOAD_DIR}`);
+}
+async function saveToLocal(buffer, filename) {
     try {
-        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-        dropboxApiKey = settings.dropboxApiKey || '';
+        // Create unique filename with timestamp
+        const timestamp = Date.now();
+        const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const uniqueFilename = `${timestamp}_${safeFilename}`;
+        const filePath = path.join(UPLOAD_DIR, uniqueFilename);
+        // Write file to local storage
+        await fs.promises.writeFile(filePath, buffer);
+        console.log(`✅ Saved to local storage: ${uniqueFilename}`);
+        // Return local file path/URL
+        return `local://${uniqueFilename}`;
     }
-    catch (e) {
-        console.error('Failed to read Dropbox API key from settings.json:', e);
+    catch (error) {
+        console.error('Local storage error:', error);
+        throw new Error(`Failed to save file locally: ${error}`);
     }
 }
-if (!dropboxApiKey) {
-    throw new Error('Dropbox API key not set in environment or settings.json');
+function getLocalFilePath(filename) {
+    return path.join(UPLOAD_DIR, filename);
 }
-const dbx = new dropbox_1.Dropbox({ accessToken: dropboxApiKey });
-async function uploadToDropbox(buffer, filename) {
-    const dropboxPath = `/Lifestyle Design Social/${Date.now()}_${filename}`;
-    const response = await dbx.filesUpload({
-        path: dropboxPath,
-        contents: buffer,
-        mode: { ".tag": "add" },
-        autorename: true,
-        mute: false,
-    });
-    // Create a shared link
-    const shared = await dbx.sharingCreateSharedLinkWithSettings({ path: response.result.path_display });
-    // Convert Dropbox shared link to direct download link
-    return shared.result.url.replace('?dl=0', '?raw=1');
+function listLocalFiles() {
+    try {
+        return fs.readdirSync(UPLOAD_DIR);
+    }
+    catch (error) {
+        console.error('Error listing local files:', error);
+        return [];
+    }
 }

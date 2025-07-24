@@ -32,37 +32,36 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadToDropbox = uploadToDropbox;
-const dropbox_1 = require("dropbox");
+const express_1 = __importDefault(require("express"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
-let dropboxApiKey = process.env.DROPBOX_API_KEY || '';
-if (!dropboxApiKey && fs.existsSync(settingsPath)) {
+const router = express_1.default.Router();
+const settingsPath = path.resolve(__dirname, '../../../../frontend/settings.json');
+router.get('/', (req, res) => {
     try {
-        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-        dropboxApiKey = settings.dropboxApiKey || '';
+        if (!fs.existsSync(settingsPath)) {
+            return res.json({});
+        }
+        const data = fs.readFileSync(settingsPath, 'utf-8');
+        res.json(JSON.parse(data));
     }
-    catch (e) {
-        console.error('Failed to read Dropbox API key from settings.json:', e);
+    catch (error) {
+        console.error('Failed to read settings:', error);
+        res.status(500).json({ error: 'Failed to read settings' });
     }
-}
-if (!dropboxApiKey) {
-    throw new Error('Dropbox API key not set in environment or settings.json');
-}
-const dbx = new dropbox_1.Dropbox({ accessToken: dropboxApiKey });
-async function uploadToDropbox(buffer, filename) {
-    const dropboxPath = `/Lifestyle Design Social/${Date.now()}_${filename}`;
-    const response = await dbx.filesUpload({
-        path: dropboxPath,
-        contents: buffer,
-        mode: { ".tag": "add" },
-        autorename: true,
-        mute: false,
-    });
-    // Create a shared link
-    const shared = await dbx.sharingCreateSharedLinkWithSettings({ path: response.result.path_display });
-    // Convert Dropbox shared link to direct download link
-    return shared.result.url.replace('?dl=0', '?raw=1');
-}
+});
+router.post('/', (req, res) => {
+    try {
+        fs.writeFileSync(settingsPath, JSON.stringify(req.body, null, 2));
+        res.json({ message: 'Settings saved' });
+    }
+    catch (error) {
+        console.error('Failed to write settings:', error);
+        res.status(500).json({ error: 'Failed to save settings' });
+    }
+});
+exports.default = router;

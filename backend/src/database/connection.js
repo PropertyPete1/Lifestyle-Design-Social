@@ -36,25 +36,46 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.connectMongo = connectMongo;
+exports.connectToDatabase = connectToDatabase;
+exports.disconnectFromDatabase = disconnectFromDatabase;
 const mongoose_1 = __importDefault(require("mongoose"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-// Try to load from settings.json (used by the app's settings UI)
-const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
-let mongoDbUri = process.env.MONGODB_URI || '';
-if (!mongoDbUri && fs.existsSync(settingsPath)) {
+let isConnected = false;
+async function connectToDatabase() {
+    if (isConnected) {
+        return;
+    }
     try {
-        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-        mongoDbUri = settings.mongoDbUri || '';
+        // Load MongoDB URI from settings.json or environment
+        const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
+        let mongoUri = process.env.MONGODB_URI;
+        if (fs.existsSync(settingsPath)) {
+            try {
+                const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+                mongoUri = settings.mongoDbUri || mongoUri;
+            }
+            catch (e) {
+                // Ignore parse errors
+            }
+        }
+        if (!mongoUri) {
+            // Use default local MongoDB if no URI provided
+            mongoUri = 'mongodb://localhost:27017/lifestyle-design-auto-poster';
+        }
+        await mongoose_1.default.connect(mongoUri);
+        isConnected = true;
+        console.log('Connected to MongoDB:', mongoUri.replace(/:[^:@]*@/, ':****@')); // Hide password in logs
     }
-    catch (e) {
-        console.error('Failed to read MongoDB URI from settings.json:', e);
+    catch (error) {
+        console.error('MongoDB connection failed:', error);
+        throw error;
     }
 }
-if (!mongoDbUri) {
-    throw new Error('MongoDB URI not set in environment or settings.json');
-}
-function connectMongo() {
-    return mongoose_1.default.connect(mongoDbUri);
+async function disconnectFromDatabase() {
+    if (isConnected) {
+        await mongoose_1.default.disconnect();
+        isConnected = false;
+        console.log('Disconnected from MongoDB');
+    }
 }

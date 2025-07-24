@@ -11,6 +11,8 @@ export interface IYouTubeVideo extends Document {
   alreadyPosted: boolean;
   captionVersion?: 'A' | 'B' | 'C';
   score?: number;
+  // Audio track matching for YouTube Shorts
+  audioTrackId?: string;
   // Video fingerprinting for content-based matching
   videoFingerprint?: {
     contentHash: string;
@@ -19,6 +21,8 @@ export interface IYouTubeVideo extends Document {
     aspectRatio?: number;
     signature?: string;
   };
+  // Peak hour scheduling for optimal posting times
+  scheduledTime?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -69,12 +73,28 @@ const YouTubeVideoSchema: Schema = new Schema({
     max: 100,
     required: false
   },
+  selectedTitle: {
+    type: String,
+    required: false
+  },
+  selectedDescription: {
+    type: String,
+    required: false
+  },
+  audioTrackId: {
+    type: String,
+    required: false
+  },
   videoFingerprint: {
     contentHash: { type: String },
     fileSize: { type: Number },
     duration: { type: Number },
     aspectRatio: { type: Number },
     signature: { type: String }
+  },
+  scheduledTime: {
+    type: Date,
+    required: false
   }
 }, {
   timestamps: true

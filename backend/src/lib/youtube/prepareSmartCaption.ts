@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import YouTubeInsight from '../../models/YouTubeInsight';
+import { getTopTrendingKeywords } from './fetchTrendingKeywords';
+import { extractCaptionPatterns, getRandomPatternElements } from './fetchCompetitorCaptions';
 
 interface CaptionVersion {
   title: string;
@@ -35,33 +37,38 @@ export async function prepareSmartCaption(
     // Get top-performing hashtags from YouTube insights
     const topHashtags = await getTopPerformingHashtags();
     
-    // Define trending real estate keywords and local SEO terms
-    const trendingKeywords = [
-      'Buy in Texas', 'VA loan help', 'First time buyer', 'Real estate tips',
-      'Property investment', 'Market update', 'Home buying guide', 'Interest rates'
-    ];
+    // PART 4: Get trending SEO keywords and competitor patterns
+    const trendingKeywords = await getTopTrendingKeywords(5);
+    const competitorPatterns = await extractCaptionPatterns();
+    const patternElements = getRandomPatternElements(competitorPatterns);
     
     const localSeoTerms = [
       'San Antonio', 'Texas real estate', 'San Antonio homes', 'Texas property',
       'SA realtor', 'South Texas', 'Alamo City', 'Texas market'
     ];
 
-    // Create prompts for each version
+    // PART 4: Enhanced base prompt with SEO keywords and competitor patterns
     const basePrompt = `
 Original Title: ${originalContent.title}
 Original Description: ${originalContent.description}
 Original Tags: ${originalContent.tags.join(', ')}
 
+🔒 CRITICAL RULE: Never mention price points (like $400K, $599,000, etc.) in the caption or title, because the price is already shown inside the video and should not be contradicted.
+
 Top Performing Hashtags: ${topHashtags.join(' ')}
-Trending Keywords: ${trendingKeywords.join(', ')}
+Trending SEO Keywords: ${trendingKeywords.join(', ')}
 Local SEO Terms: ${localSeoTerms.join(', ')}
+Competitor Hook Words: ${competitorPatterns.hookWords.join(', ')}
+Pattern Elements: ${JSON.stringify(patternElements)}
 
 Generate a rewritten version that:
 - Maintains the core message but with fresh wording
-- Incorporates 3-5 top performing hashtags naturally
-- Includes 1-2 trending keywords where relevant
-- Adds 1-2 local SEO terms for San Antonio/Texas
-- Optimizes for Instagram engagement
+- Incorporates 2-3 trending SEO keywords naturally for discoverability
+- Uses competitor-proven hook words and patterns for engagement
+- Includes 1-2 local SEO terms for San Antonio/Texas
+- Adds 3-5 top performing hashtags strategically
+- 🚫 NEVER mentions any price points or dollar amounts
+- Optimizes for YouTube Shorts/Instagram engagement
 `;
 
     const prompts = [
@@ -69,11 +76,12 @@ Generate a rewritten version that:
         type: 'clickbait',
         prompt: `${basePrompt}
 STYLE: Clickbait Hook
-- Start with attention-grabbing opener ("You won't believe...", "This ONE trick...", "SHOCKING truth about...")
-- Use urgency and curiosity gaps
-- Include emojis strategically
-- Focus on benefit/transformation
+- Start with proven competitor hook words: ${patternElements.hookWord}
+- Use urgency and curiosity gaps with trending keywords
+- Include competitor-proven emojis: ${patternElements.emoji}
+- Focus on benefit/transformation without mentioning prices
 - Keep title under 60 characters for mobile
+- Inject 1-2 trending SEO keywords: ${trendingKeywords.slice(0,2).join(', ')}
 
 Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
       },
@@ -81,11 +89,12 @@ Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
         type: 'educational',
         prompt: `${basePrompt}
 STYLE: Educational/Authority
-- Position as expert advice or tutorial
-- Use "How to", "Why", "The truth about" format
-- Include statistics or facts if relevant
+- Position as expert advice with trending keywords
+- Use "How to", "Why", "The truth about" format with SEO phrases
+- Include competitor common phrases: ${patternElements.commonPhrase}
 - Professional but approachable tone
-- Focus on value and learning
+- Focus on value and learning without price mentions
+- Integrate 2-3 trending keywords: ${trendingKeywords.slice(1,4).join(', ')}
 
 Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
       },
@@ -93,11 +102,12 @@ Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
         type: 'story',
         prompt: `${basePrompt}
 STYLE: Story/Emotional
-- Start with personal story or client success
-- Use emotional triggers (fear, hope, pride)
-- Include relatable scenarios
-- "When I helped Sarah..." or "My client just..."
-- Focus on transformation and results
+- Start with personal story using: ${patternElements.commonPhrase}
+- Use emotional triggers with trending keywords (fear, hope, pride)
+- Include relatable scenarios with SEO terms
+- "When I helped..." or "My client..." format
+- Focus on transformation and results without price reveals
+- Weave in 1-2 trending keywords: ${trendingKeywords.slice(2,4).join(', ')}
 
 Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
       }

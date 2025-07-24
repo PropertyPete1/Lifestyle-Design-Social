@@ -5,6 +5,9 @@ import { saveToLocal, getLocalFilePath } from '../../services/localStorage';
 import { VideoQueue } from '../../services/videoQueue';
 import { matchVideoContent } from '../../lib/youtube/matchVideoContent';
 import { prepareSmartCaption } from '../../lib/youtube/prepareSmartCaption';
+import { matchAudioToVideo } from '../../lib/youtube/matchAudioToVideo';
+import { fetchTrendingAudio } from '../../lib/youtube/fetchTrendingAudio';
+import { getPeakPostTime } from '../../lib/youtube/getPeakPostTime';
 import { connectToDatabase } from '../../database/connection';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -94,6 +97,7 @@ router.post('/', (req: Request, res: Response) => {
     // Check for repost detection using video content analysis FIRST (only for real_estate videos)
     let repostInfo = null;
     let smartCaptions = null;
+    let audioMatch = null;
 
     if (type === 'real_estate') {
       console.log('🔍 Analyzing video content for repost detection...');
@@ -110,6 +114,14 @@ router.post('/', (req: Request, res: Response) => {
           console.log('Generating smart captions with GPT...');
           smartCaptions = await prepareSmartCaption(matchResult.originalVideo, openaiKey);
           
+          // Match audio to the original video content for better trend alignment
+          console.log('🎵 Matching trending audio to video content...');
+          audioMatch = await matchAudioToVideo(
+            matchResult.originalVideo.title,
+            matchResult.originalVideo.description,
+            matchResult.originalVideo.tags
+          );
+          
           repostInfo = {
             isRepost: true,
             confidence: matchResult.confidence,
@@ -117,7 +129,7 @@ router.post('/', (req: Request, res: Response) => {
             smartCaptions
           };
         } else {
-          console.log('⚠️ No OpenAI API key found - skipping smart caption generation');
+          console.log('⚠️ No OpenAI API key found - skipping smart caption generation and audio matching');
           repostInfo = {
             isRepost: true,
             confidence: matchResult.confidence,
@@ -126,10 +138,24 @@ router.post('/', (req: Request, res: Response) => {
         }
       } else {
         console.log(`✨ No repost detected - this appears to be new content (best match: ${matchResult.confidence}%)`);
+        
+        // For new content, try to match audio based on filename/basic analysis
+        if (openaiKey) {
+          console.log('🎵 Matching trending audio for new content...');
+          audioMatch = await matchAudioToVideo(filename.replace(/\.[^/.]+$/, ''), '');
+        }
+        
         repostInfo = { 
           isRepost: false, 
           confidence: matchResult.confidence 
         };
+      }
+    } else if (type === 'cartoon') {
+      // For cartoon videos, always try to match audio for better engagement
+      const openaiKey = getOpenAIKey();
+      if (openaiKey) {
+        console.log('🎵 Matching trending audio for cartoon content...');
+        audioMatch = await matchAudioToVideo(filename.replace(/\.[^/.]+$/, ''), '', ['funny', 'hype', 'entertaining']);
       }
     }
 
@@ -155,15 +181,48 @@ router.post('/', (req: Request, res: Response) => {
       }
     }
 
-    // Add to video queue
-    const videoQueueEntry = new VideoQueue({
+    // Get optimal posting time for this video
+    const { recommendedTime } = getPeakPostTime();
+
+    // Add to video queue with audio track information and scheduled time
+    const videoQueueData: any = {
       type,
       dropboxUrl: storageUrl,
       filename,
-      status: storageType === 'failed' ? 'failed' : 'pending'
-    });
+      status: storageType === 'failed' ? 'failed' : 'pending',
+      scheduledTime: recommendedTime
+    };
 
-    await videoQueueEntry.save();
+    // Set filePath for local storage or keep for future Dropbox download capability
+    if (storageType === 'local') {
+      // Extract filename from local:// URL
+      const localFilename = storageUrl.replace('local://', '');
+      videoQueueData.filePath = getLocalFilePath(localFilename);
+    } else if (storageType === 'dropbox') {
+      // For Dropbox, we'll need to download when publishing - store the local path pattern
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      videoQueueData.filePath = path.join(uploadsDir, filename);
+    }
+
+    // Include audio track information if available
+    if (audioMatch && audioMatch.audioTrackId) {
+      videoQueueData.audioTrackId = audioMatch.audioTrackId;
+    }
+
+    const videoQueueEntry = new VideoQueue(videoQueueData);
+    const savedEntry = await videoQueueEntry.save();
+    
+    // Update the document with scheduledTime and filePath after saving (workaround for schema issue)
+    const updateData: any = { 
+      scheduledTime: recommendedTime 
+    };
+    
+    // Add filePath to update if it was set
+    if (videoQueueData.filePath) {
+      updateData.filePath = videoQueueData.filePath;
+    }
+    
+    await VideoQueue.findByIdAndUpdate(savedEntry._id, updateData);
 
     // Response with upload success and repost detection results
     const response: any = {
@@ -190,6 +249,20 @@ router.post('/', (req: Request, res: Response) => {
           suggestion: `🎯 This video appears to be a repost! We've generated ${smartCaptions.versionA.score >= 80 ? 'high-scoring' : 'optimized'} captions for better performance.`
         };
       }
+    }
+
+    // Include audio matching results
+    if (audioMatch) {
+      response.audioMatch = {
+        audioTrackId: audioMatch.audioTrackId,
+        audioTrack: audioMatch.audioTrack,
+        detectedTone: audioMatch.detectedTone,
+        confidence: audioMatch.confidence,
+        reasoning: audioMatch.reasoning,
+        suggestion: audioMatch.audioTrack 
+          ? `🎵 Matched trending "${audioMatch.audioTrack.title}" (${audioMatch.detectedTone} vibe)`
+          : '🎵 No suitable audio track found for this content'
+      };
     }
 
     res.json(response);
@@ -242,6 +315,49 @@ router.get('/queue', async (req: Request, res: Response) => {
     console.error('Queue fetch error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch video queue', 
+      details: error.message 
+    });
+  }
+});
+
+// POST /api/upload/select-caption/:videoId
+// Save selected caption version for a video
+router.post('/select-caption/:videoId', async (req: Request, res: Response) => {
+  try {
+    await connectToDatabase();
+
+    const { videoId } = req.params;
+    const { captionVersion, selectedTitle, selectedDescription, score } = req.body;
+
+    if (!captionVersion || !['A', 'B', 'C'].includes(captionVersion)) {
+      return res.status(400).json({ error: 'Invalid caption version' });
+    }
+
+    const updatedVideo = await VideoQueue.findByIdAndUpdate(
+      videoId,
+      {
+        captionVersion,
+        selectedTitle,
+        selectedDescription,
+        score
+      },
+      { new: true }
+    );
+
+    if (!updatedVideo) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Caption selection saved',
+      video: updatedVideo
+    });
+
+  } catch (error: any) {
+    console.error('Caption selection error:', error);
+    res.status(500).json({ 
+      error: 'Failed to save caption selection', 
       details: error.message 
     });
   }

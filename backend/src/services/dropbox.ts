@@ -21,7 +21,7 @@ if (!dropboxApiKey) {
 const dbx = new Dropbox({ accessToken: dropboxApiKey });
 
 export async function uploadToDropbox(buffer: Buffer, filename: string): Promise<string> {
-  const dropboxPath = `/uploads/${Date.now()}_${filename}`;
+  const dropboxPath = `/Lifestyle Design Social/${Date.now()}_${filename}`;
   const response = await dbx.filesUpload({
     path: dropboxPath,
     contents: buffer,

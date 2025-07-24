@@ -1,6 +1,9 @@
 import express, { Request, Response } from 'express';
 import { fetchAllVideosFromChannel, getAllSavedVideos } from '../../lib/youtube/fetchAllVideos';
 import { analyzeTopHashtags, getTopInsights, clearAllInsights } from '../../lib/youtube/analyzeTopHashtags';
+import { matchUploadedVideo } from '../../lib/youtube/matchUploadedVideo';
+import { prepareSmartCaption } from '../../lib/youtube/prepareSmartCaption';
+import YouTubeVideo from '../../models/YouTubeVideo';
 
 const router = express.Router();
 
@@ -124,6 +127,108 @@ router.delete('/insights', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/youtube/detect-repost
+// Detect if uploaded video is a repost and generate smart captions
+router.post('/detect-repost', async (req: Request, res: Response) => {
+  try {
+    const { filename, openaiApiKey } = req.body;
+
+    if (!filename || typeof filename !== 'string') {
+      return res.status(400).json({ 
+        error: 'Filename is required and must be a string' 
+      });
+    }
+
+    if (!openaiApiKey || typeof openaiApiKey !== 'string') {
+      return res.status(400).json({ 
+        error: 'OpenAI API key is required for caption generation' 
+      });
+    }
+
+    console.log(`Checking for repost: ${filename}`);
+    const matchResult = await matchUploadedVideo(filename);
+
+    if (!matchResult.isMatch || !matchResult.originalVideo) {
+      return res.json({
+        success: true,
+        isRepost: false,
+        message: 'No matching video found'
+      });
+    }
+
+    console.log(`Repost detected! Generating smart captions for: ${matchResult.originalVideo.title}`);
+    const smartCaptions = await prepareSmartCaption(matchResult.originalVideo, openaiApiKey);
+
+    res.json({
+      success: true,
+      isRepost: true,
+      originalVideo: matchResult.originalVideo,
+      smartCaptions
+    });
+
+  } catch (error: any) {
+    console.error('Error detecting repost:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to detect repost'
+    });
+  }
+});
+
+// POST /api/youtube/save-caption-choice
+// Save user's caption version choice and score
+router.post('/save-caption-choice', async (req: Request, res: Response) => {
+  try {
+    const { videoId, captionVersion, score } = req.body;
+
+    if (!videoId || typeof videoId !== 'string') {
+      return res.status(400).json({ 
+        error: 'Video ID is required and must be a string' 
+      });
+    }
+
+    if (!captionVersion || !['A', 'B', 'C'].includes(captionVersion)) {
+      return res.status(400).json({ 
+        error: 'Caption version must be A, B, or C' 
+      });
+    }
+
+    if (typeof score !== 'number' || score < 0 || score > 100) {
+      return res.status(400).json({ 
+        error: 'Score must be a number between 0 and 100' 
+      });
+    }
+
+    const updatedVideo = await YouTubeVideo.findOneAndUpdate(
+      { videoId },
+      { captionVersion, score },
+      { new: true }
+    );
+
+    if (!updatedVideo) {
+      return res.status(404).json({
+        error: 'Video not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Caption choice saved successfully',
+      video: {
+        videoId: updatedVideo.videoId,
+        title: updatedVideo.title,
+        captionVersion: updatedVideo.captionVersion,
+        score: updatedVideo.score
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error saving caption choice:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to save caption choice'
+    });
+  }
+});
+
 // GET /api/youtube/status
 // Check YouTube integration status
 router.get('/status', (req: Request, res: Response) => {
@@ -135,7 +240,9 @@ router.get('/status', (req: Request, res: Response) => {
       'POST /api/youtube/analyze-hashtags',
       'GET /api/youtube/videos',
       'GET /api/youtube/insights',
-      'DELETE /api/youtube/insights'
+      'DELETE /api/youtube/insights',
+      'POST /api/youtube/detect-repost',
+      'POST /api/youtube/save-caption-choice'
     ]
   });
 });

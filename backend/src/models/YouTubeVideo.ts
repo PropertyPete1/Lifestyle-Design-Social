@@ -9,6 +9,16 @@ export interface IYouTubeVideo extends Document {
   likeCount: number;
   publishedAt: string;
   alreadyPosted: boolean;
+  captionVersion?: 'A' | 'B' | 'C';
+  score?: number;
+  // Video fingerprinting for content-based matching
+  videoFingerprint?: {
+    contentHash: string;
+    fileSize?: number;
+    duration?: number;
+    aspectRatio?: number;
+    signature?: string;
+  };
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -47,6 +57,24 @@ const YouTubeVideoSchema: Schema = new Schema({
   alreadyPosted: {
     type: Boolean,
     default: false
+  },
+  captionVersion: {
+    type: String,
+    enum: ['A', 'B', 'C'],
+    required: false
+  },
+  score: {
+    type: Number,
+    min: 0,
+    max: 100,
+    required: false
+  },
+  videoFingerprint: {
+    contentHash: { type: String },
+    fileSize: { type: Number },
+    duration: { type: Number },
+    aspectRatio: { type: Number },
+    signature: { type: String }
   }
 }, {
   timestamps: true

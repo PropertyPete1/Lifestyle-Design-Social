@@ -5,6 +5,7 @@
   "instagramBusinessId": "106834165525382",
   "youtubeApiKey": "AIzaSyD8WKvdMqNJH6X8nQPzYhF5wFnPnN-qZ2s",
   "youtubeClientId": "your_youtube_client_id_here",
+  "youtubeRefreshToken": "",
   "tiktokAccessToken": "tiktok_access_token_here",
   "runwayApiKey": "rw_sk_test_1234567890abcdef"
 }

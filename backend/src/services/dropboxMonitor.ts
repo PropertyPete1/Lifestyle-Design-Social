@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as cron from 'node-cron';
 import { VideoQueue } from './videoQueue';
 import { generateVideoFingerprint, findDuplicateVideo } from '../lib/youtube/videoFingerprint';
+import { repostMonitor } from './repostMonitor';
 import { uploadToDropbox } from './dropbox';
 import { saveToLocal, getLocalFilePath } from './localStorage';
 import { getPeakPostTime } from '../lib/youtube/getPeakPostTime';
@@ -37,7 +38,7 @@ function getDropboxClient(): Dropbox | null {
 
 // Track processed files to avoid reprocessing
 const processedFiles = new Set<string>();
-const DROPBOX_FOLDER = '/real-videos/'; // Target folder to monitor
+const DROPBOX_FOLDER = '/Lifestyle Social App Uploads/'; // Target folder to monitor
 const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.avi', '.mkv', '.flv', '.wmv', '.m4v'];
 
 export interface DropboxMonitorStats {
@@ -117,6 +118,11 @@ async function processDropboxVideo(
     const videoQueueEntry = new VideoQueue(videoQueueData);
     await videoQueueEntry.save();
 
+    // Trigger repost monitor check for new upload (Phase 2)
+    repostMonitor.onVideoUploaded().catch(error => {
+      console.warn('Repost monitor hook failed:', error);
+    });
+
     console.log(`✅ Successfully processed: ${filename}`);
     monitorStats.newFilesProcessed++;
     return { success: true };
@@ -160,7 +166,10 @@ export async function scanDropboxFolder(): Promise<DropboxMonitorStats> {
     // Process new files
     const settings = getSettings();
     for (const fileEntry of videoFiles) {
-      const fileKey = `${fileEntry.path_lower}_${fileEntry.content_hash}`;
+      // Only process file entries (not folders)
+      if (fileEntry['.tag'] !== 'file') continue;
+      
+      const fileKey = `${fileEntry.path_lower}_${(fileEntry as any).content_hash}`;
       
       if (!processedFiles.has(fileKey)) {
         const result = await processDropboxVideo(dbx, fileEntry, settings);

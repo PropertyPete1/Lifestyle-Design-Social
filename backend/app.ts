@@ -8,6 +8,7 @@ import indexRouter from './src/routes/index';
 import { initializeScheduledJobs } from './src/lib/youtube/schedulePostJob';
 import { migrateFilePaths } from './src/lib/youtube/migrateFilePaths';
 import { startDropboxMonitoring } from './src/services/dropboxMonitor';
+import { repostMonitor } from './src/services/repostMonitor';
 import * as fs from 'fs';
 
 const app = express();
@@ -65,9 +66,27 @@ app.use('/api', indexRouter);
 // Run migration and initialize scheduled jobs on server start
 (async () => {
   try {
+    // Import here to avoid circular dependency
+    const { connectToDatabase } = await import('./src/database/connection');
+    
+    // Connect to database first
+    console.log('🔌 Connecting to database...');
+    await connectToDatabase();
+    
+    console.log('🔄 Running migrations...');
     await migrateFilePaths();
+    
+    console.log('⏰ Initializing scheduled jobs...');
     await initializeScheduledJobs();
+    
+    console.log('📁 Starting Dropbox monitoring...');
     startDropboxMonitoring();
+    
+    // Start repost monitoring (Phase 2)
+    console.log('🎯 Starting repost monitoring...');
+    repostMonitor.startMonitoring(60); // Check every hour
+    
+    console.log('🚀 Backend fully initialized with Phase 2 features');
   } catch (error) {
     console.error('❌ Failed to initialize backend:', error);
   }

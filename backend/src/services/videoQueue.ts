@@ -33,6 +33,10 @@ export interface IVideoQueue extends Document {
   videoDuration?: number;
   videoSize?: number;
   lastPostedAt?: Date;
+  // Repost functionality fields
+  isRepost?: boolean;
+  originalVideoId?: string;
+  platform?: 'youtube' | 'instagram';
 }
 
 const VideoQueueSchema = new Schema<IVideoQueue>({
@@ -65,7 +69,11 @@ const VideoQueueSchema = new Schema<IVideoQueue>({
   videoHash: { type: String },
   videoDuration: { type: Number },
   videoSize: { type: Number },
-  lastPostedAt: { type: Date }
+  lastPostedAt: { type: Date },
+  // Repost functionality fields
+  isRepost: { type: Boolean, default: false },
+  originalVideoId: { type: String },
+  platform: { type: String, enum: ['youtube', 'instagram'] }
 });
 
 // Add scheduledTime field after schema creation

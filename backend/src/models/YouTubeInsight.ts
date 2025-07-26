@@ -4,6 +4,7 @@ export interface IYouTubeInsight extends Document {
   tag: string;
   appearances: number;
   avgViewCount: number;
+  trendingKeywords?: string[]; // New field for Phase 4 SEO keywords
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -24,6 +25,10 @@ const YouTubeInsightSchema: Schema = new Schema({
     type: Number,
     required: true,
     default: 0
+  },
+  trendingKeywords: {
+    type: [String],
+    default: []
   }
 }, {
   timestamps: true

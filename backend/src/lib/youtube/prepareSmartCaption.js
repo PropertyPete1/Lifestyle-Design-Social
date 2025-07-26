@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -8,139 +41,276 @@ const openai_1 = __importDefault(require("openai"));
 const YouTubeInsight_1 = __importDefault(require("../../models/YouTubeInsight"));
 const fetchTrendingKeywords_1 = require("./fetchTrendingKeywords");
 const fetchCompetitorCaptions_1 = require("./fetchCompetitorCaptions");
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 /**
- * Generate 3 smart caption versions using GPT and performance scoring
+ * PHASE 4: Generate 3 smart caption versions optimized with competitor patterns and SEO
  * @param originalContent - Original YouTube video content
  * @param openaiApiKey - OpenAI API key for GPT requests
- * @returns Three scored caption versions
+ * @returns Three scored caption versions with enhanced SEO and competitor analysis
  */
 async function prepareSmartCaption(originalContent, openaiApiKey) {
     try {
         const openai = new openai_1.default({ apiKey: openaiApiKey });
         // Get top-performing hashtags from YouTube insights
         const topHashtags = await getTopPerformingHashtags();
-        // PART 4: Get trending SEO keywords and competitor patterns
-        const trendingKeywords = await (0, fetchTrendingKeywords_1.getTopTrendingKeywords)(5);
+        // PHASE 4: Enhanced SEO and competitor analysis
+        const trendingKeywords = await (0, fetchTrendingKeywords_1.getTopTrendingKeywords)(6); // Get 6 for variety
+        const buyingKeywords = await (0, fetchTrendingKeywords_1.getTrendingKeywordsByCategory)('buying', 2);
+        const marketKeywords = await (0, fetchTrendingKeywords_1.getTrendingKeywordsByCategory)('market', 2);
         const competitorPatterns = await (0, fetchCompetitorCaptions_1.extractCaptionPatterns)();
         const patternElements = (0, fetchCompetitorCaptions_1.getRandomPatternElements)(competitorPatterns);
+        // Auto-save YouTube channel ID if this is the first API call
+        await autoSaveChannelId();
         const localSeoTerms = [
             'San Antonio', 'Texas real estate', 'San Antonio homes', 'Texas property',
-            'SA realtor', 'South Texas', 'Alamo City', 'Texas market'
+            'SA realtor', 'South Texas', 'Alamo City', 'Texas market', 'Hill Country'
         ];
-        // PART 4: Enhanced base prompt with SEO keywords and competitor patterns
+        // PHASE 4: Critical rules for caption generation
+        const criticalRules = `
+🔒 CRITICAL PHASE 4 RULES - MANDATORY COMPLIANCE:
+1. ABSOLUTELY NO PRICING: Never mention dollar amounts ($), costs, prices, or financial figures (price already shown in video)
+2. NO DASHES: Never use dashes "-" anywhere in caption text (use commas, periods, or spaces instead)
+3. SEO KEYWORD INJECTION: Naturally inject 2-3 trending keywords: ${trendingKeywords.slice(0, 3).join(', ')}
+4. COMPETITOR PATTERNS: Must mimic proven successful patterns: ${JSON.stringify(patternElements)}
+5. LOCAL SEO: Include 1-2 local terms: ${localSeoTerms.slice(0, 2).join(', ')}
+6. TOP HASHTAGS: Include 3-4 performance hashtags: ${topHashtags.slice(0, 4).join(' ')}
+7. NO CONTRADICTIONS: Must align with video content without revealing specifics
+8. PRICE ALTERNATIVES: Use terms like "amazing value", "great opportunity", "incredible deal" instead of numbers
+`;
+        // PHASE 4: Enhanced base prompt with comprehensive SEO and competitor intelligence
         const basePrompt = `
 Original Title: ${originalContent.title}
 Original Description: ${originalContent.description}
 Original Tags: ${originalContent.tags.join(', ')}
 
-🔒 CRITICAL RULE: Never mention price points (like $400K, $599,000, etc.) in the caption or title, because the price is already shown inside the video and should not be contradicted.
+${criticalRules}
 
-Top Performing Hashtags: ${topHashtags.join(' ')}
-Trending SEO Keywords: ${trendingKeywords.join(', ')}
-Local SEO Terms: ${localSeoTerms.join(', ')}
-Competitor Hook Words: ${competitorPatterns.hookWords.join(', ')}
-Pattern Elements: ${JSON.stringify(patternElements)}
+PHASE 4 SEO INTELLIGENCE:
+- Top Trending Keywords: ${trendingKeywords.join(', ')}
+- Buying Focus Keywords: ${buyingKeywords.join(', ')}
+- Market Keywords: ${marketKeywords.join(', ')}
+- Local SEO Terms: ${localSeoTerms.join(', ')}
+- Top Hashtags: ${topHashtags.join(' ')}
 
-Generate a rewritten version that:
-- Maintains the core message but with fresh wording
-- Incorporates 2-3 trending SEO keywords naturally for discoverability
-- Uses competitor-proven hook words and patterns for engagement
-- Includes 1-2 local SEO terms for San Antonio/Texas
-- Adds 3-5 top performing hashtags strategically
-- 🚫 NEVER mentions any price points or dollar amounts
-- Optimizes for YouTube Shorts/Instagram engagement
+COMPETITOR PATTERN INTELLIGENCE:
+- Proven Hook Words: ${competitorPatterns.hookWords.join(', ')}
+- High-Engagement Emojis: ${competitorPatterns.emojis.join(' ')}
+- Successful Phrases: ${competitorPatterns.commonPhrases.join(', ')}
+- Call to Actions: ${competitorPatterns.callToActions.join(', ')}
+- SEO Terms from Competitors: ${competitorPatterns.seoTerms.join(', ')}
+
+Selected Pattern Elements: ${JSON.stringify(patternElements)}
+
+ENHANCED CAPTION OBJECTIVES:
+- Maintain core message with fresh, engaging wording
+- Naturally weave in 2-3 trending keywords for discoverability
+- Use competitor-proven hooks and emotional triggers
+- Include strategic local SEO for San Antonio/Texas market
+- Add top-performing hashtags for algorithm boost
+- Follow proven title structures from successful real estate creators
+- Optimize for YouTube Shorts/Instagram engagement without price conflicts
 `;
         const prompts = [
             {
                 type: 'clickbait',
                 prompt: `${basePrompt}
-STYLE: Clickbait Hook
-- Start with proven competitor hook words: ${patternElements.hookWord}
-- Use urgency and curiosity gaps with trending keywords
-- Include competitor-proven emojis: ${patternElements.emoji}
-- Focus on benefit/transformation without mentioning prices
-- Keep title under 60 characters for mobile
-- Inject 1-2 trending SEO keywords: ${trendingKeywords.slice(0, 2).join(', ')}
+
+STYLE: Clickbait Hook (Version A)
+OBJECTIVE: Maximum curiosity and click-through rate using competitor-proven formulas
+
+SPECIFIC REQUIREMENTS:
+- Start with proven hook: "${patternElements.hookWord}" or similar high-engagement opener
+- Use curiosity gap structure: "[Audience] [Action] and [Surprising Result]!"
+- MANDATORY: Include these trending SEO keywords naturally: ${trendingKeywords.slice(0, 2).join(' + ')} 
+- Add strategic emojis: ${patternElements.emoji} and 1-2 others from list
+- Focus on transformation/benefit without revealing price
+- Keep title under 60 characters for mobile optimization
+- Include call to action: "${patternElements.callToAction}"
+- STRICTLY NO dashes "-" anywhere in text (use spaces/commas instead)
+- ABSOLUTELY NO price mentions or dollar amounts
+
+COMPETITOR TITLE STRUCTURE: ${patternElements.titleStructure}
 
 Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
             },
             {
-                type: 'educational',
+                type: 'informational',
                 prompt: `${basePrompt}
-STYLE: Educational/Authority
-- Position as expert advice with trending keywords
-- Use "How to", "Why", "The truth about" format with SEO phrases
-- Include competitor common phrases: ${patternElements.commonPhrase}
-- Professional but approachable tone
-- Focus on value and learning without price mentions
-- Integrate 2-3 trending keywords: ${trendingKeywords.slice(1, 4).join(', ')}
+
+STYLE: Educational/Informational Authority (Version B)  
+OBJECTIVE: Position as expert resource using educational hooks
+
+SPECIFIC REQUIREMENTS:
+- Use authority opener: "How to", "Why", "The complete guide to", "What [audience] need to know"
+- Position as expert with phrases like: "${patternElements.commonPhrase}"
+- MANDATORY: Integrate trending keywords naturally: ${trendingKeywords.slice(2, 4).join(' + ')}
+- MANDATORY: Include market/buying keywords: ${buyingKeywords.concat(marketKeywords).slice(0, 2).join(' + ')}
+- Professional but approachable tone with competitor emoji style
+- Focus on education and value without price discussion
+- Include helpful call to action from competitor patterns
+- STRICTLY NO dashes "-" anywhere in text (use spaces/commas instead)
+- ABSOLUTELY NO price mentions or dollar amounts
+
+COMPETITOR AUTHORITY PHRASES: ${competitorPatterns.commonPhrases.slice(0, 3).join(', ')}
 
 Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
             },
             {
-                type: 'story',
+                type: 'emotional',
                 prompt: `${basePrompt}
-STYLE: Story/Emotional
-- Start with personal story using: ${patternElements.commonPhrase}
-- Use emotional triggers with trending keywords (fear, hope, pride)
-- Include relatable scenarios with SEO terms
-- "When I helped..." or "My client..." format
-- Focus on transformation and results without price reveals
-- Weave in 1-2 trending keywords: ${trendingKeywords.slice(2, 4).join(', ')}
+
+STYLE: Story/Emotional Connection (Version C)
+OBJECTIVE: Personal story that builds trust and emotional connection
+
+SPECIFIC REQUIREMENTS:
+- Start with personal story: "${patternElements.commonPhrase}" or "When I helped..."
+- Use emotional triggers (hope, pride, transformation) with trending keywords
+- MANDATORY: Include relatable scenarios with: ${trendingKeywords.slice(4, 6).join(' + ')}
+- Personal pronouns: "my client", "I helped", "their journey"
+- Focus on transformation story without revealing numbers
+- Include inspiring call to action: "${patternElements.callToAction}"
+- Use emotional emojis from competitor analysis: ${competitorPatterns.emojis.slice(5, 8).join(' ')}
+- STRICTLY NO dashes "-" anywhere in text (use spaces/commas instead)
+- ABSOLUTELY NO price mentions or dollar amounts
+
+STORY OPENERS: ${competitorPatterns.commonPhrases.filter(p => p.includes('client') || p.includes('helped')).join(', ')}
 
 Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
             }
         ];
         // Generate all three versions in parallel
-        const responses = await Promise.all(prompts.map(async ({ prompt }) => {
+        const responses = await Promise.all(prompts.map(async ({ prompt, type }) => {
             var _a, _b, _c, _d;
             const response = await openai.chat.completions.create({
                 model: 'gpt-4',
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.8,
-                max_tokens: 500,
+                max_tokens: 600,
             });
             try {
-                return JSON.parse(((_b = (_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content) || '{}');
+                const parsed = JSON.parse(((_b = (_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content) || '{}');
+                // PHASE 4: Clean output - remove dashes and price references
+                const cleanTitle = cleanCaptionText(parsed.title || originalContent.title);
+                const cleanDescription = cleanCaptionText(parsed.description || originalContent.description);
+                return {
+                    title: cleanTitle,
+                    description: cleanDescription,
+                    type
+                };
             }
             catch (_e) {
-                // Fallback if JSON parsing fails
+                // Enhanced fallback if JSON parsing fails
                 const content = ((_d = (_c = response.choices[0]) === null || _c === void 0 ? void 0 : _c.message) === null || _d === void 0 ? void 0 : _d.content) || '';
                 const lines = content.split('\n').filter(line => line.trim());
+                const cleanTitle = cleanCaptionText(lines[0] || originalContent.title);
+                const cleanDescription = cleanCaptionText(lines.slice(1).join('\n') || originalContent.description);
                 return {
-                    title: lines[0] || originalContent.title,
-                    description: lines.slice(1).join('\n') || originalContent.description
+                    title: cleanTitle,
+                    description: cleanDescription,
+                    type
                 };
             }
         }));
-        // Score each version
+        // PHASE 4: Enhanced scoring with competitor pattern analysis
         const versionA = {
             ...responses[0],
-            score: await scoreCaptionVersion(responses[0], topHashtags, 'clickbait')
+            score: await scoreCaptionVersion(responses[0], topHashtags, trendingKeywords, 'clickbait')
         };
         const versionB = {
             ...responses[1],
-            score: await scoreCaptionVersion(responses[1], topHashtags, 'educational')
+            score: await scoreCaptionVersion(responses[1], topHashtags, trendingKeywords, 'informational')
         };
         const versionC = {
             ...responses[2],
-            score: await scoreCaptionVersion(responses[2], topHashtags, 'story')
+            score: await scoreCaptionVersion(responses[2], topHashtags, trendingKeywords, 'emotional')
         };
+        // Log Phase 4 completion
+        console.log('✅ PHASE 4 Smart Captions Generated:', {
+            keywordsInjected: trendingKeywords.slice(0, 3),
+            competitorPatterns: Object.keys(patternElements),
+            versions: ['clickbait', 'informational', 'emotional'],
+            avgScore: Math.round((versionA.score + versionB.score + versionC.score) / 3)
+        });
         return { versionA, versionB, versionC };
     }
     catch (error) {
         console.error('Error preparing smart caption:', error);
-        // Return fallback versions based on original content
+        // Enhanced fallback versions with Phase 4 rules
         const fallbackVersion = {
-            title: originalContent.title,
-            description: originalContent.description,
+            title: cleanCaptionText(originalContent.title),
+            description: cleanCaptionText(originalContent.description),
             score: 50
         };
         return {
-            versionA: fallbackVersion,
-            versionB: fallbackVersion,
-            versionC: fallbackVersion
+            versionA: { ...fallbackVersion, type: 'clickbait' },
+            versionB: { ...fallbackVersion, type: 'informational' },
+            versionC: { ...fallbackVersion, type: 'emotional' }
         };
+    }
+}
+/**
+ * PHASE 4: Clean caption text - remove dashes and price references
+ */
+function cleanCaptionText(text) {
+    if (!text)
+        return '';
+    let cleaned = text;
+    // Remove all dashes
+    cleaned = cleaned.replace(/-/g, ' ');
+    // Remove price references (dollars, costs, amounts)
+    cleaned = cleaned.replace(/\$[\d,]+(?:\.\d{2})?(?:k|K|m|M)?/g, ''); // $123, $123K, $1.5M
+    cleaned = cleaned.replace(/\$[\d,]+/g, ''); // Any dollar amount
+    cleaned = cleaned.replace(/\d+k?\s*(dollars?|bucks?)/gi, ''); // 100k dollars
+    cleaned = cleaned.replace(/costs?\s*\$?[\d,]+/gi, ''); // costs $123
+    cleaned = cleaned.replace(/priced?\s*at\s*\$?[\d,]+/gi, ''); // priced at $123
+    cleaned = cleaned.replace(/worth\s*\$?[\d,]+/gi, ''); // worth $123
+    cleaned = cleaned.replace(/\$?[\d,]+\s*(million|thousand|k)/gi, ''); // 2.5 million
+    // Clean up extra spaces
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    return cleaned;
+}
+/**
+ * Auto-save YouTube channel ID after first API call (Phase 4 requirement)
+ * Never ask user for channel ID again once detected
+ */
+async function autoSaveChannelId() {
+    try {
+        const settingsPath = path_1.default.join(process.cwd(), 'settings.json');
+        const backupPath = path_1.default.join(process.cwd(), 'backend', 'settings.json');
+        // Try main settings first, then backup location
+        let settings = {};
+        let targetPath = settingsPath;
+        if (fs_1.default.existsSync(settingsPath)) {
+            settings = JSON.parse(fs_1.default.readFileSync(settingsPath, 'utf8'));
+        }
+        else if (fs_1.default.existsSync(backupPath)) {
+            settings = JSON.parse(fs_1.default.readFileSync(backupPath, 'utf8'));
+            targetPath = backupPath;
+        }
+        // Only save if not already set (avoid asking user again)
+        if (!settings.youtubeChannelId || settings.youtubeChannelId === '') {
+            // Auto-detect from any previously saved videos or use default
+            const { getChannelId } = await Promise.resolve().then(() => __importStar(require('../../models/ChannelSettings')));
+            const savedChannelId = await getChannelId();
+            if (savedChannelId) {
+                settings.youtubeChannelId = savedChannelId;
+                fs_1.default.writeFileSync(targetPath, JSON.stringify(settings, null, 2));
+                console.log('✅ YouTube channel ID auto-saved from database:', savedChannelId);
+            }
+            else {
+                // Set auto-detection placeholder
+                settings.youtubeChannelId = 'AUTO_DETECT_ON_NEXT_API_CALL';
+                fs_1.default.writeFileSync(targetPath, JSON.stringify(settings, null, 2));
+                console.log('✅ YouTube channel ID set for auto-detection');
+            }
+        }
+        else {
+            console.log('✅ YouTube channel ID already configured:', settings.youtubeChannelId);
+        }
+    }
+    catch (error) {
+        console.error('Error auto-saving channel ID:', error);
     }
 }
 /**
@@ -150,36 +320,42 @@ async function getTopPerformingHashtags() {
     try {
         const insights = await YouTubeInsight_1.default.find()
             .sort({ avgViewCount: -1, appearances: -1 })
-            .limit(20);
-        return insights.map(insight => `#${insight.tag}`);
+            .limit(25); // Increased for more variety
+        const hashtags = insights.map(insight => `#${insight.tag}`);
+        // Add Phase 4 real estate specific hashtags if not enough found
+        const defaultHashtags = [
+            '#realestate', '#homebuying', '#property', '#realtor', '#texas',
+            '#sanantonio', '#investment', '#firsttimebuyer', '#dreamhome', '#luxuryhomes',
+            '#newhomes', '#realestatemarket', '#homesforsale', '#propertyinvestment', '#realtorlife'
+        ];
+        return hashtags.length >= 10 ? hashtags : [...hashtags, ...defaultHashtags].slice(0, 15);
     }
     catch (error) {
         console.error('Error fetching top hashtags:', error);
-        // Return default real estate hashtags
+        // Enhanced default hashtags for Phase 4
         return [
             '#realestate', '#homebuying', '#property', '#realtor', '#texas',
-            '#sanantonio', '#investment', '#firsttimebuyer', '#mortgage', '#homes'
+            '#sanantonio', '#investment', '#firsttimebuyer', '#dreamhome', '#luxuryhomes'
         ];
     }
 }
 /**
- * Score a caption version based on multiple factors (1-100)
+ * PHASE 4: Enhanced caption scoring with SEO and competitor pattern analysis (1-100)
  */
-async function scoreCaptionVersion(version, topHashtags, type) {
+async function scoreCaptionVersion(version, topHashtags, trendingKeywords, type) {
     let score = 0;
-    // Hook strength (25 points)
-    const hookWords = ['you', 'secret', 'shocking', 'amazing', 'never', 'how to', 'why', 'when'];
-    const hasHook = hookWords.some(word => version.title.toLowerCase().includes(word) ||
-        version.description.toLowerCase().includes(word));
-    score += hasHook ? 25 : 10;
-    // SEO alignment (25 points)
-    const seoTerms = ['texas', 'san antonio', 'real estate', 'homes', 'property', 'realtor'];
-    const seoCount = seoTerms.filter(term => version.title.toLowerCase().includes(term) ||
-        version.description.toLowerCase().includes(term)).length;
-    score += Math.min(seoCount * 5, 25);
-    // Hashtag impact (25 points)
+    // PHASE 4: Hook strength with competitor patterns (25 points)
+    const competitorHooks = ['you won\'t believe', 'shocking', 'amazing', 'secret', 'hidden', 'nobody talks', 'how much', 'avoid this'];
+    const hasCompetitorHook = competitorHooks.some(hook => version.title.toLowerCase().includes(hook) ||
+        version.description.toLowerCase().includes(hook));
+    score += hasCompetitorHook ? 25 : 10;
+    // PHASE 4: SEO keyword integration (30 points)
+    const keywordMatches = trendingKeywords.filter(keyword => version.title.toLowerCase().includes(keyword.toLowerCase()) ||
+        version.description.toLowerCase().includes(keyword.toLowerCase())).length;
+    score += Math.min(keywordMatches * 10, 30);
+    // Hashtag optimization (20 points)
     const hashtagCount = topHashtags.filter(hashtag => version.description.includes(hashtag)).length;
-    score += Math.min(hashtagCount * 5, 25);
+    score += Math.min(hashtagCount * 4, 20);
     // Length optimization (15 points)
     const titleLength = version.title.length;
     if (titleLength >= 30 && titleLength <= 60)
@@ -188,26 +364,33 @@ async function scoreCaptionVersion(version, topHashtags, type) {
         score += 10;
     else
         score += 5;
-    // Type-specific bonuses (10 points)
+    // PHASE 4: Type-specific scoring with competitor analysis (10 points)
     switch (type) {
         case 'clickbait':
             if (version.title.includes('!') || version.title.includes('?'))
                 score += 5;
-            if (/\d+/.test(version.title))
+            if (/[0-9]/.test(version.title))
                 score += 5; // Contains numbers
             break;
-        case 'educational':
+        case 'informational':
             if (version.title.toLowerCase().includes('how') ||
                 version.title.toLowerCase().includes('why') ||
-                version.title.toLowerCase().includes('guide'))
+                version.title.toLowerCase().includes('guide') ||
+                version.title.toLowerCase().includes('tips'))
                 score += 10;
             break;
-        case 'story':
+        case 'emotional':
             if (version.description.toLowerCase().includes('client') ||
                 version.description.toLowerCase().includes('helped') ||
-                version.description.toLowerCase().includes('story'))
+                version.description.toLowerCase().includes('story') ||
+                version.description.toLowerCase().includes('journey'))
                 score += 10;
             break;
     }
-    return Math.min(score, 100);
+    // PHASE 4: Penalty for rule violations
+    if (version.title.includes('-') || version.description.includes('-'))
+        score -= 10;
+    if (/\$[0-9]/.test(version.title) || /\$[0-9]/.test(version.description))
+        score -= 20;
+    return Math.max(Math.min(score, 100), 0);
 }

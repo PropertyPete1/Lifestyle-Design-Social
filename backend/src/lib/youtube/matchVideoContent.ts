@@ -1,11 +1,8 @@
 import YouTubeVideo, { IYouTubeVideo } from '../../models/YouTubeVideo';
 import { 
   generateVideoFingerprint, 
-  analyzeVideoBuffer, 
-  compareFingerprints, 
-  createVideoSignature,
-  VideoFingerprint,
-  VideoMatch 
+  compareFingerprints,
+  VideoFingerprint
 } from './videoFingerprint';
 
 interface MatchResult {
@@ -35,17 +32,17 @@ export async function matchVideoContent(
     console.log(`🔍 Analyzing video content${filename ? ` for: ${filename}` : ''}...`);
     
     // Generate fingerprint from uploaded video
-    const uploadedFingerprint = analyzeVideoBuffer(videoBuffer);
-    console.log(`📊 Video analysis: ${uploadedFingerprint.fileSize} bytes, hash: ${uploadedFingerprint.contentHash}`);
+    const uploadedFingerprint = generateVideoFingerprint(videoBuffer, filename || 'uploaded_video');
+    console.log(`📊 Video analysis: ${uploadedFingerprint.size} bytes, hash: ${uploadedFingerprint.hash}`);
 
-    if (!uploadedFingerprint.contentHash) {
+    if (!uploadedFingerprint.hash) {
       console.log('❌ Could not generate content hash');
       return { isMatch: false, confidence: 0 };
     }
 
     // First, try exact content hash match (fastest)
     const exactMatch = await YouTubeVideo.findOne({
-      'videoFingerprint.contentHash': uploadedFingerprint.contentHash
+      'videoFingerprint.contentHash': uploadedFingerprint.hash
     });
 
     if (exactMatch) {
@@ -66,8 +63,8 @@ export async function matchVideoContent(
 
     // If no exact match, look for similar videos based on file size and duration
     const similarSizeRange = 0.2; // ±20% file size
-    const minSize = uploadedFingerprint.fileSize! * (1 - similarSizeRange);
-    const maxSize = uploadedFingerprint.fileSize! * (1 + similarSizeRange);
+    const minSize = uploadedFingerprint.size * (1 - similarSizeRange);
+    const maxSize = uploadedFingerprint.size * (1 + similarSizeRange);
 
     const candidates = await YouTubeVideo.find({
       $or: [
@@ -98,21 +95,20 @@ export async function matchVideoContent(
       if (!candidate.videoFingerprint) continue;
 
       const candidateFingerprint: VideoFingerprint = {
-        contentHash: candidate.videoFingerprint.contentHash,
-        fileSize: candidate.videoFingerprint.fileSize || 0,
-        duration: candidate.videoFingerprint.duration,
-        aspectRatio: candidate.videoFingerprint.aspectRatio
+        hash: candidate.videoFingerprint.contentHash || '',
+        size: candidate.videoFingerprint.fileSize || 0,
+        duration: candidate.videoFingerprint.duration
       };
 
-      const confidence = compareFingerprints(
+      const matchResult = compareFingerprints(
         uploadedFingerprint as VideoFingerprint, 
         candidateFingerprint
       );
 
-      console.log(`📊 "${candidate.title.substring(0, 40)}..." - Confidence: ${confidence}%`);
+      console.log(`📊 "${candidate.title.substring(0, 40)}..." - Confidence: ${matchResult.confidence}%`);
 
-      if (confidence > bestConfidence) {
-        bestConfidence = confidence;
+      if (matchResult.confidence > bestConfidence) {
+        bestConfidence = matchResult.confidence;
         bestMatch = candidate;
       }
     }
@@ -159,24 +155,22 @@ export async function storeVideoFingerprint(
 ): Promise<void> {
   try {
     const fingerprint = generateVideoFingerprint(videoBuffer, metadata);
-    const signature = createVideoSignature(fingerprint);
+    const signature = fingerprint.hash;
 
     await YouTubeVideo.findOneAndUpdate(
       { videoId },
       {
         $set: {
           videoFingerprint: {
-            contentHash: fingerprint.contentHash,
-            fileSize: fingerprint.fileSize,
-            duration: fingerprint.duration,
-            aspectRatio: fingerprint.aspectRatio,
-            signature: signature
+            contentHash: fingerprint.hash,
+            fileSize: fingerprint.size,
+            duration: fingerprint.duration
           }
         }
       }
     );
 
-    console.log(`📁 Stored fingerprint for video ${videoId}: ${signature}`);
+    console.log(`📁 Stored fingerprint for video ${videoId}: ${fingerprint.hash}`);
   } catch (error) {
     console.error('Error storing video fingerprint:', error);
   }

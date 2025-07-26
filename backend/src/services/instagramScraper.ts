@@ -269,7 +269,7 @@ export class InstagramScraper {
       }
 
       // Update TopHashtags collection
-      for (const [hashtag, stats] of hashtagStats.entries()) {
+      for (const [hashtag, stats] of Array.from(hashtagStats.entries())) {
         const avgViewScore = stats.usageCount > 0 ? stats.totalViews / stats.usageCount : 0;
         
         await TopHashtag.findOneAndUpdate(

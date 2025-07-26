@@ -63,7 +63,10 @@ async function connectToDatabase() {
             // Use default local MongoDB if no URI provided
             mongoUri = 'mongodb://localhost:27017/lifestyle-design-auto-poster';
         }
-        await mongoose_1.default.connect(mongoUri);
+        await mongoose_1.default.connect(mongoUri, {
+            serverSelectionTimeoutMS: 30000, // 30 second timeout
+            maxPoolSize: 10
+        });
         isConnected = true;
         console.log('Connected to MongoDB:', mongoUri.replace(/:[^:@]*@/, ':****@')); // Hide password in logs
     }

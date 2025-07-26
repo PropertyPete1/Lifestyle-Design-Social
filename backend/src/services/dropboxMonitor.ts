@@ -3,29 +3,41 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as cron from 'node-cron';
 import { VideoQueue } from './videoQueue';
+import { VideoStatus } from '../models/VideoStatus';
 import { generateVideoFingerprint, findDuplicateVideo } from '../lib/youtube/videoFingerprint';
 import { repostMonitor } from './repostMonitor';
 import { uploadToDropbox } from './dropbox';
 import { saveToLocal, getLocalFilePath } from './localStorage';
 import { getPeakPostTime } from '../lib/youtube/getPeakPostTime';
 import { connectToDatabase } from '../database/connection';
+import { v4 as uuidv4 } from 'uuid';
 
-// Get settings from settings.json
-function getSettings(): any {
-  const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
-  if (fs.existsSync(settingsPath)) {
-    try {
-      return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    } catch (e) {
-      console.error('Failed to read settings.json:', e);
+// Get settings from backend settings service instead of frontend settings.json
+async function getSettings(): Promise<any> {
+  try {
+    // Read from backend settings.json first for backward compatibility
+    const backendSettingsPath = path.resolve(__dirname, '../../settings.json');
+    if (fs.existsSync(backendSettingsPath)) {
+      const backendSettings = JSON.parse(fs.readFileSync(backendSettingsPath, 'utf-8'));
+      return backendSettings;
     }
+    
+    // Fallback to frontend settings if backend doesn't exist
+    const frontendSettingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
+    if (fs.existsSync(frontendSettingsPath)) {
+      return JSON.parse(fs.readFileSync(frontendSettingsPath, 'utf-8'));
+    }
+    
+    return {};
+  } catch (e) {
+    console.error('Failed to read settings:', e);
+    return {};
   }
-  return {};
 }
 
 // Initialize Dropbox client
-function getDropboxClient(): Dropbox | null {
-  const settings = getSettings();
+async function getDropboxClient(): Promise<Dropbox | null> {
+  const settings = await getSettings();
   const apiKey = process.env.DROPBOX_API_KEY || settings.dropboxApiKey;
   
   if (!apiKey) {
@@ -77,14 +89,23 @@ async function processDropboxVideo(
     const videoFingerprint = generateVideoFingerprint(buffer, filename);
     console.log(`Generated fingerprint: ${videoFingerprint.hash.substring(0, 12)}... (${videoFingerprint.size} bytes)`);
 
-    // Check for duplicates
-    const minDaysBeforeRepost = settings.minDaysBeforeRepost || 20;
-    const duplicateCheck = await findDuplicateVideo(videoFingerprint, VideoQueue, minDaysBeforeRepost);
+    // Check for duplicates using VideoStatus model
+    const minDaysBetweenPosts = settings.minDaysBetweenPosts || 20;
     
-    if (duplicateCheck.isDuplicate) {
-      console.log(`Skipping duplicate: ${filename} (last posted ${duplicateCheck.daysSinceLastPost} days ago)`);
-      monitorStats.duplicatesSkipped++;
-      return { success: false, reason: 'duplicate' };
+    const existingVideo = await VideoStatus.findOne({
+      'fingerprint.hash': videoFingerprint.hash
+    }).sort({ lastPosted: -1 });
+
+    if (existingVideo && existingVideo.lastPosted) {
+      const daysSinceLastPost = Math.floor(
+        (Date.now() - existingVideo.lastPosted.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysSinceLastPost < minDaysBetweenPosts) {
+        console.log(`Skipping duplicate: ${filename} (last posted ${daysSinceLastPost} days ago)`);
+        monitorStats.duplicatesSkipped++;
+        return { success: false, reason: 'duplicate' };
+      }
     }
 
     // Create shared link for storage
@@ -97,10 +118,40 @@ async function processDropboxVideo(
       storageUrl = await saveToLocal(buffer, filename);
     }
 
+    // Save file locally if needed
+    const videoId = uuidv4();
+    const timestamp = Date.now();
+    const localFilename = `${timestamp}_dropbox_${videoFingerprint.hash.substring(0, 8)}_${filename}`;
+    const localFilePath = path.join(process.cwd(), 'uploads', localFilename);
+    
+    // Ensure uploads directory exists
+    const uploadsDir = path.dirname(localFilePath);
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
+    // Save buffer to local file
+    fs.writeFileSync(localFilePath, buffer);
+
+    // Create VideoStatus record
+    const videoStatus = new VideoStatus({
+      videoId,
+      platform: 'instagram', // Default to Instagram for Dropbox uploads
+      fingerprint: videoFingerprint,
+      filename,
+      filePath: localFilePath,
+      uploadDate: new Date(),
+      captionGenerated: false,
+      posted: false,
+      status: 'pending'
+    });
+
+    await videoStatus.save();
+
     // Get optimal posting time
     const { recommendedTime } = getPeakPostTime();
 
-    // Add to video queue
+    // Also add to video queue for backward compatibility
     const videoQueueData = {
       type: 'real_estate',
       dropboxUrl: storageUrl,
@@ -110,9 +161,8 @@ async function processDropboxVideo(
       videoHash: videoFingerprint.hash,
       videoSize: videoFingerprint.size,
       videoDuration: videoFingerprint.duration,
-      filePath: storageUrl.startsWith('local://') ? 
-        getLocalFilePath(storageUrl.replace('local://', '')) : 
-        path.join(process.cwd(), 'uploads', filename)
+      platform: 'instagram',
+      filePath: localFilePath
     };
 
     const videoQueueEntry = new VideoQueue(videoQueueData);
@@ -138,7 +188,7 @@ async function processDropboxVideo(
  * Scan Dropbox folder for new videos
  */
 export async function scanDropboxFolder(): Promise<DropboxMonitorStats> {
-  const dbx = getDropboxClient();
+  const dbx = await getDropboxClient();
   if (!dbx) {
     return monitorStats;
   }
@@ -164,7 +214,7 @@ export async function scanDropboxFolder(): Promise<DropboxMonitorStats> {
     console.log(`Found ${videoFiles.length} video files in Dropbox`);
 
     // Process new files
-    const settings = getSettings();
+    const settings = await getSettings();
     for (const fileEntry of videoFiles) {
       // Only process file entries (not folders)
       if (fileEntry['.tag'] !== 'file') continue;

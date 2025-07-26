@@ -9,6 +9,7 @@ import { initializeScheduledJobs } from './src/lib/youtube/schedulePostJob';
 import { migrateFilePaths } from './src/lib/youtube/migrateFilePaths';
 import { startDropboxMonitoring } from './src/services/dropboxMonitor';
 import { repostMonitor } from './src/services/repostMonitor';
+import { audioMatchingScheduler } from './src/services/audioMatchingScheduler';
 import * as fs from 'fs';
 
 const app = express();
@@ -86,7 +87,11 @@ app.use('/api', indexRouter);
     console.log('🎯 Starting repost monitoring...');
     repostMonitor.startMonitoring(60); // Check every hour
     
-    console.log('🚀 Backend fully initialized with Phase 2 features');
+    // Start audio matching scheduler (Phase 3)
+    console.log('🎵 Starting audio matching scheduler...');
+    audioMatchingScheduler.start();
+    
+    console.log('🚀 Backend fully initialized with Phase 2 + Phase 3 features');
   } catch (error) {
     console.error('❌ Failed to initialize backend:', error);
   }

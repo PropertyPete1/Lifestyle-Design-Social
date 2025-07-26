@@ -34,129 +34,97 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateVideoFingerprint = generateVideoFingerprint;
-exports.analyzeVideoBuffer = analyzeVideoBuffer;
 exports.compareFingerprints = compareFingerprints;
-exports.createVideoSignature = createVideoSignature;
+exports.findDuplicateVideo = findDuplicateVideo;
 const crypto = __importStar(require("crypto"));
 /**
- * Generate a fingerprint from video buffer
- * This creates a unique signature based on video characteristics
+ * Generate a fingerprint for a video buffer to detect duplicates
+ * Uses combination of file size, hash of first chunk, and video metadata
  */
-function generateVideoFingerprint(buffer, metadata) {
-    // Create content hash from buffer
-    const contentHash = crypto.createHash('sha256').update(buffer).digest('hex');
-    const fingerprint = {
-        fileSize: buffer.length,
-        contentHash: contentHash.substring(0, 16), // First 16 chars for storage efficiency
+function generateVideoFingerprint(buffer, filename) {
+    const size = buffer.length;
+    // Create hash from first 64KB + last 64KB + size + filename pattern
+    const chunkSize = Math.min(64 * 1024, Math.floor(size / 4));
+    const firstChunk = buffer.slice(0, chunkSize);
+    const lastChunk = buffer.slice(-chunkSize);
+    // Extract filename without timestamp prefixes and extensions for content matching
+    const normalizedFilename = filename
+        .replace(/^\d+_/, '') // Remove timestamp prefix
+        .replace(/\.[^/.]+$/, '') // Remove extension
+        .toLowerCase();
+    const hash = crypto.createHash('sha256');
+    hash.update(firstChunk);
+    hash.update(lastChunk);
+    hash.update(Buffer.from(size.toString()));
+    hash.update(Buffer.from(normalizedFilename));
+    return {
+        hash: hash.digest('hex'),
+        size,
+        duration: undefined // Will be filled by video processing if available
     };
-    // Add metadata if available (from multer or video analysis)
-    if (metadata) {
-        fingerprint.duration = metadata.duration;
-        fingerprint.width = metadata.width;
-        fingerprint.height = metadata.height;
-        fingerprint.aspectRatio = metadata.width && metadata.height ?
-            Math.round((metadata.width / metadata.height) * 100) / 100 : undefined;
-        fingerprint.audioTrack = metadata.hasAudio;
-    }
-    return fingerprint;
 }
 /**
- * Simplified video analysis using basic buffer characteristics
- * This is a lightweight approach that doesn't require FFmpeg
+ * Check if two video fingerprints match (considering size tolerance)
  */
-function analyzeVideoBuffer(buffer) {
-    const fingerprint = {
-        fileSize: buffer.length,
-        contentHash: crypto.createHash('sha256').update(buffer).digest('hex').substring(0, 16)
-    };
-    // Simple heuristics for video analysis
-    try {
-        // Check for common video headers to estimate format
-        const header = buffer.slice(0, 100).toString('hex');
-        // MP4 detection
-        if (header.includes('667479704d70') || header.includes('667479706973')) {
-            fingerprint.aspectRatio = 16 / 9; // Common default
-        }
-        // MOV detection  
-        if (header.includes('6674797071742020')) {
-            fingerprint.aspectRatio = 16 / 9;
-        }
-        // Estimate duration based on file size (very rough)
-        // Typical video bitrates: 1-10 Mbps
-        const estimatedDurationSeconds = Math.round((buffer.length * 8) / (2 * 1024 * 1024)); // Assume 2Mbps avg
-        if (estimatedDurationSeconds > 5 && estimatedDurationSeconds < 300) { // 5s to 5min range
-            fingerprint.duration = estimatedDurationSeconds;
-        }
+function compareFingerprints(fp1, fp2, sizeTolerance = 0.02 // 2% size tolerance
+) {
+    // Exact hash match = 100% confidence
+    if (fp1.hash === fp2.hash) {
+        return { isMatch: true, confidence: 100 };
     }
-    catch (error) {
-        console.log('Video analysis error (non-fatal):', (error === null || error === void 0 ? void 0 : error.message) || error);
+    // Check size similarity
+    const sizeDiff = Math.abs(fp1.size - fp2.size) / Math.max(fp1.size, fp2.size);
+    if (sizeDiff <= sizeTolerance) {
+        // Similar size but different hash - possible re-encode or slight modification
+        const confidence = Math.max(0, 90 - (sizeDiff * 1000)); // Reduce confidence based on size difference
+        return { isMatch: confidence > 70, confidence: Math.round(confidence) };
     }
-    return fingerprint;
+    return { isMatch: false, confidence: 0 };
 }
 /**
- * Compare two video fingerprints and return match confidence
+ * Find duplicate videos in the database based on fingerprint
  */
-function compareFingerprints(fp1, fp2) {
-    let score = 0;
-    let factors = 0;
-    // Content hash match (highest weight)
-    if (fp1.contentHash === fp2.contentHash) {
-        return 100; // Exact match
+async function findDuplicateVideo(fingerprint, videoQueue, minDaysBeforeRepost = 20) {
+    // Look for exact hash matches first
+    const exactMatch = await videoQueue.findOne({
+        videoHash: fingerprint.hash,
+        status: { $in: ['posted', 'scheduled'] }
+    }).sort({ lastPostedAt: -1 });
+    if (exactMatch) {
+        const daysSince = exactMatch.lastPostedAt
+            ? Math.floor((Date.now() - exactMatch.lastPostedAt.getTime()) / (1000 * 60 * 60 * 24))
+            : 999;
+        return {
+            isDuplicate: daysSince < minDaysBeforeRepost,
+            lastPosted: exactMatch.lastPostedAt,
+            originalVideo: exactMatch,
+            daysSinceLastPost: daysSince
+        };
     }
-    // File size similarity (±5%)
-    if (fp1.fileSize && fp2.fileSize) {
-        const sizeDiff = Math.abs(fp1.fileSize - fp2.fileSize) / Math.max(fp1.fileSize, fp2.fileSize);
-        if (sizeDiff < 0.05)
-            score += 40;
-        else if (sizeDiff < 0.15)
-            score += 20;
-        factors++;
+    // Look for similar size videos (potential re-encodes)
+    const sizeTolerance = fingerprint.size * 0.02; // 2% tolerance
+    const similarVideos = await videoQueue.find({
+        videoSize: {
+            $gte: fingerprint.size - sizeTolerance,
+            $lte: fingerprint.size + sizeTolerance
+        },
+        status: { $in: ['posted', 'scheduled'] }
+    }).sort({ lastPostedAt: -1 });
+    for (const video of similarVideos) {
+        if (video.videoHash) {
+            const comparison = compareFingerprints(fingerprint, { hash: video.videoHash, size: video.videoSize, duration: video.videoDuration });
+            if (comparison.isMatch) {
+                const daysSince = video.lastPostedAt
+                    ? Math.floor((Date.now() - video.lastPostedAt.getTime()) / (1000 * 60 * 60 * 24))
+                    : 999;
+                return {
+                    isDuplicate: daysSince < minDaysBeforeRepost,
+                    lastPosted: video.lastPostedAt,
+                    originalVideo: video,
+                    daysSinceLastPost: daysSince
+                };
+            }
+        }
     }
-    // Duration similarity (±10%)
-    if (fp1.duration && fp2.duration) {
-        const durationDiff = Math.abs(fp1.duration - fp2.duration) / Math.max(fp1.duration, fp2.duration);
-        if (durationDiff < 0.1)
-            score += 30;
-        else if (durationDiff < 0.25)
-            score += 15;
-        factors++;
-    }
-    // Aspect ratio match
-    if (fp1.aspectRatio && fp2.aspectRatio) {
-        const ratioDiff = Math.abs(fp1.aspectRatio - fp2.aspectRatio);
-        if (ratioDiff < 0.1)
-            score += 20;
-        else if (ratioDiff < 0.3)
-            score += 10;
-        factors++;
-    }
-    // Resolution similarity
-    if (fp1.width && fp2.width && fp1.height && fp2.height) {
-        const resolutionMatch = (fp1.width === fp2.width && fp1.height === fp2.height);
-        if (resolutionMatch)
-            score += 10;
-        factors++;
-    }
-    // Audio track presence
-    if (fp1.audioTrack !== undefined && fp2.audioTrack !== undefined) {
-        if (fp1.audioTrack === fp2.audioTrack)
-            score += 5;
-        factors++;
-    }
-    // Normalize score based on available factors
-    return factors > 0 ? Math.min(Math.round(score / factors * (factors / 5)), 100) : 0;
-}
-/**
- * Create a simple hash-based signature for quick comparison
- * This can be used for database indexing
- */
-function createVideoSignature(fingerprint) {
-    var _a, _b, _c;
-    const components = [
-        fingerprint.contentHash,
-        (_a = fingerprint.fileSize) === null || _a === void 0 ? void 0 : _a.toString(),
-        (_b = fingerprint.duration) === null || _b === void 0 ? void 0 : _b.toString(),
-        (_c = fingerprint.aspectRatio) === null || _c === void 0 ? void 0 : _c.toString(),
-    ].filter(Boolean);
-    return crypto.createHash('md5').update(components.join('|')).digest('hex').substring(0, 12);
+    return { isDuplicate: false };
 }

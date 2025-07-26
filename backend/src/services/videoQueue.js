@@ -60,7 +60,16 @@ const VideoQueueSchema = new mongoose_1.Schema({
     publishedTags: [{ type: String }],
     audioTrackId: { type: String },
     errorMessage: { type: String },
-    filePath: { type: String }
+    filePath: { type: String },
+    // Video fingerprinting for repost detection
+    videoHash: { type: String },
+    videoDuration: { type: Number },
+    videoSize: { type: Number },
+    lastPostedAt: { type: Date },
+    // Repost functionality fields
+    isRepost: { type: Boolean, default: false },
+    originalVideoId: { type: String },
+    platform: { type: String, enum: ['youtube', 'instagram'] }
 });
 // Add scheduledTime field after schema creation
 VideoQueueSchema.add({

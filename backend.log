@@ -1,0 +1,53 @@
+
+> backend@0.0.0 dev
+> ts-node ./bin/www.ts
+
+🔌 Connecting to database...
+Connected to MongoDB: mongodb://localhost:27017/lifestyle-design-auto-poster
+🔄 Running migrations...
+🔄 Starting filePath migration for existing videos...
+Found 0 local videos missing filePath
+🎉 Migration complete! Updated 0 videos with filePath
+⏰ Initializing scheduled jobs...
+🕒 Video scheduled for posting at 2025-07-28T14:49:33.234Z
+🕒 Initialized 11 scheduled jobs
+📁 Starting Dropbox monitoring...
+🚀 Starting Dropbox folder monitoring...
+✅ Dropbox monitoring scheduled (every 10 minutes)
+🎯 Starting repost monitoring...
+🔄 Starting repost monitor - checking every 60 minutes
+🔍 Checking repost trigger conditions...
+🚀 Backend fully initialized with Phase 2 features
+🔍 Scanning Dropbox folder: /Lifestyle Social App Uploads/
+Found 0 new uploads since last repost trigger
+⌛ Repost threshold not reached yet
+Found 0 video files in Dropbox
+📊 Dropbox scan complete: 0 new, 0 duplicates, 0 errors
+[0mGET /api/insights/analytics [33m404 [0m2.238 ms - 161[0m
+[0mGET /api/settings [32m200 [0m1.422 ms - 2089[0m
+[0mPOST /api/insights/clear [33m404 [0m68.467 ms - 158[0m
+⏰ Scheduled Dropbox folder scan...
+🔍 Scanning Dropbox folder: /Lifestyle Social App Uploads/
+Found 0 video files in Dropbox
+📊 Dropbox scan complete: 0 new, 0 duplicates, 0 errors
+[0mGET /api/upload/dropbox-status [33m404 [0m1.424 ms - 164[0m
+[0mGET /api/youtube/videos [36m304 [0m111.206 ms - -[0m
+[0mGET /api/auto-poster/videos [33m404 [0m3.602 ms - 161[0m
+[0mGET /api/youtube/videos [36m304 [0m101.642 ms - -[0m
+⏰ Scheduled Dropbox folder scan...
+🔍 Scanning Dropbox folder: /Lifestyle Social App Uploads/
+Found 0 video files in Dropbox
+📊 Dropbox scan complete: 0 new, 0 duplicates, 0 errors
+[0mGET /api/youtube/videos [36m304 [0m87.551 ms - -[0m
+[0mGET /api/youtube/videos [36m304 [0m17.758 ms - -[0m
+[0mGET /api/youtube/videos [36m304 [0m48.380 ms - -[0m
+[0mGET /api/youtube/videos [36m304 [0m25.432 ms - -[0m
+⏰ Scheduled Dropbox folder scan...
+🔍 Scanning Dropbox folder: /Lifestyle Social App Uploads/
+Found 0 video files in Dropbox
+📊 Dropbox scan complete: 0 new, 0 duplicates, 0 errors
+[0mGET /api/audio/trending [33m404 [0m8.388 ms - 157[0m
+[0mGET /api/audio/trending [33m404 [0m2.233 ms - 157[0m
+[0mGET /api/settings [32m200 [0m14.570 ms - 2089[0m
+[0mGET /api/test [33m404 [0m0.510 ms - 147[0m
+[0mGET /api/youtube [33m404 [0m2.653 ms - 150[0m

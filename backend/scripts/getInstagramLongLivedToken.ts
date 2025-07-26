@@ -1,10 +1,3 @@
-// File path: backend/scripts/getInstagramLongLivedToken.ts
-
-// 🛠️ Instructions for Cursor:
-// ✅ This script fetches your Instagram long-lived token
-// ✅ Then sends it to your backend to store in your database
-// ✅ Do NOT save to .env
-
 import axios from 'axios';
 
 async function getLongLivedToken() {
@@ -14,27 +7,25 @@ async function getLongLivedToken() {
       {
         params: {
           grant_type: 'fb_exchange_token',
-          client_id: '1952344705305646',
-          client_secret: '03277b2d9d9ae7f177e0091374277ead',
-          fb_exchange_token: 'EAAbvpayjjC4BPLh8wE65baGZBnPYsZB6Ry1ZAZBTAf3aS1WhZAdOuikY67CUl2t63jcICaZA1ZCfVZB8XPzuYomRug0GfvTQihmSZBTNs6jyNBYXV3BeUFF6qzZC43d45dhmZAWq0xZAPXrmQZAEE7xxUE7TGteoFIyhGn6OnU7gH0VjvaGAaXqcg8xZBf5LJaCTsYVGh00kSb2qo6qitAmH78EUBh6OSVRONPNpzpLKFVMg1STolaA8CciH3kU7PhkgZDZD'
-        }
+          client_id: '2090398888156566', // Lifestyle Design Social App ID
+          client_secret: '4112c14a5aab0e9ec0305a26db826626', // Lifestyle Design Social App Secret
+          fb_exchange_token: 'EAAdtNOsq3ZAYBPAuZCH90BgZAavz3qy5ncKvyz88m3demwhYhSPEURKWZAGfm2Aq7ZBILagunlz7lt4brHknU1xaJKXCiPzc6cxEDWn33q2hlLeTHHjUWliHIWOLKxPuourBArPBsF8KSPQhc8Kddq4P3nNuzdee9WDpBdecMC9FgZBlm9bwZA2Kr2dgnokyZBTLO5Y5nDw1u1XjlbhpXU9MaY0VhYiJk8WuiWVALuEtr1mHyhWVucTdPgWLuZAEZD'
+        },
       }
     );
 
     const token = response.data.access_token;
     const expiresIn = response.data.expires_in;
 
-    console.log('✅ Token:', token);
-
-    // Send token to backend for saving
-    const saveResponse = await axios.post('http://localhost:3001/api/instagram/token/save', {
-      token,
-      expiresIn,
-    });
-
-    console.log('💾 Token saved in DB:', saveResponse.data);
+    console.log('✅ Long-lived token:', token);
+    console.log('🕒 Expires in (seconds):', expiresIn);
+    console.log('📅 Expires in (days):', Math.floor(expiresIn / 86400));
+    
+    console.log('\n📋 Copy this token to backend/settings.json:');
+    console.log(`"instagramAccessToken": "${token}"`);
+    
   } catch (error: any) {
-    console.error('❌ Failed to get or save token:', error.response?.data || error.message);
+    console.error('❌ Failed to fetch long-lived token:', error.response?.data || error.message);
   }
 }
 

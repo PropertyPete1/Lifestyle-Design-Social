@@ -371,41 +371,66 @@ router.get('/analytics', async (req: Request, res: Response) => {
 
     console.log('📊 Getting Instagram analytics...');
 
-    // Get account info - try different fields that might be available
-    const accountResponse = await fetch(`https://graph.facebook.com/v18.0/${settings.businessId}?fields=id,name,username,ig_id&access_token=${settings.accessToken}`);
+    // Get Facebook Page info first
+    const accountResponse = await fetch(`https://graph.facebook.com/v18.0/${settings.businessId}?fields=id,name,username&access_token=${settings.accessToken}`);
     
     let accountData: any = {};
     if (accountResponse.ok) {
       accountData = await accountResponse.json();
     }
 
-    // If we have an ig_id, try to get Instagram account data
+    // Try to get connected Instagram Business Account ID
     let instagramData: any = {};
-    if (accountData.ig_id) {
-      const igResponse = await fetch(`https://graph.facebook.com/v18.0/${accountData.ig_id}?fields=id,username,account_type,media_count,followers_count&access_token=${settings.accessToken}`);
-      if (igResponse.ok) {
-        instagramData = await igResponse.json();
+    let igBusinessAccountId = null;
+    
+    // Check if this Facebook Page has a connected Instagram Business Account
+    const igAccountResponse = await fetch(`https://graph.facebook.com/v18.0/${settings.businessId}?fields=instagram_business_account&access_token=${settings.accessToken}`);
+    if (igAccountResponse.ok) {
+      const igAccountData = await igAccountResponse.json();
+      if (igAccountData.instagram_business_account && igAccountData.instagram_business_account.id) {
+        igBusinessAccountId = igAccountData.instagram_business_account.id;
+        console.log(`📸 Found connected Instagram Business Account: ${igBusinessAccountId}`);
+        
+        // Get Instagram Business Account data
+        const igResponse = await fetch(`https://graph.facebook.com/v18.0/${igBusinessAccountId}?fields=id,username,followers_count,media_count,profile_picture_url&access_token=${settings.accessToken}`);
+        if (igResponse.ok) {
+          instagramData = await igResponse.json();
+          console.log(`✅ Got Instagram data: ${instagramData.followers_count} followers, ${instagramData.media_count} posts`);
+        }
+      } else {
+        console.log('⚠️ No Instagram Business Account connected to this Facebook Page');
+        console.log('💡 To get real Instagram data: Connect your Instagram Business Account to this Facebook Page');
       }
     }
 
-    // Get recent media with insights - try both page media and Instagram media
+    // Get recent media with insights - prioritize Instagram media for engagement data
     let mediaData = { data: [] };
     let totalLikes = 0;
     let totalComments = 0;
     let totalEngagement = 0;
     
-    // Try getting media from the page first
-    const pageMediaResponse = await fetch(`https://graph.facebook.com/v18.0/${settings.businessId}/media?fields=id,caption,media_type,media_url,permalink,timestamp&limit=20&access_token=${settings.accessToken}`);
-    
-    if (pageMediaResponse.ok) {
-      mediaData = await pageMediaResponse.json();
+    // Try Instagram-specific media FIRST (to get like_count and comments_count)
+    if (igBusinessAccountId) {
+      console.log(`📱 Fetching Instagram media for Business Account: ${igBusinessAccountId}`);
+      const igMediaResponse = await fetch(`https://graph.facebook.com/v18.0/${igBusinessAccountId}/media?fields=id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count&limit=20&access_token=${settings.accessToken}`);
+      if (igMediaResponse.ok) {
+        const igData = await igMediaResponse.json();
+        if (igData.data && igData.data.length > 0) {
+          mediaData = igData;
+          console.log(`✅ Got ${igData.data.length} Instagram posts with engagement data`);
+        }
+      } else {
+        console.log(`❌ Instagram media fetch failed: ${igMediaResponse.status}`);
+      }
     }
     
-    // If we have ig_id, try Instagram-specific media
-    if (accountData.ig_id && (!mediaData.data || mediaData.data.length === 0)) {
-      const igMediaResponse = await fetch(`https://graph.facebook.com/v18.0/${accountData.ig_id}/media?fields=id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count&limit=20&access_token=${settings.accessToken}`);
-      if (igMediaResponse.ok) {
-        mediaData = await igMediaResponse.json();
+    // Fallback to page media if Instagram media failed (but won't have engagement data)
+    if (!mediaData.data || mediaData.data.length === 0) {
+      console.log('📄 Falling back to page media...');
+      const pageMediaResponse = await fetch(`https://graph.facebook.com/v18.0/${settings.businessId}/media?fields=id,caption,media_type,media_url,permalink,timestamp&limit=20&access_token=${settings.accessToken}`);
+      if (pageMediaResponse.ok) {
+        mediaData = await pageMediaResponse.json();
+        console.log(`📄 Got ${mediaData.data?.length || 0} page posts (no engagement data)`);
       }
     }
     

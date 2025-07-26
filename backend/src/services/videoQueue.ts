@@ -28,6 +28,11 @@ export interface IVideoQueue extends Document {
   audioTrackId?: string;
   errorMessage?: string;
   filePath?: string;
+  // Video fingerprinting for repost detection
+  videoHash?: string;
+  videoDuration?: number;
+  videoSize?: number;
+  lastPostedAt?: Date;
 }
 
 const VideoQueueSchema = new Schema<IVideoQueue>({
@@ -55,7 +60,12 @@ const VideoQueueSchema = new Schema<IVideoQueue>({
   publishedTags: [{ type: String }],
   audioTrackId: { type: String },
   errorMessage: { type: String },
-  filePath: { type: String }
+  filePath: { type: String },
+  // Video fingerprinting for repost detection
+  videoHash: { type: String },
+  videoDuration: { type: Number },
+  videoSize: { type: Number },
+  lastPostedAt: { type: Date }
 });
 
 // Add scheduledTime field after schema creation

@@ -8,6 +8,8 @@ import { prepareSmartCaption } from '../../lib/youtube/prepareSmartCaption';
 import { matchAudioToVideo } from '../../lib/youtube/matchAudioToVideo';
 import { fetchTrendingAudio } from '../../lib/youtube/fetchTrendingAudio';
 import { getPeakPostTime } from '../../lib/youtube/getPeakPostTime';
+import { generateVideoFingerprint, findDuplicateVideo } from '../../lib/youtube/videoFingerprint';
+import { getMonitorStats, triggerManualScan } from '../../services/dropboxMonitor';
 import { connectToDatabase } from '../../database/connection';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -30,6 +32,19 @@ const upload = multer({
   }
 });
 
+// Get settings from settings.json
+function getSettings(): any {
+  const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
+  if (fs.existsSync(settingsPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    } catch (e) {
+      console.error('Failed to read settings.json:', e);
+    }
+  }
+  return {};
+}
+
 // Get OpenAI API key from settings
 function getOpenAIKey(): string {
   // Try environment variable first
@@ -38,19 +53,8 @@ function getOpenAIKey(): string {
   }
 
   // Try settings.json
-  const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
-  if (fs.existsSync(settingsPath)) {
-    try {
-      const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      if (settings.openaiApiKey) {
-        return settings.openaiApiKey;
-      }
-    } catch (e) {
-      console.error('Failed to read OpenAI API key from settings.json:', e);
-    }
-  }
-
-  return '';
+  const settings = getSettings();
+  return settings.openaiApiKey || '';
 }
 
 // POST /api/upload
@@ -93,6 +97,31 @@ router.post('/', (req: Request, res: Response) => {
 
     const filename = req.file.originalname;
     console.log(`Processing upload: ${filename} (${type})`);
+
+    // Generate video fingerprint for repost detection
+    const videoFingerprint = generateVideoFingerprint(req.file.buffer, filename);
+    console.log(`Generated fingerprint: ${videoFingerprint.hash.substring(0, 12)}... (${videoFingerprint.size} bytes)`);
+
+    // Get repost settings
+    const settings = getSettings();
+    const minDaysBeforeRepost = settings.minDaysBeforeRepost || 20;
+
+    // Check for duplicate videos using fingerprinting
+    const duplicateCheck = await findDuplicateVideo(videoFingerprint, VideoQueue, minDaysBeforeRepost);
+    
+    if (duplicateCheck.isDuplicate) {
+      return res.status(409).json({
+        error: 'Duplicate video detected',
+        message: `This video was already posted ${duplicateCheck.daysSinceLastPost} days ago. Minimum repost interval is ${minDaysBeforeRepost} days.`,
+        lastPosted: duplicateCheck.lastPosted,
+        originalVideo: {
+          filename: duplicateCheck.originalVideo.filename,
+          postedAt: duplicateCheck.originalVideo.lastPostedAt,
+          daysSinceLastPost: duplicateCheck.daysSinceLastPost
+        },
+        minDaysBeforeRepost
+      });
+    }
 
     // Check for repost detection using video content analysis FIRST (only for real_estate videos)
     let repostInfo = null;
@@ -190,7 +219,11 @@ router.post('/', (req: Request, res: Response) => {
       dropboxUrl: storageUrl,
       filename,
       status: storageType === 'failed' ? 'failed' : 'pending',
-      scheduledTime: recommendedTime
+      scheduledTime: recommendedTime,
+      // Add video fingerprint data
+      videoHash: videoFingerprint.hash,
+      videoSize: videoFingerprint.size,
+      videoDuration: videoFingerprint.duration
     };
 
     // Set filePath for local storage or keep for future Dropbox download capability
@@ -387,6 +420,201 @@ router.get('/file/:filename', (req: Request, res: Response) => {
     console.error('File serve error:', error);
     res.status(500).json({ 
       error: 'Failed to serve file', 
+      details: error.message 
+    });
+  }
+});
+
+// POST /api/upload/url
+// Upload video from URL with repost detection
+router.post('/url', async (req: Request, res: Response) => {
+  try {
+    await connectToDatabase();
+
+    const { url, type } = req.body;
+    
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ error: 'Valid video URL required' });
+    }
+
+    if (!type || !['real_estate', 'cartoon'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid type. Must be real_estate or cartoon' });
+    }
+
+    // Validate URL format
+    const videoExtensions = ['.mp4', '.mov', '.webm', '.avi', '.mkv', '.flv', '.wmv', '.m4v'];
+    const isVideoUrl = videoExtensions.some(ext => url.toLowerCase().includes(ext));
+    
+    if (!isVideoUrl) {
+      return res.status(400).json({ 
+        error: 'Invalid video URL', 
+        details: 'URL must point to a video file (.mp4, .mov, .webm, etc.)' 
+      });
+    }
+
+    console.log(`Processing URL upload: ${url} (${type})`);
+
+    // Download video from URL
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      return res.status(400).json({ 
+        error: 'Failed to download video', 
+        details: `HTTP ${response.status}: ${response.statusText}` 
+      });
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const filename = url.split('/').pop() || `video-${Date.now()}.mp4`;
+
+    console.log(`Downloaded ${buffer.length} bytes from URL`);
+
+    // Generate video fingerprint for repost detection
+    const videoFingerprint = generateVideoFingerprint(buffer, filename);
+    console.log(`Generated fingerprint: ${videoFingerprint.hash.substring(0, 12)}... (${videoFingerprint.size} bytes)`);
+
+    // Get repost settings
+    const settings = getSettings();
+    const minDaysBeforeRepost = settings.minDaysBeforeRepost || 20;
+
+    // Check for duplicate videos using fingerprinting
+    const duplicateCheck = await findDuplicateVideo(videoFingerprint, VideoQueue, minDaysBeforeRepost);
+    
+    if (duplicateCheck.isDuplicate) {
+      return res.status(409).json({
+        error: 'Duplicate video detected',
+        message: `This video was already posted ${duplicateCheck.daysSinceLastPost} days ago. Minimum repost interval is ${minDaysBeforeRepost} days.`,
+        lastPosted: duplicateCheck.lastPosted,
+        originalVideo: {
+          filename: duplicateCheck.originalVideo.filename,
+          postedAt: duplicateCheck.originalVideo.lastPostedAt,
+          daysSinceLastPost: duplicateCheck.daysSinceLastPost
+        },
+        minDaysBeforeRepost
+      });
+    }
+
+    // Upload to storage (try Dropbox first, fallback to local)
+    let storageUrl = '';
+    let storageType = '';
+    
+    try {
+      console.log('Uploading to Dropbox...');
+      storageUrl = await uploadToDropbox(buffer, filename);
+      storageType = 'dropbox';
+      console.log('✅ Dropbox upload successful');
+    } catch (dropboxError: any) {
+      console.log('⚠️ Dropbox upload failed, trying local storage...', dropboxError.message);
+      try {
+        storageUrl = await saveToLocal(buffer, filename);
+        storageType = 'local';
+        console.log('✅ Local storage successful');
+      } catch (localError: any) {
+        console.log('❌ Local storage also failed:', localError.message);
+        storageUrl = 'storage-failed';
+        storageType = 'failed';
+      }
+    }
+
+    // Get optimal posting time
+    const { recommendedTime } = getPeakPostTime();
+
+    // Add to video queue with fingerprint data
+    const videoQueueData: any = {
+      type,
+      dropboxUrl: storageUrl,
+      filename,
+      status: storageType === 'failed' ? 'failed' : 'pending',
+      scheduledTime: recommendedTime,
+      // Add video fingerprint data
+      videoHash: videoFingerprint.hash,
+      videoSize: videoFingerprint.size,
+      videoDuration: videoFingerprint.duration
+    };
+
+    // Set filePath for local storage
+    if (storageType === 'local') {
+      const localFilename = storageUrl.replace('local://', '');
+      videoQueueData.filePath = getLocalFilePath(localFilename);
+    } else if (storageType === 'dropbox') {
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      videoQueueData.filePath = path.join(uploadsDir, filename);
+    }
+
+    const videoQueueEntry = new VideoQueue(videoQueueData);
+    const savedEntry = await videoQueueEntry.save();
+    
+    // Update with scheduledTime after saving
+    await VideoQueue.findByIdAndUpdate(savedEntry._id, { 
+      scheduledTime: recommendedTime,
+      filePath: videoQueueData.filePath
+    });
+
+    res.json({
+      success: true,
+      message: storageType === 'failed' ? 
+        'Video processed successfully (storage failed)' : 
+        `Video uploaded successfully from URL (${storageType} storage)`,
+      videoId: videoQueueEntry._id,
+      filename,
+      storageUrl: storageType === 'failed' ? null : storageUrl,
+      storageType,
+      type,
+      sourceUrl: url,
+      storageStatus: storageType === 'failed' ? 'failed' : 'success'
+    });
+
+  } catch (error: any) {
+    console.error('URL upload error:', error);
+    
+    if (error.message.includes('fetch')) {
+      return res.status(400).json({ 
+        error: 'Failed to download video from URL', 
+        details: error.message 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'URL upload failed', 
+      details: error.message || 'Unknown error' 
+    });
+  }
+});
+
+// GET /api/upload/dropbox-status
+// Get Dropbox monitoring statistics
+router.get('/dropbox-status', (req: Request, res: Response) => {
+  try {
+    const stats = getMonitorStats();
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error: any) {
+    console.error('Dropbox status error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get Dropbox status', 
+      details: error.message 
+    });
+  }
+});
+
+// POST /api/upload/scan-dropbox
+// Manually trigger Dropbox folder scan
+router.post('/scan-dropbox', async (req: Request, res: Response) => {
+  try {
+    console.log('Manual Dropbox scan requested');
+    const stats = await triggerManualScan();
+    res.json({
+      success: true,
+      message: 'Dropbox scan completed',
+      stats
+    });
+  } catch (error: any) {
+    console.error('Manual Dropbox scan error:', error);
+    res.status(500).json({ 
+      error: 'Failed to scan Dropbox', 
       details: error.message 
     });
   }

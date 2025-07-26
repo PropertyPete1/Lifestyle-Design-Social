@@ -7,6 +7,7 @@ import cors from 'cors';
 import indexRouter from './src/routes/index';
 import { initializeScheduledJobs } from './src/lib/youtube/schedulePostJob';
 import { migrateFilePaths } from './src/lib/youtube/migrateFilePaths';
+import { startDropboxMonitoring } from './src/services/dropboxMonitor';
 import * as fs from 'fs';
 
 const app = express();
@@ -66,6 +67,7 @@ app.use('/api', indexRouter);
   try {
     await migrateFilePaths();
     await initializeScheduledJobs();
+    startDropboxMonitoring();
   } catch (error) {
     console.error('❌ Failed to initialize backend:', error);
   }

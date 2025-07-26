@@ -1,1 +1,8 @@
-{"test":"ok"}
+{
+  "dropboxApiKey": "sl.B4yG6vXKqRAo7Q5Q7UKoKcdq_xMoafQKWZ_8TwfBbLrWZwqGaLpWnKN3A49I_x4rM7HNrWCU_t6fBm_M3xk7o7Z2HqHl7K2a0D8UY_AXwB1_KZMpV3qL0mN9jlkwYdFg7p",
+  "openaiApiKey": "sk-proj-pJ4HsaJLgtXNcm0rwkx0T3BlbkFJB8l0Af96FQWdLfYZdoMN",
+  "instagramAccessToken": "EAAG1ZBoVJJhQBOZCZBK9G8qAF1YQ7xHoZCKJ4",
+  "youtubeApiKey": "AIzaSyD8WKvdMqNJH6X8nQPzYhF5wFnPnN-qZ2s",
+  "tiktokAccessToken": "tiktok_access_token_here",
+  "runwayApiKey": "rw_sk_test_1234567890abcdef"
+}

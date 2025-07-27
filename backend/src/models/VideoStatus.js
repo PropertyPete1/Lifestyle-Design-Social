@@ -50,7 +50,21 @@ const VideoStatusSchema = new mongoose_1.Schema({
     filename: { type: String, required: true },
     filePath: { type: String },
     status: { type: String, enum: ['pending', 'processing', 'ready', 'posted', 'failed'], default: 'pending' },
-    errorMessage: { type: String }
+    errorMessage: { type: String },
+    repostData: {
+        originalVideoId: { type: String },
+        originalCaption: { type: String },
+        newCaption: { type: String },
+        isRepost: { type: Boolean, default: false }
+    },
+    phase8Status: { type: String, enum: ['not_processed', 'processing', 'completed', 'failed'], default: 'not_processed' },
+    phase8ProcessedAt: { type: Date },
+    phase8Platform: { type: String, enum: ['youtube', 'instagram'] },
+    phase8PolishedTitle: { type: String },
+    phase8PolishedDescription: { type: String },
+    phase8Hashtags: [{ type: String }],
+    phase8AudioTrackId: { type: String },
+    phase8ProcessedVideoPath: { type: String }
 });
 // Add indexes for efficient queries
 VideoStatusSchema.index({ 'fingerprint.hash': 1 });

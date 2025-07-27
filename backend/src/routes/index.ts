@@ -7,6 +7,9 @@ import insightsRouter from './api/insights';
 import insightsSimpleRouter from './api/insights-simple';
 import testRouter from './api/test';
 import audioRouter from './api/audio';
+import peakHoursRouter from './api/peakHours';
+import repostRouter from './api/repost';
+import finalPolishRouter from './api/finalPolish';
 import youtubeOAuthRouter from './youtube/oauth';
 
 const router = express.Router();
@@ -19,6 +22,9 @@ router.use('/settings', settingsRouter);
 router.use('/insights', insightsRouter);
 router.use('/insights-simple', insightsSimpleRouter);
 router.use('/audio', audioRouter);
+router.use('/peak-hours', peakHoursRouter);
+router.use('/repost', repostRouter);
+router.use('/final-polish', finalPolishRouter);
 router.use('/test', testRouter);
 
 export default router;

@@ -1,4 +1,6 @@
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface VideoFingerprint {
   hash: string;
@@ -122,4 +124,22 @@ export async function findDuplicateVideo(
   }
   
   return { isDuplicate: false };
+} 
+
+/**
+ * Get repost cooldown settings from settings.json
+ */
+export function getRepostSettings(): { minDaysBeforeRepost: number } {
+  const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
+  if (fs.existsSync(settingsPath)) {
+    try {
+      const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+      return {
+        minDaysBeforeRepost: settings.minDaysBeforeRepost || 20
+      };
+    } catch (e) {
+      console.error('Failed to read settings.json:', e);
+    }
+  }
+  return { minDaysBeforeRepost: 20 };
 } 

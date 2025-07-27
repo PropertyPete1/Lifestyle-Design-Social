@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as cron from 'node-cron';
 import { VideoQueue } from './videoQueue';
 import { VideoStatus } from '../models/VideoStatus';
-import { generateVideoFingerprint, findDuplicateVideo } from '../lib/youtube/videoFingerprint';
+import { generateVideoFingerprint, findDuplicateVideo, getRepostSettings } from '../lib/youtube/videoFingerprint';
 import { repostMonitor } from './repostMonitor';
 import { uploadToDropbox } from './dropbox';
 import { saveToLocal, getLocalFilePath } from './localStorage';
@@ -90,7 +90,8 @@ async function processDropboxVideo(
     console.log(`Generated fingerprint: ${videoFingerprint.hash.substring(0, 12)}... (${videoFingerprint.size} bytes)`);
 
     // Check for duplicates using VideoStatus model
-    const minDaysBetweenPosts = settings.minDaysBetweenPosts || 20;
+    const repostSettings = getRepostSettings();
+  const minDaysBetweenPosts = repostSettings.minDaysBeforeRepost;
     
     const existingVideo = await VideoStatus.findOne({
       'fingerprint.hash': videoFingerprint.hash

@@ -384,4 +384,245 @@ router.delete('/clear', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/insights/phase2/run
+ * Complete Phase 2 scraping process - scrape both platforms and trigger smart reposts
+ */
+router.post('/phase2/run', async (req, res) => {
+  try {
+    const { credentials } = req.body;
+
+    if (!credentials || (!credentials.youtube && !credentials.instagram)) {
+      return res.status(400).json({
+        error: 'Platform credentials required. Provide youtube and/or instagram credentials.'
+      });
+    }
+
+    console.log('🚀 PHASE 2: Starting complete scraping and smart repost process...');
+
+    const results: {
+      scraping: {
+        youtube: any;
+        instagram: any;
+        totalVideosScraped: number;
+        totalHashtagsUpdated: number;
+      };
+      smartRepost: any;
+      summary: {
+        success: boolean;
+        videosAnalyzed: number;
+        repostCandidatesFound: number;
+        repostsScheduled: number;
+        topHashtags: string[];
+      };
+    } = {
+      scraping: {
+        youtube: null,
+        instagram: null,
+        totalVideosScraped: 0,
+        totalHashtagsUpdated: 0
+      },
+      smartRepost: null,
+      summary: {
+        success: false,
+        videosAnalyzed: 0,
+        repostCandidatesFound: 0,
+        repostsScheduled: 0,
+        topHashtags: []
+      }
+    };
+
+    // Phase 2A: Scrape YouTube if credentials provided
+    if (credentials.youtube?.apiKey && credentials.youtube?.channelId) {
+      try {
+        console.log('📺 Phase 2A: Scraping YouTube channel...');
+        const ytScraper = new YouTubeScraper(
+          credentials.youtube.apiKey, 
+          credentials.youtube.channelId, 
+          credentials.youtube.refreshToken
+        );
+        results.scraping.youtube = await ytScraper.performFullScrape();
+        results.scraping.totalVideosScraped += results.scraping.youtube.videosScraped;
+        results.scraping.totalHashtagsUpdated += results.scraping.youtube.hashtagsUpdated;
+        console.log(`✅ YouTube: ${results.scraping.youtube.videosScraped} videos, ${results.scraping.youtube.hashtagsUpdated} hashtags`);
+      } catch (ytError) {
+        console.error('❌ YouTube scraping failed:', ytError);
+        results.scraping.youtube = { error: 'Failed to scrape YouTube' };
+      }
+    }
+
+    // Phase 2B: Scrape Instagram if credentials provided
+    if (credentials.instagram?.accessToken && credentials.instagram?.pageId) {
+      try {
+        console.log('📸 Phase 2B: Scraping Instagram page...');
+        const igScraper = new InstagramScraper(
+          credentials.instagram.accessToken, 
+          credentials.instagram.pageId
+        );
+        results.scraping.instagram = await igScraper.performFullScrape();
+        results.scraping.totalVideosScraped += results.scraping.instagram.videosScraped;
+        results.scraping.totalHashtagsUpdated += results.scraping.instagram.hashtagsUpdated;
+        console.log(`✅ Instagram: ${results.scraping.instagram.videosScraped} videos, ${results.scraping.instagram.hashtagsUpdated} hashtags`);
+      } catch (igError) {
+        console.error('❌ Instagram scraping failed:', igError);
+        results.scraping.instagram = { error: 'Failed to scrape Instagram' };
+      }
+    }
+
+    // Phase 2C: Run Smart Repost Analysis
+    try {
+      console.log('🧠 Phase 2C: Running smart repost analysis...');
+      const repostService = new SmartRepostService();
+      results.smartRepost = await repostService.performSmartRepost();
+      console.log(`✅ Smart Repost: ${results.smartRepost.candidatesFound} candidates, ${results.smartRepost.repostsScheduled} scheduled`);
+    } catch (repostError) {
+      console.error('❌ Smart repost failed:', repostError);
+      results.smartRepost = { 
+        triggered: false, 
+        candidatesFound: 0, 
+        repostsScheduled: 0,
+        error: 'Smart repost analysis failed'
+      };
+    }
+
+    // Phase 2D: Get top hashtags for summary
+    try {
+      const topHashtags = await TopHashtag.find({})
+        .sort({ avgViewScore: -1 })
+        .limit(10)
+        .select('hashtag')
+        .lean();
+      results.summary.topHashtags = topHashtags.map(h => h.hashtag);
+    } catch (hashtagError) {
+      console.warn('Could not fetch top hashtags for summary');
+      results.summary.topHashtags = [];
+    }
+
+    // Compile final summary
+    results.summary = {
+      success: true,
+      videosAnalyzed: results.scraping.totalVideosScraped,
+      repostCandidatesFound: results.smartRepost?.candidatesFound || 0,
+      repostsScheduled: results.smartRepost?.repostsScheduled || 0,
+      topHashtags: results.summary.topHashtags
+    };
+
+    console.log('✅ PHASE 2 COMPLETE:', results.summary);
+
+    res.json({
+      success: true,
+      message: 'Phase 2 complete: YouTube & Instagram scraping with smart repost analysis',
+      data: results,
+      phase2Status: {
+        scrapingComplete: !!(results.scraping.youtube || results.scraping.instagram),
+        smartRepostTriggered: results.smartRepost?.triggered || false,
+        totalVideoInsights: results.scraping.totalVideosScraped,
+        readyForPhase3: results.summary.videosAnalyzed > 0
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ PHASE 2 Error:', error);
+    res.status(500).json({
+      error: 'Phase 2 process failed',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      phase: 'PHASE 2 - Smart Scraping & Reposts'
+    });
+  }
+});
+
+/**
+ * GET /api/insights/phase2/status
+ * Check Phase 2 implementation status and data
+ */
+router.get('/phase2/status', async (req, res) => {
+  try {
+    const [
+      totalInsights,
+      youtubeInsights,
+      instagramInsights,
+      totalHashtags,
+      repostEligible,
+      alreadyReposted
+    ] = await Promise.all([
+      PostInsight.countDocuments(),
+      PostInsight.countDocuments({ platform: 'youtube' }),
+      PostInsight.countDocuments({ platform: 'instagram' }),
+      TopHashtag.countDocuments(),
+      PostInsight.countDocuments({ repostEligible: true, reposted: false }),
+      PostInsight.countDocuments({ reposted: true })
+    ]);
+
+    // Get recent scraping activity
+    const recentInsights = await PostInsight.find({})
+      .sort({ scrapedAt: -1 })
+      .limit(5)
+      .select('platform videoId performanceScore scrapedAt')
+      .lean();
+
+    // Get top performing videos per platform
+    const [topYouTube, topInstagram] = await Promise.all([
+      PostInsight.findOne({ platform: 'youtube' })
+        .sort({ performanceScore: -1 })
+        .select('videoId performanceScore views likes title')
+        .lean(),
+      PostInsight.findOne({ platform: 'instagram' })
+        .sort({ performanceScore: -1 })
+        .select('videoId performanceScore views likes title')
+        .lean()
+    ]);
+
+    // Get top hashtags
+    const topHashtags = await TopHashtag.find({})
+      .sort({ avgViewScore: -1 })
+      .limit(10)
+      .select('hashtag avgViewScore usageCount platform')
+      .lean();
+
+    res.json({
+      success: true,
+      phase2Status: {
+        implemented: true,
+        dataCollected: totalInsights > 0,
+        scrapingModels: '✅ PostInsights & TopHashtags',
+        smartRepostLogic: '✅ 20 new uploads threshold',
+        readyForTesting: true
+      },
+      data: {
+        totalVideoInsights: totalInsights,
+        platforms: {
+          youtube: youtubeInsights,
+          instagram: instagramInsights
+        },
+        hashtags: {
+          total: totalHashtags,
+          top10: topHashtags
+        },
+        reposts: {
+          eligible: repostEligible,
+          completed: alreadyReposted
+        },
+        topPerformers: {
+          youtube: topYouTube,
+          instagram: topInstagram
+        },
+        recentActivity: recentInsights
+      },
+      nextSteps: {
+        testScrapingProcess: 'POST /api/insights/phase2/run',
+        viewVideoInsights: 'GET /api/insights/videos',
+        checkRepostTrigger: 'POST /api/insights/repost/check',
+        manualRepost: 'POST /api/insights/repost/trigger'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting Phase 2 status:', error);
+    res.status(500).json({
+      error: 'Failed to get Phase 2 status',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router; 

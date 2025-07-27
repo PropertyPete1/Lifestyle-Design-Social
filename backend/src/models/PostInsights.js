@@ -47,7 +47,8 @@ const PostInsightSchema = new mongoose_1.Schema({
     },
     caption: {
         type: String,
-        required: true
+        required: false,
+        default: ''
     },
     hashtags: [{
             type: String
@@ -64,6 +65,9 @@ const PostInsightSchema = new mongoose_1.Schema({
     reposted: {
         type: Boolean,
         default: false
+    },
+    repostedAt: {
+        type: Date
     },
     originalPostDate: {
         type: Date,

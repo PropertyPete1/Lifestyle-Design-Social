@@ -47,16 +47,23 @@ async function connectToDatabase() {
         return;
     }
     try {
-        // Load MongoDB URI from settings.json or environment
-        const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
+        // Load MongoDB URI from backend settings.json or environment
+        const settingsPath = path.resolve(__dirname, '../../settings.json');
+        const backupSettingsPath = path.resolve(__dirname, '../../../settings.json');
         let mongoUri = process.env.MONGODB_URI;
-        if (fs.existsSync(settingsPath)) {
-            try {
-                const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-                mongoUri = settings.mongoDbUri || mongoUri;
-            }
-            catch (e) {
-                // Ignore parse errors
+        // Try backend/settings.json first, then root settings.json
+        const pathsToCheck = [settingsPath, backupSettingsPath];
+        for (const settingsFile of pathsToCheck) {
+            if (fs.existsSync(settingsFile)) {
+                try {
+                    const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
+                    mongoUri = settings.mongoUri || settings.mongoDbUri || mongoUri;
+                    if (mongoUri)
+                        break;
+                }
+                catch (e) {
+                    // Ignore parse errors and try next file
+                }
             }
         }
         if (!mongoUri) {

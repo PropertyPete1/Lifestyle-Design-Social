@@ -160,7 +160,7 @@ export class YouTubeScraper {
           await PostInsight.create({
             platform: 'youtube',
             videoId: video.videoId,
-            caption: video.description,
+            caption: video.description || video.title || 'No description available',
             hashtags,
             performanceScore,
             repostEligible: true,

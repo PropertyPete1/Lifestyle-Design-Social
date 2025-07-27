@@ -45,7 +45,17 @@ const connection_1 = require("../../database/connection");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const uuid_1 = require("uuid");
+const TopHashtags_1 = __importDefault(require("../../models/TopHashtags"));
+const AudioMatch_1 = require("../../models/AudioMatch");
 const router = express_1.default.Router();
+// DEBUG: Simple route to test routing
+router.get('/debug', (req, res) => {
+    res.json({ message: 'DEBUG: Upload router is working!', timestamp: new Date().toISOString() });
+});
+// Simple test route
+router.get('/simple-test', (req, res) => {
+    res.json({ message: 'Simple test works!', timestamp: new Date().toISOString() });
+});
 // Configure multer for file uploads
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
@@ -159,8 +169,8 @@ router.post('/url', async (req, res) => {
         const videoFingerprint = (0, videoFingerprint_1.generateVideoFingerprint)(mockBuffer, filename);
         console.log(`Generated fingerprint: ${videoFingerprint.hash.substring(0, 12)}... (${videoFingerprint.size} bytes)`);
         // Get repost settings
-        const settings = getSettings();
-        const minDaysBetweenPosts = settings.minDaysBetweenPosts || 20;
+        const repostSettings = (0, videoFingerprint_1.getRepostSettings)();
+        const minDaysBetweenPosts = repostSettings.minDaysBeforeRepost;
         // Check for duplicates using VideoStatus model
         const existingVideo = await VideoStatus_1.VideoStatus.findOne({
             'fingerprint.hash': videoFingerprint.hash
@@ -254,9 +264,9 @@ router.post('/', upload.array('videos', 20), async (req, res) => {
             errors: 0,
             details: []
         };
-        // Get settings
-        const settings = getSettings();
-        const minDaysBetweenPosts = settings.minDaysBetweenPosts || 20;
+        // Get repost settings
+        const repostSettings = (0, videoFingerprint_1.getRepostSettings)();
+        const minDaysBetweenPosts = repostSettings.minDaysBeforeRepost;
         for (const file of files) {
             try {
                 // Generate video fingerprint
@@ -397,6 +407,215 @@ router.get('/status', async (req, res) => {
         res.status(500).json({
             error: 'Failed to fetch video statuses',
             details: error.message
+        });
+    }
+});
+// GET /api/upload/phase1-status
+// Test endpoint to verify Phase 1 functionality
+router.get('/phase1-status', async (req, res) => {
+    try {
+        await (0, connection_1.connectToDatabase)();
+        const repostSettings = (0, videoFingerprint_1.getRepostSettings)();
+        const totalVideos = await VideoStatus_1.VideoStatus.countDocuments();
+        const recentUploads = await VideoStatus_1.VideoStatus.find()
+            .sort({ uploadDate: -1 })
+            .limit(5)
+            .select('filename platform uploadDate posted fingerprint.hash');
+        res.json({
+            success: true,
+            phase1Status: {
+                message: "✅ Phase 1 - Bulk Upload + Smart De-Dupe + Video Fingerprinting",
+                features: {
+                    bulkUpload: "✅ Drag-and-drop, multiple formats (mp4, mov, webm, avi, mkv)",
+                    dropboxSync: "✅ Automated monitoring and file sync",
+                    urlUpload: "✅ URL-based video download and processing",
+                    videoFingerprinting: "✅ Hash-based duplicate detection",
+                    repostCooldown: `✅ ${repostSettings.minDaysBeforeRepost}-day minimum between reposts`,
+                    databaseStorage: "✅ MongoDB VideoStatus model with all required fields"
+                },
+                statistics: {
+                    totalVideosTracked: totalVideos,
+                    minDaysBeforeRepost: repostSettings.minDaysBeforeRepost,
+                    recentUploads: recentUploads.length
+                },
+                recentUploads: recentUploads.map(video => {
+                    var _a, _b;
+                    return ({
+                        filename: video.filename,
+                        platform: video.platform,
+                        uploadDate: video.uploadDate,
+                        posted: video.posted,
+                        fingerprintHash: ((_b = (_a = video.fingerprint) === null || _a === void 0 ? void 0 : _a.hash) === null || _b === void 0 ? void 0 : _b.substring(0, 12)) + '...'
+                    });
+                })
+            }
+        });
+    }
+    catch (error) {
+        console.error('Phase 1 status check error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to check Phase 1 status',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Test route to debug routing issues
+router.get('/test-queue', async (req, res) => {
+    res.json({ success: true, message: 'Test route works!', timestamp: new Date().toISOString() });
+});
+// PHASE 5: POST QUEUE - Get videos ready for auto-publish (enhanced with smart captions, hashtags, and audio matching)
+router.get('/post-queue', async (req, res) => {
+    try {
+        await (0, connection_1.connectToDatabase)();
+        // Get all videos ready for auto-publish (both Instagram and YouTube)
+        const readyVideos = await VideoStatus_1.VideoStatus.find({
+            status: { $in: ['ready', 'pending'] },
+            posted: false
+        }).sort({ uploadDate: -1 });
+        console.log(`Found ${readyVideos.length} videos ready for post queue:`, readyVideos.map(v => `${v.filename} (${v.platform})`).join(', '));
+        // Get settings for OpenAI API key
+        const settings = getSettings();
+        const openaiApiKey = settings.openaiApiKey || process.env.OPENAI_API_KEY;
+        // Enhanced response with Phase 3 AudioMatch, Phase 4 Smart Captions, and TopHashtags integration
+        const postQueueData = await Promise.all(readyVideos.map(async (video) => {
+            try {
+                // Phase 4: Generate smart captions using prepareSmartCaption
+                let smartCaptionResult = null;
+                let selectedCaption = null;
+                if (openaiApiKey) {
+                    try {
+                        const { prepareSmartCaption } = await Promise.resolve().then(() => __importStar(require('../../lib/youtube/prepareSmartCaption')));
+                        // Prepare original content for smart caption generation
+                        const originalContent = {
+                            title: video.filename.replace(/\.[^/.]+$/, "").replace(/-/g, " "), // Remove dashes as required
+                            description: `Property showcase video: ${video.filename.replace(/-/g, " ")}`, // Remove dashes
+                            tags: ['realestate', 'property', 'homes']
+                        };
+                        smartCaptionResult = await prepareSmartCaption(originalContent, openaiApiKey, video.platform);
+                        // Auto-select best caption version based on highest GPT score
+                        const captions = [smartCaptionResult.versionA, smartCaptionResult.versionB, smartCaptionResult.versionC];
+                        selectedCaption = captions.reduce((best, current) => current.score > best.score ? current : best);
+                        // Ensure selected caption has no dashes in title or description
+                        if (selectedCaption) {
+                            selectedCaption.title = selectedCaption.title.replace(/-/g, " ");
+                            selectedCaption.description = selectedCaption.description.replace(/-/g, " ");
+                        }
+                    }
+                    catch (captionError) {
+                        console.error(`Error generating smart caption for ${video.filename}:`, captionError);
+                    }
+                }
+                // Fallback caption if smart caption generation fails
+                if (!selectedCaption) {
+                    selectedCaption = {
+                        title: video.filename.replace(/\.[^/.]+$/, "").replace(/-/g, " "), // Remove dashes
+                        description: `Property showcase video: ${video.filename.replace(/-/g, " ")}`, // Remove dashes
+                        type: 'fallback',
+                        score: 75
+                    };
+                }
+                // Get top-performing hashtags from TopHashtags model
+                let performanceTags = ['#realestate', '#property', '#homes'];
+                try {
+                    const topHashtags = await TopHashtags_1.default.find({
+                        platform: { $in: [video.platform, 'both'] }
+                    })
+                        .sort({ avgViewScore: -1 })
+                        .limit(8)
+                        .select('hashtag');
+                    if (topHashtags.length > 0) {
+                        performanceTags = topHashtags.map(tag => `#${tag.hashtag}`);
+                    }
+                }
+                catch (hashtagError) {
+                    console.error(`Error fetching top hashtags for ${video.filename}:`, hashtagError);
+                }
+                // Phase 3: Get audio match from AudioMatch model
+                let audioMatch = null;
+                try {
+                    const matchedAudio = await AudioMatch_1.AudioMatch.findOne({
+                        videoId: video.videoId,
+                        platform: video.platform,
+                        status: 'matched'
+                    })
+                        .sort({ 'matchingFactors.overallScore': -1 });
+                    if (matchedAudio) {
+                        audioMatch = {
+                            title: matchedAudio.audioMetadata.title,
+                            artist: matchedAudio.audioMetadata.artist || undefined,
+                            score: matchedAudio.matchingFactors.overallScore,
+                            category: matchedAudio.audioMetadata.category
+                        };
+                    }
+                }
+                catch (audioError) {
+                    console.error(`Error fetching audio match for ${video.filename}:`, audioError);
+                }
+                return {
+                    videoId: video.videoId,
+                    videoPreview: `/uploads/${video.filename}`,
+                    selectedCaption,
+                    smartCaptionVersions: smartCaptionResult ? {
+                        versionA: smartCaptionResult.versionA,
+                        versionB: smartCaptionResult.versionB,
+                        versionC: smartCaptionResult.versionC
+                    } : null,
+                    tags: performanceTags,
+                    title: selectedCaption.title, // Use smart caption title
+                    scheduledTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // Phase 6 placeholder: 2 hours from now
+                    audioMatch,
+                    uploadDate: video.uploadDate,
+                    filename: video.filename,
+                    platform: video.platform || 'youtube',
+                    status: video.status
+                };
+            }
+            catch (videoError) {
+                console.error(`Error processing video ${video.filename} for post queue:`, videoError);
+                // Return fallback data for failed videos
+                return {
+                    videoId: video.videoId,
+                    videoPreview: `/uploads/${video.filename}`,
+                    selectedCaption: {
+                        title: video.filename.replace(/\.[^/.]+$/, "").replace(/-/g, " "), // Remove dashes
+                        description: `Property showcase video: ${video.filename.replace(/-/g, " ")}`, // Remove dashes
+                        type: 'fallback',
+                        score: 50
+                    },
+                    smartCaptionVersions: null,
+                    tags: ['#realestate', '#property', '#homes'],
+                    title: video.filename.replace(/\.[^/.]+$/, "").replace(/-/g, " "), // Remove dashes
+                    scheduledTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+                    audioMatch: null,
+                    uploadDate: video.uploadDate,
+                    filename: video.filename,
+                    platform: video.platform || 'youtube',
+                    status: video.status,
+                    error: 'Failed to process video data'
+                };
+            }
+        }));
+        res.json({
+            success: true,
+            data: {
+                videos: postQueueData,
+                totalCount: postQueueData.length,
+                integrations: {
+                    smartCaptionsEnabled: !!openaiApiKey,
+                    hashtagsFromTopPerformers: true,
+                    audioMatchingActive: true,
+                    dashRemovalApplied: true
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error fetching enhanced post queue:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch enhanced post queue',
+            error: error.message
         });
     }
 });

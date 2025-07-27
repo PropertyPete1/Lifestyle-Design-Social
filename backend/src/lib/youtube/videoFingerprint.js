@@ -36,7 +36,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateVideoFingerprint = generateVideoFingerprint;
 exports.compareFingerprints = compareFingerprints;
 exports.findDuplicateVideo = findDuplicateVideo;
+exports.getRepostSettings = getRepostSettings;
 const crypto = __importStar(require("crypto"));
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 /**
  * Generate a fingerprint for a video buffer to detect duplicates
  * Uses combination of file size, hash of first chunk, and video metadata
@@ -127,4 +130,22 @@ async function findDuplicateVideo(fingerprint, videoQueue, minDaysBeforeRepost =
         }
     }
     return { isDuplicate: false };
+}
+/**
+ * Get repost cooldown settings from settings.json
+ */
+function getRepostSettings() {
+    const settingsPath = path.resolve(__dirname, '../../../frontend/settings.json');
+    if (fs.existsSync(settingsPath)) {
+        try {
+            const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+            return {
+                minDaysBeforeRepost: settings.minDaysBeforeRepost || 20
+            };
+        }
+        catch (e) {
+            console.error('Failed to read settings.json:', e);
+        }
+    }
+    return { minDaysBeforeRepost: 20 };
 }

@@ -105,7 +105,8 @@ async function processDropboxVideo(dbx, fileEntry, settings) {
         const videoFingerprint = (0, videoFingerprint_1.generateVideoFingerprint)(buffer, filename);
         console.log(`Generated fingerprint: ${videoFingerprint.hash.substring(0, 12)}... (${videoFingerprint.size} bytes)`);
         // Check for duplicates using VideoStatus model
-        const minDaysBetweenPosts = settings.minDaysBetweenPosts || 20;
+        const repostSettings = (0, videoFingerprint_1.getRepostSettings)();
+        const minDaysBetweenPosts = repostSettings.minDaysBeforeRepost;
         const existingVideo = await VideoStatus_1.VideoStatus.findOne({
             'fingerprint.hash': videoFingerprint.hash
         }).sort({ lastPosted: -1 });

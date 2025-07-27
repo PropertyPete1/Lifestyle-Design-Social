@@ -48,6 +48,8 @@ const migrateFilePaths_1 = require("./src/lib/youtube/migrateFilePaths");
 const dropboxMonitor_1 = require("./src/services/dropboxMonitor");
 const repostMonitor_1 = require("./src/services/repostMonitor");
 const audioMatchingScheduler_1 = require("./src/services/audioMatchingScheduler");
+const scheduler_1 = require("./src/lib/peakHours/scheduler");
+const smartRepostTrigger_1 = require("./src/lib/repost/smartRepostTrigger");
 const fs = __importStar(require("fs"));
 const app = (0, express_1.default)();
 // Load API keys from settings.json if present
@@ -119,7 +121,13 @@ app.use('/api', index_1.default);
         // Start audio matching scheduler (Phase 3)
         console.log('🎵 Starting audio matching scheduler...');
         audioMatchingScheduler_1.audioMatchingScheduler.start();
-        console.log('🚀 Backend fully initialized with Phase 2 + Phase 3 features');
+        // Start peak hours scheduler (Phase 6)
+        console.log('🕒 Starting peak hours scheduler...');
+        scheduler_1.peakHoursScheduler.startScheduler();
+        // Start smart repost trigger (Phase 7)
+        console.log('🔄 Starting smart repost trigger...');
+        smartRepostTrigger_1.smartRepostTrigger.startTrigger();
+        console.log('🚀 Backend fully initialized with ALL PHASES (1-7) complete');
     }
     catch (error) {
         console.error('❌ Failed to initialize backend:', error);

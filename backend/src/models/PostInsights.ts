@@ -8,6 +8,7 @@ export interface IPostInsight extends Document {
   performanceScore: number;
   repostEligible: boolean;
   reposted: boolean;
+  repostedAt?: Date;
   originalPostDate: Date;
   views?: number;
   likes?: number;
@@ -30,7 +31,8 @@ const PostInsightSchema: Schema = new Schema({
   },
   caption: {
     type: String,
-    required: true
+    required: false,
+    default: ''
   },
   hashtags: [{
     type: String
@@ -47,6 +49,9 @@ const PostInsightSchema: Schema = new Schema({
   reposted: {
     type: Boolean,
     default: false
+  },
+  repostedAt: {
+    type: Date
   },
   originalPostDate: {
     type: Date,

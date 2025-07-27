@@ -45,11 +45,12 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 /**
  * PHASE 4: Generate 3 smart caption versions optimized with competitor patterns and SEO
- * @param originalContent - Original YouTube video content
+ * @param originalContent - Original video content
  * @param openaiApiKey - OpenAI API key for GPT requests
+ * @param platform - Target platform (youtube or instagram)
  * @returns Three scored caption versions with enhanced SEO and competitor analysis
  */
-async function prepareSmartCaption(originalContent, openaiApiKey) {
+async function prepareSmartCaption(originalContent, openaiApiKey, platform = 'youtube') {
     try {
         const openai = new openai_1.default({ apiKey: openaiApiKey });
         // Get top-performing hashtags from YouTube insights
@@ -60,31 +61,23 @@ async function prepareSmartCaption(originalContent, openaiApiKey) {
         const marketKeywords = await (0, fetchTrendingKeywords_1.getTrendingKeywordsByCategory)('market', 2);
         const competitorPatterns = await (0, fetchCompetitorCaptions_1.extractCaptionPatterns)();
         const patternElements = (0, fetchCompetitorCaptions_1.getRandomPatternElements)(competitorPatterns);
-        // Auto-save YouTube channel ID if this is the first API call
-        await autoSaveChannelId();
+        // Get platform-specific competitor data
+        const instagramPosts = platform === 'instagram' ? await (0, fetchCompetitorCaptions_1.fetchInstagramCompetitorPosts)() : [];
+        // Auto-save channel ID if this is the first API call
+        await autoSaveChannelId(platform);
         const localSeoTerms = [
             'San Antonio', 'Texas real estate', 'San Antonio homes', 'Texas property',
             'SA realtor', 'South Texas', 'Alamo City', 'Texas market', 'Hill Country'
         ];
-        // PHASE 4: Critical rules for caption generation
-        const criticalRules = `
-🔒 CRITICAL PHASE 4 RULES - MANDATORY COMPLIANCE:
-1. ABSOLUTELY NO PRICING: Never mention dollar amounts ($), costs, prices, or financial figures (price already shown in video)
-2. NO DASHES: Never use dashes "-" anywhere in caption text (use commas, periods, or spaces instead)
-3. SEO KEYWORD INJECTION: Naturally inject 2-3 trending keywords: ${trendingKeywords.slice(0, 3).join(', ')}
-4. COMPETITOR PATTERNS: Must mimic proven successful patterns: ${JSON.stringify(patternElements)}
-5. LOCAL SEO: Include 1-2 local terms: ${localSeoTerms.slice(0, 2).join(', ')}
-6. TOP HASHTAGS: Include 3-4 performance hashtags: ${topHashtags.slice(0, 4).join(' ')}
-7. NO CONTRADICTIONS: Must align with video content without revealing specifics
-8. PRICE ALTERNATIVES: Use terms like "amazing value", "great opportunity", "incredible deal" instead of numbers
-`;
+        // PHASE 4: Platform-specific optimization rules
+        const platformRules = getPlatformSpecificRules(platform, topHashtags, trendingKeywords, localSeoTerms);
         // PHASE 4: Enhanced base prompt with comprehensive SEO and competitor intelligence
         const basePrompt = `
 Original Title: ${originalContent.title}
 Original Description: ${originalContent.description}
 Original Tags: ${originalContent.tags.join(', ')}
 
-${criticalRules}
+${platformRules.criticalRules}
 
 PHASE 4 SEO INTELLIGENCE:
 - Top Trending Keywords: ${trendingKeywords.join(', ')}
@@ -102,6 +95,11 @@ COMPETITOR PATTERN INTELLIGENCE:
 
 Selected Pattern Elements: ${JSON.stringify(patternElements)}
 
+${platform === 'instagram' ? `
+INSTAGRAM-SPECIFIC PATTERNS (from top performers):
+${instagramPosts.slice(0, 3).map(post => `- ${post.caption.substring(0, 100)}...`).join('\n')}
+` : ''}
+
 ENHANCED CAPTION OBJECTIVES:
 - Maintain core message with fresh, engaging wording
 - Naturally weave in 2-3 trending keywords for discoverability
@@ -109,7 +107,7 @@ ENHANCED CAPTION OBJECTIVES:
 - Include strategic local SEO for San Antonio/Texas market
 - Add top-performing hashtags for algorithm boost
 - Follow proven title structures from successful real estate creators
-- Optimize for YouTube Shorts/Instagram engagement without price conflicts
+- Optimize for ${platform} engagement without price conflicts
 `;
         const prompts = [
             {
@@ -125,7 +123,7 @@ SPECIFIC REQUIREMENTS:
 - MANDATORY: Include these trending SEO keywords naturally: ${trendingKeywords.slice(0, 2).join(' + ')} 
 - Add strategic emojis: ${patternElements.emoji} and 1-2 others from list
 - Focus on transformation/benefit without revealing price
-- Keep title under 60 characters for mobile optimization
+- Keep title under ${platformRules.titleLength} characters for ${platform} optimization
 - Include call to action: "${patternElements.callToAction}"
 - STRICTLY NO dashes "-" anywhere in text (use spaces/commas instead)
 - ABSOLUTELY NO price mentions or dollar amounts
@@ -151,6 +149,7 @@ SPECIFIC REQUIREMENTS:
 - Include helpful call to action from competitor patterns
 - STRICTLY NO dashes "-" anywhere in text (use spaces/commas instead)
 - ABSOLUTELY NO price mentions or dollar amounts
+- ${platform === 'instagram' ? 'Use Instagram-style engagement hooks like "Save this post!" or "Tag someone who needs this"' : ''}
 
 COMPETITOR AUTHORITY PHRASES: ${competitorPatterns.commonPhrases.slice(0, 3).join(', ')}
 
@@ -173,6 +172,7 @@ SPECIFIC REQUIREMENTS:
 - Use emotional emojis from competitor analysis: ${competitorPatterns.emojis.slice(5, 8).join(' ')}
 - STRICTLY NO dashes "-" anywhere in text (use spaces/commas instead)
 - ABSOLUTELY NO price mentions or dollar amounts
+- ${platform === 'instagram' ? 'Include Instagram storytelling elements like "Swipe to see their journey" or "Their faces said it all"' : ''}
 
 STORY OPENERS: ${competitorPatterns.commonPhrases.filter(p => p.includes('client') || p.includes('helped')).join(', ')}
 
@@ -215,18 +215,18 @@ Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
         // PHASE 4: Enhanced scoring with competitor pattern analysis
         const versionA = {
             ...responses[0],
-            score: await scoreCaptionVersion(responses[0], topHashtags, trendingKeywords, 'clickbait')
+            score: await scoreCaptionVersion(responses[0], topHashtags, trendingKeywords, 'clickbait', platform)
         };
         const versionB = {
             ...responses[1],
-            score: await scoreCaptionVersion(responses[1], topHashtags, trendingKeywords, 'informational')
+            score: await scoreCaptionVersion(responses[1], topHashtags, trendingKeywords, 'informational', platform)
         };
         const versionC = {
             ...responses[2],
-            score: await scoreCaptionVersion(responses[2], topHashtags, trendingKeywords, 'emotional')
+            score: await scoreCaptionVersion(responses[2], topHashtags, trendingKeywords, 'emotional', platform)
         };
         // Log Phase 4 completion
-        console.log('✅ PHASE 4 Smart Captions Generated:', {
+        console.log(`✅ PHASE 4 Smart Captions Generated for ${platform.toUpperCase()}:`, {
             keywordsInjected: trendingKeywords.slice(0, 3),
             competitorPatterns: Object.keys(patternElements),
             versions: ['clickbait', 'informational', 'emotional'],
@@ -246,6 +246,43 @@ Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
             versionA: { ...fallbackVersion, type: 'clickbait' },
             versionB: { ...fallbackVersion, type: 'informational' },
             versionC: { ...fallbackVersion, type: 'emotional' }
+        };
+    }
+}
+/**
+ * PHASE 4: Get platform-specific optimization rules
+ */
+function getPlatformSpecificRules(platform, topHashtags, trendingKeywords, localSeoTerms) {
+    const baseRules = `
+🔒 CRITICAL PHASE 4 RULES - MANDATORY COMPLIANCE:
+1. ABSOLUTELY NO PRICING: Never mention dollar amounts ($), costs, prices, or financial figures (price already shown in video)
+2. NO DASHES: Never use dashes "-" anywhere in caption text (use commas, periods, or spaces instead)
+3. SEO KEYWORD INJECTION: Naturally inject 2-3 trending keywords: ${trendingKeywords.slice(0, 3).join(', ')}
+4. LOCAL SEO: Include 1-2 local terms: ${localSeoTerms.slice(0, 2).join(', ')}
+5. TOP HASHTAGS: Include 3-4 performance hashtags: ${topHashtags.slice(0, 4).join(' ')}
+6. NO CONTRADICTIONS: Must align with video content without revealing specifics
+7. PRICE ALTERNATIVES: Use terms like "amazing value", "great opportunity", "incredible deal" instead of numbers
+`;
+    if (platform === 'instagram') {
+        return {
+            criticalRules: baseRules + `
+8. INSTAGRAM OPTIMIZATION: Use Instagram-specific engagement tactics
+9. STORY ELEMENTS: Include "Swipe to see", "Tag someone", "Save this post"
+10. COMMUNITY FOCUS: Encourage comments with questions like "Which would you choose?"
+11. VISUAL REFERENCES: Reference multiple slides/images when applicable
+12. HASHTAG STRATEGY: Use mix of niche and broad hashtags for discovery`,
+            titleLength: 125 // Instagram caption length optimization
+        };
+    }
+    else {
+        return {
+            criticalRules: baseRules + `
+8. YOUTUBE OPTIMIZATION: Focus on searchability and click-through rate
+9. VIDEO REFERENCES: Include timestamps and "full tour inside" language
+10. RETENTION HOOKS: Create curiosity gaps to increase watch time
+11. EDUCATIONAL FOCUS: Position content as valuable learning resource
+12. THUMBNAIL ALIGNMENT: Ensure title matches expected thumbnail content`,
+            titleLength: 60 // YouTube title length optimization
         };
     }
 }
@@ -271,10 +308,10 @@ function cleanCaptionText(text) {
     return cleaned;
 }
 /**
- * Auto-save YouTube channel ID after first API call (Phase 4 requirement)
+ * Auto-save platform channel/account ID after first API call (Phase 4 requirement)
  * Never ask user for channel ID again once detected
  */
-async function autoSaveChannelId() {
+async function autoSaveChannelId(platform) {
     try {
         const settingsPath = path_1.default.join(process.cwd(), 'settings.json');
         const backupPath = path_1.default.join(process.cwd(), 'backend', 'settings.json');
@@ -288,29 +325,30 @@ async function autoSaveChannelId() {
             settings = JSON.parse(fs_1.default.readFileSync(backupPath, 'utf8'));
             targetPath = backupPath;
         }
+        const settingKey = platform === 'instagram' ? 'instagramAccountId' : 'youtubeChannelId';
         // Only save if not already set (avoid asking user again)
-        if (!settings.youtubeChannelId || settings.youtubeChannelId === '') {
-            // Auto-detect from any previously saved videos or use default
+        if (!settings[settingKey] || settings[settingKey] === '') {
+            // Auto-detect from any previously saved data or use default
             const { getChannelId } = await Promise.resolve().then(() => __importStar(require('../../models/ChannelSettings')));
             const savedChannelId = await getChannelId();
             if (savedChannelId) {
-                settings.youtubeChannelId = savedChannelId;
+                settings[settingKey] = savedChannelId;
                 fs_1.default.writeFileSync(targetPath, JSON.stringify(settings, null, 2));
-                console.log('✅ YouTube channel ID auto-saved from database:', savedChannelId);
+                console.log(`✅ ${platform} account ID auto-saved from database:`, savedChannelId);
             }
             else {
                 // Set auto-detection placeholder
-                settings.youtubeChannelId = 'AUTO_DETECT_ON_NEXT_API_CALL';
+                settings[settingKey] = 'AUTO_DETECT_ON_NEXT_API_CALL';
                 fs_1.default.writeFileSync(targetPath, JSON.stringify(settings, null, 2));
-                console.log('✅ YouTube channel ID set for auto-detection');
+                console.log(`✅ ${platform} account ID set for auto-detection`);
             }
         }
         else {
-            console.log('✅ YouTube channel ID already configured:', settings.youtubeChannelId);
+            console.log(`✅ ${platform} account ID already configured:`, settings[settingKey]);
         }
     }
     catch (error) {
-        console.error('Error auto-saving channel ID:', error);
+        console.error(`Error auto-saving ${platform} account ID:`, error);
     }
 }
 /**
@@ -342,10 +380,10 @@ async function getTopPerformingHashtags() {
 /**
  * PHASE 4: Enhanced caption scoring with SEO and competitor pattern analysis (1-100)
  */
-async function scoreCaptionVersion(version, topHashtags, trendingKeywords, type) {
+async function scoreCaptionVersion(version, topHashtags, trendingKeywords, type, platform) {
     let score = 0;
     // PHASE 4: Hook strength with competitor patterns (25 points)
-    const competitorHooks = ['you won\'t believe', 'shocking', 'amazing', 'secret', 'hidden', 'nobody talks', 'how much', 'avoid this'];
+    const competitorHooks = ['you won\'t believe', 'shocking', 'amazing', 'secret', 'hidden', 'nobody talks', 'how much', 'avoid this', 'just sold', 'pov:', 'wild'];
     const hasCompetitorHook = competitorHooks.some(hook => version.title.toLowerCase().includes(hook) ||
         version.description.toLowerCase().includes(hook));
     score += hasCompetitorHook ? 25 : 10;
@@ -356,11 +394,12 @@ async function scoreCaptionVersion(version, topHashtags, trendingKeywords, type)
     // Hashtag optimization (20 points)
     const hashtagCount = topHashtags.filter(hashtag => version.description.includes(hashtag)).length;
     score += Math.min(hashtagCount * 4, 20);
-    // Length optimization (15 points)
+    // Platform-specific length optimization (15 points)
     const titleLength = version.title.length;
-    if (titleLength >= 30 && titleLength <= 60)
+    const optimalRange = platform === 'instagram' ? [80, 125] : [30, 60];
+    if (titleLength >= optimalRange[0] && titleLength <= optimalRange[1])
         score += 15;
-    else if (titleLength >= 20 && titleLength <= 80)
+    else if (titleLength >= optimalRange[0] - 10 && titleLength <= optimalRange[1] + 20)
         score += 10;
     else
         score += 5;
@@ -386,6 +425,19 @@ async function scoreCaptionVersion(version, topHashtags, trendingKeywords, type)
                 version.description.toLowerCase().includes('journey'))
                 score += 10;
             break;
+    }
+    // PHASE 4: Platform-specific bonus scoring (5 points)
+    if (platform === 'instagram') {
+        const instagramElements = ['save this', 'tag someone', 'swipe to', 'comment below', 'drop your guess'];
+        const hasInstagramElement = instagramElements.some(element => version.description.toLowerCase().includes(element));
+        if (hasInstagramElement)
+            score += 5;
+    }
+    else if (platform === 'youtube') {
+        const youtubeElements = ['full tour', 'inside', 'breakdown', 'don\'t miss'];
+        const hasYoutubeElement = youtubeElements.some(element => version.description.toLowerCase().includes(element));
+        if (hasYoutubeElement)
+            score += 5;
     }
     // PHASE 4: Penalty for rule violations
     if (version.title.includes('-') || version.description.includes('-'))

@@ -5,11 +5,15 @@ import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import cors from 'cors';
 import indexRouter from './src/routes/index';
+import phase9Router from './src/routes/api/phase9';
 import { initializeScheduledJobs } from './src/lib/youtube/schedulePostJob';
 import { migrateFilePaths } from './src/lib/youtube/migrateFilePaths';
 import { startDropboxMonitoring } from './src/services/dropboxMonitor';
 import { repostMonitor } from './src/services/repostMonitor';
 import { audioMatchingScheduler } from './src/services/audioMatchingScheduler';
+import { peakHoursScheduler } from './src/lib/peakHours/scheduler';
+import { smartRepostTrigger } from './src/lib/repost/smartRepostTrigger';
+import { phase9Monitor } from './src/services/phase9Monitor';
 import * as fs from 'fs';
 
 const app = express();
@@ -63,6 +67,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api', indexRouter);
+app.use('/api/phase9', phase9Router);
 
 // Run migration and initialize scheduled jobs on server start
 (async () => {
@@ -91,7 +96,19 @@ app.use('/api', indexRouter);
     console.log('🎵 Starting audio matching scheduler...');
     audioMatchingScheduler.start();
     
-    console.log('🚀 Backend fully initialized with Phase 2 + Phase 3 features');
+    // Start peak hours scheduler (Phase 6)
+    console.log('🕒 Starting peak hours scheduler...');
+    peakHoursScheduler.startScheduler();
+    
+    // Start smart repost trigger (Phase 7)
+    console.log('🔄 Starting smart repost trigger...');
+    smartRepostTrigger.startTrigger();
+    
+    // Start Phase 9 intelligent content repurposing monitor
+    console.log('🤖 Starting Phase 9 intelligent content repurposing...');
+    await phase9Monitor.start();
+    
+    console.log('🚀 Backend fully initialized with ALL PHASES (1-9) complete');
   } catch (error) {
     console.error('❌ Failed to initialize backend:', error);
   }

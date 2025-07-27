@@ -5,10 +5,15 @@
   "scripts": {
     "start": "ts-node ./bin/www",
     "dev": "ts-node ./bin/www.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test:phase2": "ts-node ./src/lib/youtube/testPhase2.ts",
+    "test:phase6": "ts-node ./src/lib/youtube/testPhase6.ts",
+    "test:phase8": "ts-node ./src/lib/youtube/testPhase8.ts",
+    "test:phase9": "ts-node ./src/lib/youtube/testPhase9.ts"
   },
   "dependencies": {
     "@runwayml/sdk": "^2.5.0",
+    "@types/fluent-ffmpeg": "^2.1.27",
     "@types/node-cron": "^3.0.11",
     "@types/uuid": "^10.0.0",
     "axios": "^1.11.0",
@@ -18,6 +23,7 @@
     "dotenv": "^17.2.0",
     "dropbox": "^10.34.0",
     "express": "~4.16.1",
+    "fluent-ffmpeg": "^2.1.3",
     "googleapis": "^154.0.0",
     "mongoose": "^8.16.4",
     "morgan": "~1.9.1",

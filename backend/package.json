@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node bin/www.js",
+    "start": "node dist/bin/www.js",
     "dev": "ts-node ./bin/www.ts",
     "build": "tsc",
     "postbuild": "cp -r public dist/ && mkdir -p dist/uploads dist/temp_audio dist/temp_processing"

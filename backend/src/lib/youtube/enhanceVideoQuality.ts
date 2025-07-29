@@ -1,4 +1,4 @@
-import * as ffmpeg from 'fluent-ffmpeg';
+import ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -86,10 +86,10 @@ export class VideoQualityEnhancer {
           '-pix_fmt', 'yuv420p', // Standard pixel format
           '-movflags', '+faststart' // Optimize for streaming
         ])
-        .on('start', (commandLine) => {
+        .on('start', (commandLine: string) => {
           console.log('🎬 FFmpeg enhancement started:', commandLine.substring(0, 100) + '...');
         })
-        .on('progress', (progress) => {
+        .on('progress', (progress: any) => {
           if (progress.percent) {
             console.log(`   🔄 Enhancement progress: ${Math.round(progress.percent)}%`);
           }
@@ -98,7 +98,7 @@ export class VideoQualityEnhancer {
           console.log('✅ Video enhancement completed successfully');
           resolve();
         })
-        .on('error', (err) => {
+        .on('error', (err: Error) => {
           console.error('❌ FFmpeg enhancement error:', err.message);
           reject(err);
         });

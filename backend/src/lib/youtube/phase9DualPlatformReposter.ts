@@ -470,7 +470,7 @@ Generate YouTube description:`;
         .select('hashtag');
       
       if (trendingHashtags.length > 0) {
-        const hashtags = trendingHashtags.map(item => 
+        const hashtags = trendingHashtags.map((item: any) => 
           item.hashtag.startsWith('#') ? item.hashtag : `#${item.hashtag}`
         );
         console.log(`📱 Using ${hashtags.length} trending Instagram hashtags`);
@@ -509,7 +509,7 @@ Generate YouTube description:`;
         .select('hashtag');
       
       if (trendingHashtags.length > 0) {
-        const hashtags = trendingHashtags.map(item => 
+        const hashtags = trendingHashtags.map((item: any) => 
           item.hashtag.startsWith('#') ? item.hashtag : `#${item.hashtag}`
         );
         console.log(`📺 Using ${hashtags.length} trending YouTube hashtags`);

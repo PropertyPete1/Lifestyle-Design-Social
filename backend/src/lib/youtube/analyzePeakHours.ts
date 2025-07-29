@@ -69,7 +69,7 @@ async function fetchLastYouTubeVideos(count: number): Promise<YouTubeVideoData[]
         API_KEY = API_KEY || settings.youtubeApiKey;
         CHANNEL_ID = CHANNEL_ID || settings.youtubeChannelId;
       } catch (error) {
-        console.warn('Could not load settings file:', error.message);
+        console.warn('Could not load settings file:', error instanceof Error ? error.message : 'Unknown error');
       }
     }
     

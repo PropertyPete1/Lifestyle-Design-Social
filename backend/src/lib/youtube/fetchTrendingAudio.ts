@@ -31,21 +31,21 @@ const TRENDING_AUDIO_SIMULATION: AudioTrack[] = [
     audioTrackId: 'hype_001',
     title: 'Epic Victory Beat',
     category: 'hype',
-    sampleUrl: null,
+    sampleUrl: '',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'hype_002',
     title: 'Motivation Rising',
     category: 'hype',
-    sampleUrl: null,
+    sampleUrl: '',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'hype_003',
     title: 'Success Anthem',
     category: 'hype',
-    sampleUrl: null,
+    sampleUrl: '',
     lastUpdated: new Date()
   },
   

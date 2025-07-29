@@ -6,7 +6,7 @@
     "start": "node dist/bin/www.js",
     "dev": "ts-node ./bin/www.ts",
     "build": "tsc",
-    "postbuild": "cp -r public dist/ && mkdir -p dist/uploads dist/temp_audio dist/temp_processing"
+    "postbuild": "cp -r public dist/ && cp settings.json dist/ && mkdir -p dist/uploads dist/temp_audio dist/temp_processing"
   },
   "dependencies": {
     "@runwayml/sdk": "^2.5.0",

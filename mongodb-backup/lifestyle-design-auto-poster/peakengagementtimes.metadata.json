@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"platform":{"$numberInt":"1"},"dayOfWeek":{"$numberInt":"1"},"hour":{"$numberInt":"1"}},"name":"platform_1_dayOfWeek_1_hour_1","background":true,"unique":true}],"uuid":"a9c4b2182cb842399434dec04ccb7227","collectionName":"peakengagementtimes","type":"collection"}

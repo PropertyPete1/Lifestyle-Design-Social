@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"hashtag":{"$numberInt":"1"}},"name":"hashtag_1","background":true,"unique":true}],"uuid":"5976dcd4b130454eb7aeb7df7ff8bb3a","collectionName":"testtophashtags","type":"collection"}

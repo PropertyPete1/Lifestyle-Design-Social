@@ -6,9 +6,12 @@ import path from 'path';
 
 const router = express.Router();
 
-// Load settings
-const settingsPath = path.join(__dirname, '../../../settings.json');
-const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+// Load settings from environment or fallback to defaults
+const settings = {
+  phase9AutopilotMode: process.env.PHASE9_AUTOPILOT_MODE || 'both',
+  maxRepostsPerDay: parseInt(process.env.MAX_REPOSTS_PER_DAY || '8'),
+  minDaysBetweenPosts: parseInt(process.env.MIN_DAYS_BETWEEN_POSTS || '30')
+};
 
 /**
  * GET /api/repost/status

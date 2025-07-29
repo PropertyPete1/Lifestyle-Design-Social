@@ -10,7 +10,9 @@ const router = express.Router();
 const settings = {
   phase9AutopilotMode: process.env.PHASE9_AUTOPILOT_MODE || 'both',
   maxRepostsPerDay: parseInt(process.env.MAX_REPOSTS_PER_DAY || '8'),
-  minDaysBetweenPosts: parseInt(process.env.MIN_DAYS_BETWEEN_POSTS || '30')
+  minDaysBetweenPosts: parseInt(process.env.MIN_DAYS_BETWEEN_POSTS || '30'),
+  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lifestyle-design-auto-poster',
+  mongoDatabase: process.env.MONGO_DATABASE || 'lifestyle-design-auto-poster'
 };
 
 /**

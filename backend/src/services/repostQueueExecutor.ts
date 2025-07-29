@@ -1,14 +1,21 @@
 import * as cron from 'node-cron';
 import { RepostQueue, IRepostQueue } from '../models/RepostQueue';
-import { Phase9DualPlatformReposter } from '../lib/youtube/phase9DualPlatformReposter';
+import { Phase9YouTubeReposter } from '../lib/youtube/phase9YouTubeReposter';
+import { Phase9InstagramReposter } from '../lib/youtube/phase9InstagramReposter';
 
 export class RepostQueueExecutor {
-  private reposter: Phase9DualPlatformReposter;
+  private youtubeReposter: Phase9YouTubeReposter;
+  private instagramReposter: Phase9InstagramReposter;
   private executorJob: any;
   private isRunning: boolean = false;
 
   constructor() {
-    this.reposter = new Phase9DualPlatformReposter();
+    this.youtubeReposter = new Phase9YouTubeReposter();
+    
+    // Get Instagram credentials from environment variables
+    const instagramToken = process.env.INSTAGRAM_ACCESS_TOKEN || '';
+    const instagramBusinessId = process.env.INSTAGRAM_BUSINESS_ID || '';
+    this.instagramReposter = new Phase9InstagramReposter(instagramToken, instagramBusinessId);
   }
 
   /**
@@ -86,9 +93,13 @@ export class RepostQueueExecutor {
       // Execute based on target platform
       let result;
       if (post.targetPlatform === 'youtube') {
-        result = await this.reposter.processYouTubeRepost(post);
+        // Process single YouTube repost
+        const youtubeResult = await this.youtubeReposter.processYouTubeReposts();
+        result = { success: youtubeResult.successful > 0, videoId: 'unknown', url: 'unknown' };
       } else if (post.targetPlatform === 'instagram') {
-        result = await this.reposter.processInstagramRepost(post);
+        // Process single Instagram repost  
+        const instagramResult = await this.instagramReposter.processInstagramReposts();
+        result = { success: instagramResult.successful > 0, videoId: 'unknown', url: 'unknown' };
       } else {
         throw new Error(`Unknown target platform: ${post.targetPlatform}`);
       }

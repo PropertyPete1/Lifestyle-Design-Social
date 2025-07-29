@@ -523,7 +523,7 @@ router.get('/trending-keywords', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      keywords: keywords.slice(0, limit),
+      data: keywords.slice(0, limit),
       totalCount: keywords.length,
       message: `Retrieved ${keywords.length} trending SEO keywords`
     });
@@ -531,6 +531,7 @@ router.get('/trending-keywords', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error getting trending keywords:', error);
     res.status(500).json({
+      success: false,
       error: error.message || 'Failed to get trending keywords'
     });
   }
@@ -544,7 +545,7 @@ router.get('/competitor-captions', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      captions,
+      data: captions,
       totalCount: captions.length,
       message: `Retrieved ${captions.length} competitor captions for pattern analysis`
     });
@@ -552,6 +553,7 @@ router.get('/competitor-captions', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error getting competitor captions:', error);
     res.status(500).json({
+      success: false,
       error: error.message || 'Failed to get competitor captions'
     });
   }

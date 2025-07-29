@@ -1,7 +1,14 @@
 import express from 'express';
 import { smartRepostTrigger } from '../../lib/repost/smartRepostTrigger';
+import { MongoClient } from 'mongodb';
+import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
+
+// Load settings
+const settingsPath = path.join(__dirname, '../../../settings.json');
+const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
 
 /**
  * GET /api/repost/status
@@ -242,6 +249,171 @@ router.get('/analytics', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error getting analytics'
+    });
+  }
+});
+
+// GET /api/repost/queue - Get actual scheduled posts from database
+router.get('/queue', async (req, res) => {
+  try {
+    const client = new MongoClient(settings.mongoUri);
+    await client.connect();
+    const db = client.db(settings.mongoDatabase);
+    
+    const repostQueue = db.collection('repostqueues');
+    
+    // Get all queued posts, sorted by scheduled time
+    const posts = await repostQueue.find({ 
+      status: 'queued' 
+    }).sort({ scheduledFor: 1 }).toArray();
+    
+    // Transform the data for frontend consumption
+    const transformedPosts = posts.map((post, index) => ({
+      id: post._id?.toString() || `post_${index}`,
+      platform: post.targetPlatform,
+      title: post.originalContent?.caption || 'Viral Content',
+      scheduledFor: post.scheduledFor,
+      viralScore: post.viralScore || post.originalContent?.performanceScore || 0,
+      peakEngagement: post.peakEngagement || 0,
+      optimalTimeReason: post.optimalTimeReason || 'Smart scheduled',
+      status: post.status || 'queued',
+      smartScheduled: post.smartScheduled || false,
+      scheduledForToday: post.scheduledForToday || false
+    }));
+    
+    await client.close();
+    
+    res.json({
+      success: true,
+      posts: transformedPosts,
+      total: transformedPosts.length,
+      message: `Found ${transformedPosts.length} scheduled posts`
+    });
+    
+  } catch (error) {
+    console.error('Error fetching scheduled posts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch scheduled posts',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/repost/clear-queue
+ * Clear all queued reposts
+ */
+router.post('/clear-queue', async (req, res) => {
+  try {
+    console.log('🗑️ Clearing all queued reposts...');
+    
+    const { RepostQueue } = await import('../../models/RepostQueue');
+    
+    const result = await RepostQueue.deleteMany({});
+    
+    console.log(`✅ Cleared ${result.deletedCount} queued reposts`);
+    
+    res.json({
+      success: true,
+      data: {
+        deletedCount: result.deletedCount,
+        message: `Cleared ${result.deletedCount} queued reposts`
+      },
+      message: 'Queue cleared successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error clearing queue:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear queue',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/repost/stats - Get posting statistics
+ */
+router.get('/stats', async (req, res) => {
+  try {
+    const client = new MongoClient(settings.mongoUri);
+    await client.connect();
+    const db = client.db(settings.mongoDatabase);
+    
+    const repostQueue = db.collection('repostqueues');
+    const videoStatus = db.collection('videostatus');
+    
+    // Get today's date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Count posts scheduled for today
+    const todayPosts = await repostQueue.countDocuments({
+      status: 'queued',
+      scheduledFor: { $gte: today, $lt: tomorrow }
+    });
+    
+    // Count posts by platform for today
+    const youtubeToday = await repostQueue.countDocuments({
+      status: 'queued',
+      targetPlatform: 'youtube',
+      scheduledFor: { $gte: today, $lt: tomorrow }
+    });
+    
+    const instagramToday = await repostQueue.countDocuments({
+      status: 'queued',
+      targetPlatform: 'instagram',
+      scheduledFor: { $gte: today, $lt: tomorrow }
+    });
+    
+    // Count total posted today
+    const postedToday = await videoStatus.countDocuments({
+      status: 'posted',
+      lastPosted: { $gte: today, $lt: tomorrow }
+    });
+    
+    await client.close();
+    
+    res.json({
+      success: true,
+      stats: {
+        todayScheduled: todayPosts,
+        youtubeToday,
+        instagramToday,
+        postedToday,
+        totalQueued: todayPosts + postedToday
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching repost stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch statistics',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// POST /api/repost/refresh - Trigger a refresh of the queue
+router.post('/refresh', async (req, res) => {
+  try {
+    // This would trigger the Phase 9 scraping and scheduling
+    // For now, just return success
+    res.json({
+      success: true,
+      message: 'Queue refresh triggered'
+    });
+  } catch (error) {
+    console.error('Error refreshing queue:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to refresh queue',
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

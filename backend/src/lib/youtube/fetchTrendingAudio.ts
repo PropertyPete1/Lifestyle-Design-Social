@@ -31,21 +31,21 @@ const TRENDING_AUDIO_SIMULATION: AudioTrack[] = [
     audioTrackId: 'hype_001',
     title: 'Epic Victory Beat',
     category: 'hype',
-    sampleUrl: 'https://example.com/audio/hype_001.mp3',
+    sampleUrl: null,
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'hype_002',
     title: 'Motivation Rising',
     category: 'hype',
-    sampleUrl: 'https://example.com/audio/hype_002.mp3',
+    sampleUrl: null,
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'hype_003',
     title: 'Success Anthem',
     category: 'hype',
-    sampleUrl: 'https://example.com/audio/hype_003.mp3',
+    sampleUrl: null,
     lastUpdated: new Date()
   },
   
@@ -54,21 +54,21 @@ const TRENDING_AUDIO_SIMULATION: AudioTrack[] = [
     audioTrackId: 'emotional_001',
     title: 'Heartfelt Piano',
     category: 'emotional',
-    sampleUrl: 'https://example.com/audio/emotional_001.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real dataemotional_001.mp3',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'emotional_002',
     title: 'Family Moments',
     category: 'emotional',
-    sampleUrl: 'https://example.com/audio/emotional_002.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real dataemotional_002.mp3',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'emotional_003',
     title: 'Touching Strings',
     category: 'emotional',
-    sampleUrl: 'https://example.com/audio/emotional_003.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real dataemotional_003.mp3',
     lastUpdated: new Date()
   },
   
@@ -77,21 +77,21 @@ const TRENDING_AUDIO_SIMULATION: AudioTrack[] = [
     audioTrackId: 'luxury_001',
     title: 'Sophisticated Jazz',
     category: 'luxury',
-    sampleUrl: 'https://example.com/audio/luxury_001.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real dataluxury_001.mp3',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'luxury_002',
     title: 'Elegant Orchestral',
     category: 'luxury',
-    sampleUrl: 'https://example.com/audio/luxury_002.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real dataluxury_002.mp3',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'luxury_003',
     title: 'Premium Vibes',
     category: 'luxury',
-    sampleUrl: 'https://example.com/audio/luxury_003.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real dataluxury_003.mp3',
     lastUpdated: new Date()
   },
   
@@ -100,21 +100,21 @@ const TRENDING_AUDIO_SIMULATION: AudioTrack[] = [
     audioTrackId: 'funny_001',
     title: 'Comedy Gold',
     category: 'funny',
-    sampleUrl: 'https://example.com/audio/funny_001.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real datafunny_001.mp3',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'funny_002',
     title: 'Quirky Tune',
     category: 'funny',
-    sampleUrl: 'https://example.com/audio/funny_002.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real datafunny_002.mp3',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'funny_003',
     title: 'Laugh Track Beat',
     category: 'funny',
-    sampleUrl: 'https://example.com/audio/funny_003.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real datafunny_003.mp3',
     lastUpdated: new Date()
   },
   
@@ -123,21 +123,21 @@ const TRENDING_AUDIO_SIMULATION: AudioTrack[] = [
     audioTrackId: 'chill_001',
     title: 'Ambient Relaxation',
     category: 'chill',
-    sampleUrl: 'https://example.com/audio/chill_001.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real datachill_001.mp3',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'chill_002',
     title: 'Smooth Vibes',
     category: 'chill',
-    sampleUrl: 'https://example.com/audio/chill_002.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real datachill_002.mp3',
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'chill_003',
     title: 'Peaceful Moments',
     category: 'chill',
-    sampleUrl: 'https://example.com/audio/chill_003.mp3',
+    sampleUrl: 'null, // Audio URL to be populated with real datachill_003.mp3',
     lastUpdated: new Date()
   }
 ];

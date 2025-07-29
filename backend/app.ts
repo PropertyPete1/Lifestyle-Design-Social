@@ -1,11 +1,16 @@
 import 'dotenv/config';
+import { appConfig } from './src/config/environment';
+import * as path from 'path';
+
+// Now import everything else after settings are loaded
 import express from 'express';
-import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import cors from 'cors';
 import indexRouter from './src/routes/index';
 import phase9Router from './src/routes/api/phase9';
+import insightsRouter from './src/routes/api/insights';
+import healthRouter from './src/routes/api/health';
 import { initializeScheduledJobs } from './src/lib/youtube/schedulePostJob';
 import { migrateFilePaths } from './src/lib/youtube/migrateFilePaths';
 import { startDropboxMonitoring } from './src/services/dropboxMonitor';
@@ -14,24 +19,11 @@ import { audioMatchingScheduler } from './src/services/audioMatchingScheduler';
 import { peakHoursScheduler } from './src/lib/peakHours/scheduler';
 import { smartRepostTrigger } from './src/lib/repost/smartRepostTrigger';
 import { phase9Monitor } from './src/services/phase9Monitor';
-import * as fs from 'fs';
+import { dailyHashtagRefresh } from './src/services/dailyHashtagRefresh';
+import { dailyScheduler } from './src/services/dailyScheduler';
+import { dailyRepostScheduler } from './src/services/dailyRepostScheduler';
 
 const app = express();
-
-// Load API keys from settings.json if present
-const settingsPath = path.resolve(__dirname, '../frontend/settings.json');
-if (fs.existsSync(settingsPath)) {
-  try {
-    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    for (const [key, value] of Object.entries(settings)) {
-      if (value && !process.env[key]) {
-        process.env[key] = String(value);
-      }
-    }
-  } catch (e) {
-    // Ignore parse errors, fallback to .env
-  }
-}
 
 // CORS for all routes and preflight
 app.use(cors({
@@ -67,7 +59,43 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api', indexRouter);
+app.use('/api/health', healthRouter);
 app.use('/api/phase9', phase9Router);
+app.use('/api/insights', insightsRouter);
+
+// Initialize all scheduled services
+async function initializeServices() {
+  try {
+    console.log('🚀 Initializing backend services...');
+    
+    // Initialize database migration
+    await migrateFilePaths();
+    
+    // Start scheduled jobs
+    initializeScheduledJobs();
+    
+    // Start monitoring services
+    startDropboxMonitoring();
+    repostMonitor.startMonitoring();
+    audioMatchingScheduler.start();
+    peakHoursScheduler.startScheduler();
+    // smartRepostTrigger starts automatically in constructor
+    phase9Monitor.start();
+    
+    // Start daily hashtag refresh service
+    dailyHashtagRefresh.start();
+    
+    // Initialize daily scheduler
+    dailyScheduler.start().catch(console.error);
+    
+    // Start daily repost scheduler
+    dailyRepostScheduler.start();
+    
+    console.log('✅ All backend services initialized successfully');
+  } catch (error) {
+    console.error('❌ Error initializing services:', error);
+  }
+}
 
 // Run migration and initialize scheduled jobs on server start
 (async () => {
@@ -79,34 +107,8 @@ app.use('/api/phase9', phase9Router);
     console.log('🔌 Connecting to database...');
     await connectToDatabase();
     
-    console.log('🔄 Running migrations...');
-    await migrateFilePaths();
-    
-    console.log('⏰ Initializing scheduled jobs...');
-    await initializeScheduledJobs();
-    
-    console.log('📁 Starting Dropbox monitoring...');
-    startDropboxMonitoring();
-    
-    // Start repost monitoring (Phase 2)
-    console.log('🎯 Starting repost monitoring...');
-    repostMonitor.startMonitoring(60); // Check every hour
-    
-    // Start audio matching scheduler (Phase 3)
-    console.log('🎵 Starting audio matching scheduler...');
-    audioMatchingScheduler.start();
-    
-    // Start peak hours scheduler (Phase 6)
-    console.log('🕒 Starting peak hours scheduler...');
-    peakHoursScheduler.startScheduler();
-    
-    // Start smart repost trigger (Phase 7)
-    console.log('🔄 Starting smart repost trigger...');
-    smartRepostTrigger.startTrigger();
-    
-    // Start Phase 9 intelligent content repurposing monitor
-    console.log('🤖 Starting Phase 9 intelligent content repurposing...');
-    await phase9Monitor.start();
+    // Initialize all services
+    await initializeServices();
     
     console.log('🚀 Backend fully initialized with ALL PHASES (1-9) complete');
   } catch (error) {

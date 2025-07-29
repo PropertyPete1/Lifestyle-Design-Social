@@ -37,6 +37,11 @@ export interface IVideoQueue extends Document {
   isRepost?: boolean;
   originalVideoId?: string;
   platform?: 'youtube' | 'instagram';
+  // Phase 8: Final Polish fields
+  phase8Status?: 'not_processed' | 'processing' | 'completed' | 'failed';
+  phase8ProcessedAt?: Date;
+  phase8Platform?: 'youtube' | 'instagram';
+  phase8ProcessedVideoPath?: string;
 }
 
 const VideoQueueSchema = new Schema<IVideoQueue>({
@@ -73,7 +78,12 @@ const VideoQueueSchema = new Schema<IVideoQueue>({
   // Repost functionality fields
   isRepost: { type: Boolean, default: false },
   originalVideoId: { type: String },
-  platform: { type: String, enum: ['youtube', 'instagram'] }
+  platform: { type: String, enum: ['youtube', 'instagram'] },
+  // Phase 8: Final Polish fields
+  phase8Status: { type: String, enum: ['not_processed', 'processing', 'completed', 'failed'], default: 'not_processed' },
+  phase8ProcessedAt: { type: Date },
+  phase8Platform: { type: String, enum: ['youtube', 'instagram'] },
+  phase8ProcessedVideoPath: { type: String }
 });
 
 // Add scheduledTime field after schema creation

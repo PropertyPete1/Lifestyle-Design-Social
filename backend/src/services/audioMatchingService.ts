@@ -177,7 +177,7 @@ export class AudioMatchingService {
     for (const audio of trendingAudio) {
       const matchingFactors = this.calculateMatchingScore(video, audio);
       
-      if (matchingFactors.overallScore > bestScore && matchingFactors.overallScore >= 30) { // Minimum 30% match
+      if (matchingFactors.overallScore > bestScore && matchingFactors.overallScore >= 15) { // Minimum 15% match for production
         bestScore = matchingFactors.overallScore;
         bestMatch = {
           audio,
@@ -266,7 +266,7 @@ export class AudioMatchingService {
     
     if (hasRealEstate) {
       // For real estate content, prefer trending/popular audio over specific genre matches
-      return audio.trending_rank <= 20 ? 80 : 50; // High score for top 20 trending
+      return audio.trending_rank <= 10 ? 90 : audio.trending_rank <= 20 ? 70 : 50; // Higher scores for trending audio
     }
     
     // Generic category matching

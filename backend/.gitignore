@@ -59,3 +59,23 @@ typings/
 
 # next.js build output
 .next
+
+# Compiled JavaScript files (keep only TypeScript sources)
+src/**/*.js
+bin/**/*.js
+app.js
+get_long_lived_token.js
+
+# Settings duplicates (use frontend/settings.json only)
+settings.json
+
+# Build and temporary files
+dist/
+uploads/
+*.log
+backend.log
+
+# Environment files
+.env
+.env.local
+.env.production

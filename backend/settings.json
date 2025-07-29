@@ -1,24 +1,126 @@
 {
   "dropboxApiKey": "sl.u.AF7a04nF_JIlejRUFcCspSE68e--H1w2HhzygcCQLLiJKo2lxfBYDrYBKgZs_9a8LBHStgZ1isV4bG9dJ3lfiPSqOcvyFWBiVYubf08OCGnHQhsoEGnKJ1TEQ3j3z-MqsKdkTZkx3yWTHnBiWnoPRjeMUlkzrV4MAZKwv1_G7rrFyfZHT29XWEZag0geCJe8lP4NmiCGT_16Nrc_lfDigm2K4g3pFkl13DVmEb3TgVVuCeW-i-8rGF-aqpFApYEpUrKye_CxpRjGIakHyChN0EYOOx0Vmp3WicPvYeLAVG9nNt-Sc6x-86BFwrBaKFVfGxFTm0TfwWVyGICr99FqQrMkJfsofX_GWau9oHnMUQMspt5Iha8ZnskDeQm_FN9jiOE9Zrysg5JFGVB7TU1Jo-fC_SGqp9kmTsVjIMXvBkGUlnn6DRVd2G1NHd0YUR-oVbkHo0dWDHe_uYQmro0mrYsJUhmCxRHZ_AZNGsA7q1VVGCPR4sAp0G5PHei3Pa4ZXvtToM7PpR80-XB0zowyQfoI2pSC4EqqKnbs5DLWMxYmi4NKB5a87WQKYBTiksImo7Ki3yySPS67qtgQTvPqgQlBbx8vLyNCU30YRqTyokT7vEP7qDCv1qcAE7cjZ-XrdW_xWFVTsBzpIwSXZwCJeSmqYT0hcjn1gjAvm0QOcyulPzm-F3GEIN4QE53Yg_L040p8VycP1rkUy9oP1Oer_bLibOIbfIJkgVkjy42iBOwCekbbRtNnpXoM6UQaWIeJEFqHR6urPFNB9OlFx0K5PFMKc3WnXWFjExtG5iFae4IfJVv5hY7hJYvAAdxQDvJU9bxLkswJ0T5zgplnMNl_amWPnRzHA_LlTPBFZ0PGTa2kS_oOMuGqng9unPpO5dAQNPdJ_PZiyrHZmM-jlLWZLE7m6NDcZ9vkruKsbmDD1q4C5Sf5Hip2ZACCGZKk0129GT7__W1yBHIdujIlTG0xgeC8EFJ5DE0IQ36zv3o6wdia7WYrHBAoCSBuatQjKRnjY5_bd8qub3NsVf9Tvlp_b1aOaSy7qz9vNz2NNvqDU3GUizp9FrneXs5lHeI0m2uLJim6yewbIZftyayQ75bpGGCr8WobS-W_5ObpbYFaexlgccPyrynyqPLSFVDLBnf22chf_cS_FtXBxHbuBmj_b7etRqj9GWB6eRSYrIuvbZpuICF5Cmr6aRm20tlr5GReG-2fDDUG3nXdDAdgTy1k1Ag0TIYVoOE6uUOQQXHzzc4AtMD_O37_IbYvJWmg8yyPk8IROHt6Fr571WOItEkZ9nyP2jjvSpNQE2iTy7iKiu5Feg",
-  "openaiApiKey": "sk-proj-pJ4HsaJLgtXNcm0rwkx0T3BlbkFJB8l0Af96FQWdLfYZdoMN",
-  "instagramAccessToken": "EAAbvpayjjC4BPEoOcR453vZBSDyhnZAV0HR5o86PY4zn4ECx2lXFc4CtuV4aHAZAodNnfv0pWd8Un8ZBJiX05r4ZCfGEjwfWUIp1Fmb4djXLeTj8grHEx4NhZCXPcMR8ZBIaxzDJacQEAVZAK2ugwbdfzt1Xb0U8ZCxUKE8WUA1KVGgH8losEZC37RssGAieyw1uqTo96H3QpZANn2Jo718",
-  "instagramBusinessId": "732270276634005",
-  "youtubeApiKey": "AIzaSyD8WKvdMqNJH6X8nQPzYhF5wFnPnN-qZ2s",
-  "youtubeClientId": "your_youtube_client_id_here",
-  "youtubeChannelId": "AUTO_DETECT_ON_NEXT_API_CALL",
-  "youtubeRefreshToken": "",
+  "openaiApiKey": "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",
+  "instagramAccessToken": "EAAdtNOsq3ZAYBPLlWQe8QlbwqrmfDo52kQXiPdWHdIxn19rjTo9ZBCBURgN721tWNRYb46MiFGual91ip9Jrn9hepm5ChRkNmT1296mRyPGyZA3JB399UD8vZBxyU2fwVpSlgiDL26wLecDqhsHdBb97IColcqZCuLTuSIgpZB6ImVLvJ5myZCCBoqrNxIZBAniHErcErMKxmLrDIY4tkzhNSSRGsha362GSOR9YFAs8wDSrINQTEwZDZD",
+  "instagramBusinessId": "17841454131323777",
+  "instagramAccountId": "peter@lifestyledesignrealty.com",
+  "youtubeApiKey": "AIzaSyAqXLUTFa_6SuSfsIg0Flc3uxFf4xQmhwM",
+  "youtubeClientId": "823598477516-htskr4bgptn0nm88bfa32di503tn2prk.apps.googleusercontent.com",
+  "youtubeChannelId": "UCqSfOt2aLrKKiROnY4kGBcQ",
+  "youtubeRefreshToken": "1//0fdTp6fY4365mCgYIARAAGA8SNgF-L9IrQ0z8Dsz61Wq3RLAMGf-il2RzSeiOwPzbC2j2UK3l0L4mL2e8NoStGhfhVpe21kq9TA",
   "tiktokAccessToken": "tiktok_access_token_here",
   "runwayApiKey": "rw_sk_test_1234567890abcdef",
   "mongoUri": "mongodb://localhost:27017/lifestyle-design-auto-poster",
   "mongoDatabase": "lifestyle-design-auto-poster",
-  "minDaysBetweenPosts": 20,
-  "instagramAccountId": "UCqSfOt2aLrKKiROnY4kGBcQ",
-  "autopostMode": "instagram",
+  "minDaysBetweenPosts": 30,
+  "autopostMode": "both",
   "phase9Settings": {
     "minPerformanceScore": 1000,
-    "repostDelay": 7,
+    "repostDelay": 1,
     "enableYouTubeReposts": true,
     "enableInstagramReposts": true,
-    "maxRepostsPerDay": 5
-  }
+    "maxRepostsPerDay": 8,
+    "maxRepostsPerPlatform": 4,
+    "phase9AutopilotMode": "both",
+    "dailyScheduling": {
+      "enabled": true,
+      "scheduleTime": "0 2 * * *",
+      "prepareForTomorrow": true,
+      "maxPostsPerDay": 8,
+      "maxPostsPerPlatform": 4,
+      "peakHoursOnly": true,
+      "weeklySchedule": {
+        "monday": {
+          "instagram": "10:00",
+          "youtube": "14:00"
+        },
+        "tuesday": {
+          "instagram": "09:30",
+          "youtube": "15:30"
+        },
+        "wednesday": {
+          "instagram": "11:00",
+          "youtube": "16:00"
+        },
+        "thursday": {
+          "instagram": "10:30",
+          "youtube": "14:30"
+        },
+        "friday": {
+          "instagram": "09:00",
+          "youtube": "17:00"
+        },
+        "saturday": {
+          "instagram": "12:00",
+          "youtube": "18:00"
+        },
+        "sunday": {
+          "instagram": "13:00",
+          "youtube": "19:00"
+        }
+      }
+    },
+    "dropboxSync": {
+      "enabled": true,
+      "syncPath": "/SyncedInstagramPosts/",
+      "filenameFormat": "YYYY-MM-DD_CaptionSnippet.mp4",
+      "preventDuplicates": true
+    },
+    "contentRefresh": {
+      "enabled": true,
+      "refreshAfterPost": true,
+      "refreshAudio": true,
+      "refreshHashtags": true,
+      "refreshDescriptions": true
+    }
+  },
+  "youtubeClientSecret": "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",
+  "youtubeUploadTested": true,
+  "lastYouTubeUpload": {
+    "videoId": "h_2UG3a4oug",
+    "title": "🏡 Lifestyle Design Realty - 7/29/2025 | Real Estate Excellence",
+    "uploadDate": "2025-07-29T06:41:56.788Z",
+    "originalFile": "891258ba5ac845b8937b5acf19555ab6.mp4"
+  },
+  "phase9Uploads": [
+    {
+      "uploadId": "K8hzrgX7vlE",
+      "title": "🏡 STUNNING Texas Home Tour | Lifestyle Design Realty",
+      "description": "🏡 Premium real estate content from Lifestyle Design Realty Texas!\n\nDiscover the latest in luxury homes, market insights, and property investment opportunities. Our expert team brings you behind the scenes access to Texas's most sought after properties.\n\n🏠 What You'll Get:\n• Exclusive property tours and market analysis\n• Expert buying and selling strategies  \n• Investment opportunity insights\n• Texas real estate market updates\n• Professional guidance from licensed agents\n\nReady to find your dream home or make your next investment? Contact Lifestyle Design Realty today for personalized service and expert guidance in the Texas real estate market.\n\n📞 Contact us for private consultations\n🏠 Lifestyle Design Realty | Texas Premier Real Estate\n📍 Serving all of Texas with premium real estate solutions\n\n#LifestyleDesignRealty #TexasRealEstate #LuxuryHomes #PropertyInvestment #RealEstateExpert\n\nGenerated via Phase 9 Intelligent Content System",
+      "tags": [
+        "real estate",
+        "texas homes",
+        "lifestyle design realty",
+        "luxury real estate",
+        "property tour",
+        "home buying",
+        "real estate agent",
+        "texas property",
+        "investment property",
+        "dream home",
+        "real estate tips",
+        "market update",
+        "property investment",
+        "home selling",
+        "real estate expert"
+      ],
+      "uploadDate": "2025-07-29T06:47:55.628Z",
+      "originalFile": "891258ba5ac845b8937b5acf19555ab6.mp4",
+      "phase9Features": [
+        "ai_description",
+        "smart_title",
+        "performance_tags",
+        "platform_optimization",
+        "dash_removal"
+      ]
+    }
+  ],
+  "instagramTokenType": "long_lived",
+  "instagramTokenUpdated": "2025-07-29T07:03:42.558Z",
+  "instagramTokenExpiry": "2025-09-27T08:00:00.000Z",
+  "instagramTokenDaysRemaining": 60,
+  "instagramAppId": "2090398888156566",
+  "instagramUserId": "732022579657643",
+  "instagramAppName": "Lifestyle Design Social",
+  "phase9AutopilotMode": "both"
 }

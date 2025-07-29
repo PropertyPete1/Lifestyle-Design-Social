@@ -4,7 +4,7 @@ export interface ITopHashtag extends Document {
   hashtag: string;
   usageCount: number;
   avgViewScore: number;
-  platform: 'youtube' | 'instagram' | 'both';
+  platform: 'youtube' | 'instagram';
   totalViews: number;
   totalLikes: number;
   lastUpdated: Date;
@@ -13,8 +13,7 @@ export interface ITopHashtag extends Document {
 const TopHashtagSchema: Schema = new Schema({
   hashtag: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   usageCount: {
     type: Number,
@@ -28,8 +27,8 @@ const TopHashtagSchema: Schema = new Schema({
   },
   platform: {
     type: String,
-    enum: ['youtube', 'instagram', 'both'],
-    default: 'both'
+    enum: ['youtube', 'instagram'],
+    required: true
   },
   totalViews: {
     type: Number,
@@ -51,5 +50,8 @@ const TopHashtagSchema: Schema = new Schema({
 TopHashtagSchema.index({ avgViewScore: -1 });
 TopHashtagSchema.index({ usageCount: -1 });
 TopHashtagSchema.index({ platform: 1, avgViewScore: -1 });
+
+// Compound unique index to allow same hashtag on different platforms
+TopHashtagSchema.index({ hashtag: 1, platform: 1 }, { unique: true });
 
 export default mongoose.model<ITopHashtag>('TopHashtag', TopHashtagSchema); 

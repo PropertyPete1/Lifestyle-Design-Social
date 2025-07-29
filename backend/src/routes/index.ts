@@ -5,7 +5,6 @@ import youtubeRouter from './api/youtube';
 import settingsRouter from './api/settings';
 import insightsRouter from './api/insights';
 import insightsSimpleRouter from './api/insights-simple';
-import testRouter from './api/test';
 import audioRouter from './api/audio';
 import peakHoursRouter from './api/peakHours';
 import repostRouter from './api/repost';
@@ -25,6 +24,5 @@ router.use('/audio', audioRouter);
 router.use('/peak-hours', peakHoursRouter);
 router.use('/repost', repostRouter);
 router.use('/final-polish', finalPolishRouter);
-router.use('/test', testRouter);
 
 export default router;

@@ -6,9 +6,9 @@ import { matchAudioToVideo } from './matchAudioToVideo';
 import { publishVideo } from './publishVideo';
 import { schedulePostJob } from './schedulePostJob';
 import axios from 'axios';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
 
 export class Phase9YouTubeReposter {
   private uploadsDir: string;

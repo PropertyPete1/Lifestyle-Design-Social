@@ -134,40 +134,51 @@ async function processDropboxVideo(
     // Save buffer to local file
     fs.writeFileSync(localFilePath, buffer);
 
-    // Create VideoStatus record
-    const videoStatus = new VideoStatus({
-      videoId,
-      platform: 'instagram', // Default to Instagram for Dropbox uploads
-      fingerprint: videoFingerprint,
-      filename,
-      filePath: localFilePath,
-      uploadDate: new Date(),
-      captionGenerated: false,
-      posted: false,
-      status: 'pending'
-    });
+    // Determine target platforms based on autopostMode setting
+    const autopostMode = settings.autopostMode || 'instagram';
+    const platforms = autopostMode === 'both' ? ['youtube', 'instagram'] : [autopostMode === 'dropbox' ? 'instagram' : autopostMode];
+    
+    console.log(`📱 Target platforms for ${filename}: ${platforms.join(', ')} (autopostMode: ${autopostMode})`);
 
-    await videoStatus.save();
+    // Create VideoStatus record(s) - one for each target platform
+    for (const platform of platforms) {
+      const videoStatus = new VideoStatus({
+        videoId: `${videoId}_${platform}`, // Unique ID per platform
+        platform,
+        fingerprint: videoFingerprint,
+        filename,
+        filePath: localFilePath,
+        uploadDate: new Date(),
+        captionGenerated: false,
+        posted: false,
+        status: 'pending'
+      });
+
+      await videoStatus.save();
+    }
 
     // Get optimal posting time
     const { recommendedTime } = getPeakPostTime();
 
-    // Also add to video queue for backward compatibility
-    const videoQueueData = {
-      type: 'real_estate',
-      dropboxUrl: storageUrl,
-      filename,
-      status: 'pending',
-      scheduledTime: recommendedTime,
-      videoHash: videoFingerprint.hash,
-      videoSize: videoFingerprint.size,
-      videoDuration: videoFingerprint.duration,
-      platform: 'instagram',
-      filePath: localFilePath
-    };
+    // Also add to video queue for backward compatibility - one entry per platform
+    for (const platform of platforms) {
+      const videoQueueData = {
+        type: 'real_estate',
+        dropboxUrl: storageUrl,
+        filename: `${filename}`, // Keep original filename
+        status: 'pending',
+        scheduledTime: recommendedTime,
+        videoHash: videoFingerprint.hash,
+        videoSize: videoFingerprint.size,
+        videoDuration: videoFingerprint.duration,
+        platform,
+        filePath: localFilePath
+      };
 
-    const videoQueueEntry = new VideoQueue(videoQueueData);
-    await videoQueueEntry.save();
+      const videoQueueEntry = new VideoQueue(videoQueueData);
+      await videoQueueEntry.save();
+      console.log(`✅ Added to ${platform} queue: ${filename}`);
+    }
 
     // Trigger repost monitor check for new upload (Phase 2)
     repostMonitor.onVideoUploaded().catch(error => {

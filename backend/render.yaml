@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: lifestyle-social-backend
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: MONGO_URI
+        fromDatabase:
+          name: lifestyle-social-mongo
+          property: connectionString
+      - key: MONGO_DATABASE
+        value: lifestyle-design-auto-poster
+      - key: INSTAGRAM_ACCESS_TOKEN
+        sync: false
+      - key: INSTAGRAM_BUSINESS_ID
+        sync: false
+      - key: INSTAGRAM_APP_ID
+        sync: false
+      - key: INSTAGRAM_USER_ID
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: YOUTUBE_CLIENT_ID
+        sync: false
+      - key: YOUTUBE_CLIENT_SECRET
+        sync: false
+      - key: YOUTUBE_REFRESH_TOKEN
+        sync: false
+      - key: YOUTUBE_CHANNEL_ID
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DROPBOX_API_KEY
+        sync: false
+      - key: PHASE9_AUTOPILOT_MODE
+        value: both
+      - key: MAX_REPOSTS_PER_DAY
+        value: 8
+      - key: MIN_DAYS_BETWEEN_POSTS
+        value: 20
+
+databases:
+  - name: lifestyle-social-mongo
+    databaseName: lifestyle-design-auto-poster
+    user: admin

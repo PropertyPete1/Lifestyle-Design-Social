@@ -54,21 +54,42 @@ export async function analyzePeakHours(): Promise<void> {
 async function fetchLastYouTubeVideos(count: number): Promise<YouTubeVideoData[]> {
   try {
     const youtube = google.youtube('v3');
-    const API_KEY = process.env.YOUTUBE_API_KEY;
+    
+    // Load from settings file first, then fallback to environment variables
+    let API_KEY = process.env.YOUTUBE_API_KEY || process.env.youtubeApiKey;
+    let CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID || process.env.youtubeChannelId;
+    
+    // If not in env vars, load from settings file
+    if (!API_KEY || !CHANNEL_ID) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const settingsPath = path.join(__dirname, '../../../settings.json');
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        API_KEY = API_KEY || settings.youtubeApiKey;
+        CHANNEL_ID = CHANNEL_ID || settings.youtubeChannelId;
+      } catch (error) {
+        console.warn('Could not load settings file:', error.message);
+      }
+    }
     
     if (!API_KEY) {
       throw new Error('YouTube API key not found');
     }
+    
+    if (!CHANNEL_ID) {
+      throw new Error('YouTube channel ID not found');
+    }
 
-    // Get channel uploads playlist
+    // Get channel uploads playlist using channel ID
     const channelsResponse = await youtube.channels.list({
       key: API_KEY,
       part: ['contentDetails'],
-      mine: true
+      id: [CHANNEL_ID]
     });
 
     if (!channelsResponse.data.items?.length) {
-      throw new Error('No YouTube channel found');
+      throw new Error('No YouTube channel found with the provided ID');
     }
 
     const uploadsPlaylistId = channelsResponse.data.items[0].contentDetails?.relatedPlaylists?.uploads;
@@ -118,17 +139,13 @@ function calculateEngagementMetrics(video: YouTubeVideoData): EngagementMetrics 
   const hour = postTime.getHours();
   const dayOfWeek = postTime.toLocaleDateString('en-US', { weekday: 'long' });
   
-  // Calculate engagement metrics
-  const viewsAfter60Min = video.viewCount; // Approximation - actual 60min data would need historical tracking
+  // Calculate engagement metrics using real data
+  const viewsAfter60Min = video.viewCount; // Current view count as proxy for 1hr views
   const likesToViewsRatio = video.viewCount > 0 ? (video.likeCount / video.viewCount) * 100 : 0;
-  const commentsPerHour = video.commentCount; // Approximation - would need hourly breakdown
+  const commentsPerHour = video.commentCount; // Current comment count as proxy
   
-  // Calculate composite engagement score (0-100)
-  const engagementScore = Math.min(100, (
-    (likesToViewsRatio * 40) + // 40% weight on like ratio
-    (Math.min(video.commentCount / 10, 30)) + // 30% weight on comments (capped)
-    (Math.min(video.viewCount / 1000, 30)) // 30% weight on views (normalized)
-  ));
+  // Calculate engagement score using formula: views + (likes * 1.5) + (comments * 2)
+  const engagementScore = video.viewCount + (video.likeCount * 1.5) + (video.commentCount * 2);
   
   return {
     postTime,

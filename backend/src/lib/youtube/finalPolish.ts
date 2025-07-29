@@ -7,6 +7,7 @@ import { prepareSmartCaption, SmartCaptionResult } from './prepareSmartCaption';
 import { getTopTrendingKeywords, getTrendingKeywordsByCategory } from './fetchTrendingKeywords';
 import TopHashtag from '../../models/TopHashtags';
 import { VideoStatus } from '../../models/VideoStatus';
+import { VideoQueue } from '../../services/videoQueue';
 
 export interface FinalPolishResult {
   success: boolean;
@@ -55,21 +56,36 @@ export async function applyFinalPolish(
   console.log(`🎨 PHASE 8: Starting final polish for ${platform.toUpperCase()} - Video: ${videoId}`);
 
   try {
-    // 1. Get video data from database
-    const videoStatus = await VideoStatus.findOne({ videoId });
-    if (!videoStatus) {
-      throw new Error(`Video ${videoId} not found in database`);
+    // 1. Get video data from VideoQueue (where real uploads are stored)
+    const videoRecord = await VideoQueue.findById(videoId);
+    if (!videoRecord) {
+      throw new Error(`Video ${videoId} not found in VideoQueue database`);
     }
 
     const originalVideo = {
-      title: videoStatus.filename.replace(/\.[^/.]+$/, ""), // Remove file extension
-      description: videoStatus.filename, // Will be enhanced by AI
-      filePath: videoStatus.filePath || path.join(process.cwd(), 'uploads', videoStatus.filename)
+      title: videoRecord.filename.replace(/\.[^/.]+$/, ""), // Remove file extension
+      description: videoRecord.selectedDescription || videoRecord.filename, // Use existing description or filename
+      filePath: getVideoFilePath(videoRecord)
     };
 
     // 2. PLATFORM-SPECIFIC CAPTION REWRITE (Phase 4 style)
     console.log(`📝 Rewriting caption for ${platform} with Phase 4 intelligence...`);
-    const openaiApiKey = process.env.OPENAI_API_KEY;
+    
+    // Get OpenAI API key from environment or settings
+    let openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      // Try to load from settings file if not in environment
+      try {
+        const settingsPath = path.resolve(__dirname, '../../../../frontend/settings.json');
+        if (fs.existsSync(settingsPath)) {
+          const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+          openaiApiKey = settings.openaiApiKey;
+        }
+      } catch (error) {
+        console.warn('Could not load OpenAI API key from settings:', error);
+      }
+    }
+    
     if (!openaiApiKey) {
       throw new Error('OpenAI API key not found for caption generation');
     }
@@ -115,21 +131,22 @@ export async function applyFinalPolish(
       processedVideoPath: audioOverlay.outputPath
     };
 
-    // 7. UPDATE DATABASE
-    await VideoStatus.findOneAndUpdate(
-      { videoId },
+    // 7. UPDATE DATABASE - Use VideoQueue where the video exists
+    await VideoQueue.findByIdAndUpdate(
+      videoId,
       {
         $set: {
           status: 'ready',
-          captionGenerated: true,
-          'phase8Status': 'completed',
-          'phase8ProcessedAt': new Date(),
-          'phase8Platform': platform,
-          'phase8PolishedTitle': polishedOutput.title,
-          'phase8PolishedDescription': polishedOutput.description,
-          'phase8Hashtags': polishedOutput.hashtags,
-          'phase8AudioTrackId': polishedOutput.audioTrack.audioTrackId,
-          'phase8ProcessedVideoPath': polishedOutput.processedVideoPath
+          // Store Phase 8 results in VideoQueue
+          publishedTitle: polishedOutput.title,
+          publishedDescription: polishedOutput.description,
+          publishedTags: polishedOutput.hashtags,
+          audioTrackId: polishedOutput.audioTrack.audioTrackId,
+          // Add Phase 8 specific fields
+          phase8Status: 'completed',
+          phase8ProcessedAt: new Date(),
+          phase8Platform: platform,
+          phase8ProcessedVideoPath: polishedOutput.processedVideoPath
         }
       },
       { new: true }
@@ -163,13 +180,13 @@ export async function applyFinalPolish(
     console.error('❌ PHASE 8: Final polish failed:', error);
     
     // Update database with failure status
-    await VideoStatus.findOneAndUpdate(
-      { videoId },
+    await VideoQueue.findByIdAndUpdate(
+      videoId,
       {
         $set: {
           status: 'failed',
           errorMessage: `Phase 8 failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          'phase8Status': 'failed'
+          phase8Status: 'failed'
         }
       }
     );
@@ -403,23 +420,57 @@ export async function batchFinalPolish(
  */
 export async function getPhase8Status(videoId: string) {
   try {
-    const videoStatus = await VideoStatus.findOne({ videoId });
-    if (!videoStatus) {
+    const videoRecord = await VideoQueue.findById(videoId);
+    if (!videoRecord) {
       return { found: false };
     }
     
     return {
       found: true,
-      status: videoStatus.status,
-      phase8Status: (videoStatus as any).phase8Status || 'not_processed',
-      phase8Platform: (videoStatus as any).phase8Platform,
-      phase8ProcessedAt: (videoStatus as any).phase8ProcessedAt,
-      captionGenerated: videoStatus.captionGenerated,
-      posted: videoStatus.posted
+      status: videoRecord.status,
+      phase8Status: (videoRecord as any).phase8Status || 'not_processed',
+      phase8Platform: (videoRecord as any).phase8Platform,
+      phase8ProcessedAt: (videoRecord as any).phase8ProcessedAt,
+      captionGenerated: !!(videoRecord.publishedTitle), // If we have a published title, captions were generated
+      posted: videoRecord.status === 'posted'
     };
     
   } catch (error) {
     console.error('Error getting Phase 8 status:', error);
     return { found: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
+} 
+
+// Helper function to determine the correct video file path
+function getVideoFilePath(videoRecord: any): string {
+  // If explicit filePath exists and file is accessible, use it
+  if (videoRecord.filePath && require('fs').existsSync(videoRecord.filePath)) {
+    return videoRecord.filePath;
+  }
+  
+  // Handle local:// URLs (uploaded to local storage)
+  if (videoRecord.dropboxUrl && videoRecord.dropboxUrl.startsWith('local://')) {
+    const localFilename = videoRecord.dropboxUrl.replace('local://', '');
+    
+    // Try multiple possible locations
+    const possiblePaths = [
+      path.join(process.cwd(), 'uploads', localFilename),
+      path.join(process.cwd(), '..', 'uploads', localFilename), // If running from backend/
+      path.join('/Users/peterallen/Lifestyle Design Auto Poster/uploads', localFilename),
+      path.join(process.cwd(), localFilename)
+    ];
+    
+    for (const testPath of possiblePaths) {
+      if (require('fs').existsSync(testPath)) {
+        console.log(`🎬 Found video file at: ${testPath}`);
+        return testPath;
+      }
+    }
+    
+    console.warn(`⚠️ Video file not found in any expected location for: ${localFilename}`);
+    console.warn(`Tried paths:`, possiblePaths);
+  }
+  
+  // Fallback to original logic
+  return videoRecord.filePath || path.join(process.cwd(), 'uploads', videoRecord.filename);
 } 

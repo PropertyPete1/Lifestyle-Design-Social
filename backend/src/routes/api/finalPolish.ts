@@ -1,6 +1,7 @@
 import express from 'express';
 import { applyFinalPolish, batchFinalPolish, getPhase8Status, FinalPolishResult } from '../../lib/youtube/finalPolish';
 import { VideoStatus } from '../../models/VideoStatus';
+import { VideoQueue } from '../../services/videoQueue';
 
 const router = express.Router();
 
@@ -156,8 +157,11 @@ router.get('/queue', async (req, res) => {
     const { platform, limit = 10 } = req.query;
 
     const query: any = {
-      status: { $in: ['pending', 'processing', 'ready'] },
-      captionGenerated: false
+      status: { $in: ['pending', 'processing', 'ready', 'scheduled'] },
+      // Exclude test videos - prioritize real content
+      filename: { 
+        $not: /^test_video\.mp4$/i 
+      }
     };
 
     // Add platform filter if specified
@@ -165,24 +169,39 @@ router.get('/queue', async (req, res) => {
       query.platform = platform;
     }
 
-    const videos = await VideoStatus.find(query)
-      .sort({ uploadDate: -1 })
+    // Get videos from VideoQueue (where your real uploads are stored)
+    const videos = await VideoQueue.find(query)
+      .sort({ uploadedAt: -1 }) // Use uploadedAt instead of uploadDate
       .limit(parseInt(limit as string))
-      .select('videoId filename uploadDate platform status captionGenerated posted')
+      .select('_id filename uploadedAt platform status type dropboxUrl filePath')
       .exec();
+
+    // Transform data to match expected format
+    const transformedVideos = videos.map(video => ({
+      videoId: (video._id as any).toString(), // Use MongoDB _id as videoId
+      filename: video.filename,
+      uploadDate: video.uploadedAt,
+      platform: video.platform || 'instagram',
+      status: video.status,
+      captionGenerated: false, // These haven't been processed by Phase 8 yet
+      posted: video.status === 'posted',
+      type: video.type || 'real_estate'
+    }));
 
     return res.status(200).json({
       success: true,
       data: {
-        videos,
-        count: videos.length,
+        videos: transformedVideos,
+        count: transformedVideos.length,
         filterApplied: {
           platform: platform || 'all',
-          statuses: ['pending', 'processing', 'ready'],
-          captionGenerated: false
+          statuses: ['pending', 'processing', 'ready', 'scheduled'],
+          captionGenerated: false,
+          excludedTestVideos: true,
+          sourceCollection: 'VideoQueue'
         }
       },
-      message: `Found ${videos.length} videos ready for Phase 8 processing`
+      message: `Found ${transformedVideos.length} real videos ready for Phase 8 processing`
     });
 
   } catch (error) {

@@ -37,36 +37,48 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+// Load API keys from settings.json FIRST, before any other imports
+const settingsPath = path.resolve(__dirname, '../frontend/settings.json');
+console.log(`🔧 Loading settings from: ${settingsPath}`);
+if (fs.existsSync(settingsPath)) {
+    try {
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+        console.log(`✅ Settings loaded: ${Object.keys(settings).length} keys`);
+        for (const [key, value] of Object.entries(settings)) {
+            if (value && !process.env[key]) {
+                process.env[key] = String(value);
+                if (key === 'youtubeApiKey') {
+                    console.log(`🔑 YouTube API Key loaded: ${String(value).substring(0, 10)}...`);
+                }
+            }
+        }
+    }
+    catch (e) {
+        console.error(`❌ Failed to parse settings:`, e);
+    }
+}
+else {
+    console.warn(`⚠️ Settings file not found at: ${settingsPath}`);
+}
+// Now import everything else after settings are loaded
 const express_1 = __importDefault(require("express"));
-const path_1 = __importDefault(require("path"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const morgan_1 = __importDefault(require("morgan"));
 const cors_1 = __importDefault(require("cors"));
 const index_1 = __importDefault(require("./src/routes/index"));
+const phase9_1 = __importDefault(require("./src/routes/api/phase9"));
+const insights_1 = __importDefault(require("./src/routes/api/insights"));
 const schedulePostJob_1 = require("./src/lib/youtube/schedulePostJob");
 const migrateFilePaths_1 = require("./src/lib/youtube/migrateFilePaths");
 const dropboxMonitor_1 = require("./src/services/dropboxMonitor");
 const repostMonitor_1 = require("./src/services/repostMonitor");
 const audioMatchingScheduler_1 = require("./src/services/audioMatchingScheduler");
 const scheduler_1 = require("./src/lib/peakHours/scheduler");
-const smartRepostTrigger_1 = require("./src/lib/repost/smartRepostTrigger");
-const fs = __importStar(require("fs"));
+const phase9Monitor_1 = require("./src/services/phase9Monitor");
+const dailyHashtagRefresh_1 = require("./src/services/dailyHashtagRefresh");
 const app = (0, express_1.default)();
-// Load API keys from settings.json if present
-const settingsPath = path_1.default.resolve(__dirname, '../frontend/settings.json');
-if (fs.existsSync(settingsPath)) {
-    try {
-        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-        for (const [key, value] of Object.entries(settings)) {
-            if (value && !process.env[key]) {
-                process.env[key] = String(value);
-            }
-        }
-    }
-    catch (e) {
-        // Ignore parse errors, fallback to .env
-    }
-}
 // CORS for all routes and preflight
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
@@ -99,8 +111,33 @@ app.use((0, morgan_1.default)('dev'));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: false }));
 app.use((0, cookie_parser_1.default)());
-app.use(express_1.default.static(path_1.default.join(__dirname, 'public')));
+app.use(express_1.default.static(path.join(__dirname, 'public')));
 app.use('/api', index_1.default);
+app.use('/api/phase9', phase9_1.default);
+app.use('/api/insights', insights_1.default);
+// Initialize all scheduled services
+async function initializeServices() {
+    try {
+        console.log('🚀 Initializing backend services...');
+        // Initialize database migration
+        await (0, migrateFilePaths_1.migrateFilePaths)();
+        // Start scheduled jobs
+        (0, schedulePostJob_1.initializeScheduledJobs)();
+        // Start monitoring services
+        (0, dropboxMonitor_1.startDropboxMonitoring)();
+        repostMonitor_1.repostMonitor.startMonitoring();
+        audioMatchingScheduler_1.audioMatchingScheduler.start();
+        scheduler_1.peakHoursScheduler.startScheduler();
+        // smartRepostTrigger starts automatically in constructor
+        phase9Monitor_1.phase9Monitor.start();
+        // Start daily hashtag refresh service
+        dailyHashtagRefresh_1.dailyHashtagRefresh.start();
+        console.log('✅ All backend services initialized successfully');
+    }
+    catch (error) {
+        console.error('❌ Error initializing services:', error);
+    }
+}
 // Run migration and initialize scheduled jobs on server start
 (async () => {
     try {
@@ -109,25 +146,9 @@ app.use('/api', index_1.default);
         // Connect to database first
         console.log('🔌 Connecting to database...');
         await connectToDatabase();
-        console.log('🔄 Running migrations...');
-        await (0, migrateFilePaths_1.migrateFilePaths)();
-        console.log('⏰ Initializing scheduled jobs...');
-        await (0, schedulePostJob_1.initializeScheduledJobs)();
-        console.log('📁 Starting Dropbox monitoring...');
-        (0, dropboxMonitor_1.startDropboxMonitoring)();
-        // Start repost monitoring (Phase 2)
-        console.log('🎯 Starting repost monitoring...');
-        repostMonitor_1.repostMonitor.startMonitoring(60); // Check every hour
-        // Start audio matching scheduler (Phase 3)
-        console.log('🎵 Starting audio matching scheduler...');
-        audioMatchingScheduler_1.audioMatchingScheduler.start();
-        // Start peak hours scheduler (Phase 6)
-        console.log('🕒 Starting peak hours scheduler...');
-        scheduler_1.peakHoursScheduler.startScheduler();
-        // Start smart repost trigger (Phase 7)
-        console.log('🔄 Starting smart repost trigger...');
-        smartRepostTrigger_1.smartRepostTrigger.startTrigger();
-        console.log('🚀 Backend fully initialized with ALL PHASES (1-7) complete');
+        // Initialize all services
+        await initializeServices();
+        console.log('🚀 Backend fully initialized with ALL PHASES (1-9) complete');
     }
     catch (error) {
         console.error('❌ Failed to initialize backend:', error);

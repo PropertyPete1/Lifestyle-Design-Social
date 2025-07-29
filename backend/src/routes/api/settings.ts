@@ -20,8 +20,11 @@ router.get('/', (req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    fs.writeFileSync(settingsPath, JSON.stringify(req.body, null, 2));
-    res.json({ message: 'Settings saved' });
+    const settingsData = JSON.stringify(req.body, null, 2);
+    fs.writeFileSync(settingsPath, settingsData);
+    
+    console.log('✅ Settings saved to frontend/settings.json');
+    res.json({ message: 'Settings saved successfully' });
   } catch (error) {
     console.error('Failed to write settings:', error);
     res.status(500).json({ error: 'Failed to save settings' });

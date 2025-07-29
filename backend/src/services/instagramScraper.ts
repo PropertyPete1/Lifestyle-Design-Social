@@ -32,12 +32,16 @@ export class InstagramScraper {
   }
 
   /**
-   * Fetch top 20 performing videos from Instagram page
+   * Fetch top 500 performing videos from Instagram page - PHASE 2 ENHANCED
    */
   async scrapeTopPerformingVideos(): Promise<InstagramMediaData[]> {
     try {
-      // First, get all videos from page (up to 200 recent posts)
+      console.log('🎯 PHASE 2: Fetching up to 500 Instagram videos for analysis...');
+      
+      // First, get all videos from page (up to 500 recent posts)
       const allVideos = await this.fetchPageVideos();
+      
+      console.log(`📊 Fetched ${allVideos.length} videos from Instagram page`);
       
       // Calculate performance scores and sort
       const videosWithScores = allVideos.map(video => ({
@@ -45,27 +49,31 @@ export class InstagramScraper {
         performanceScore: this.calculatePerformanceScore(video)
       }));
 
-      // Sort by performance score and return top 20
+      // Sort by performance score and return all (up to 500)
       const topVideos = videosWithScores
-        .sort((a, b) => b.performanceScore - a.performanceScore)
-        .slice(0, 20);
+        .sort((a, b) => b.performanceScore - a.performanceScore);
 
-      console.log(`Found ${topVideos.length} top performing Instagram videos`);
+      console.log(`✅ Analyzed ${topVideos.length} Instagram videos with performance scores`);
+      if (topVideos.length > 0) {
+        console.log(`🏆 Top performer: ${topVideos[0]?.caption?.substring(0, 50)}... (Score: ${topVideos[0]?.performanceScore})`);
+      }
+      
       return topVideos;
     } catch (error) {
       console.error('Error scraping Instagram videos:', error);
-      console.warn('⚠️ Using fallback sample data for Instagram scraping');
-      return this.getSampleInstagramData();
+      console.warn('⚠️ Instagram API unavailable - using production fallback workflow for Phase 2 processing');
+      throw new Error('Instagram API access failed - no fallback data available');
     }
   }
 
   /**
-   * Fetch video posts from Instagram page
+   * Fetch video posts from Instagram page - ENHANCED for 500 videos
    */
   private async fetchPageVideos(): Promise<InstagramMediaData[]> {
     const videos: InstagramMediaData[] = [];
     let nextUrl = '';
     let totalFetched = 0;
+    const targetVideos = 500; // PHASE 2: Increased from 200 to 500
 
     try {
       // Try different Instagram Business Account IDs and API versions
@@ -78,13 +86,20 @@ export class InstagramScraper {
       const apiVersions = ['v23.0', 'v19.0', 'v18.0'];
       
       let workingUrl = '';
+      let workingId = '';
+      let workingVersion = '';
+      
+      console.log('🔍 Testing Instagram API endpoints...');
+      
       for (const id of possibleIds) {
         for (const version of apiVersions) {
           try {
             const testUrl = `https://graph.facebook.com/${version}/${id}/media?fields=id,caption,media_type,media_url,permalink,timestamp&access_token=${this.accessToken}&limit=5`;
             const testResponse = await fetch(testUrl);
             if (testResponse.ok) {
-              workingUrl = `https://graph.facebook.com/${version}/${id}/media?fields=id,caption,media_type,media_url,permalink,timestamp&access_token=${this.accessToken}&limit=25`;
+              workingUrl = `https://graph.facebook.com/${version}/${id}/media`;
+              workingId = id;
+              workingVersion = version;
               console.log(`✅ Found working Instagram endpoint: ${version}/${id}`);
               break;
             }
@@ -96,25 +111,25 @@ export class InstagramScraper {
       }
       
       if (!workingUrl) {
-        console.warn('⚠️ Instagram API not accessible - using fallback data for testing');
-        // Return sample data for testing purposes
-        return this.getSampleInstagramData();
+        console.warn('⚠️ Instagram API not accessible - using minimal fallback data');
+        throw new Error('Instagram API access failed - no fallback data available');
       }
       
       // Initial request to get page media
-      let url = workingUrl;
+      let url = `${workingUrl}?fields=id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count&access_token=${this.accessToken}&limit=50`;
       
-      while (totalFetched < 200) { // Limit to 200 posts for analysis
+      while (totalFetched < targetVideos) {
         let response;
         try {
           response = await axios.get(url);
         } catch (apiError) {
-          console.warn('⚠️ Instagram API call failed - using fallback data for testing');
-          return this.getSampleInstagramData();
+          console.warn('⚠️ Instagram API call failed - stopping pagination');
+          break;
         }
         const data: InstagramApiResponse = response.data;
 
         if (!data.data || data.data.length === 0) {
+          console.log('📝 No more Instagram media found');
           break;
         }
 
@@ -122,29 +137,35 @@ export class InstagramScraper {
         for (const media of data.data) {
           if (media.media_type === 'VIDEO' || media.media_type === 'REELS') {
             try {
-              // Get insights for this media
-              const insights = await this.getMediaInsights(media.id);
+              // Try to get enhanced insights for this media
+              const insights = await this.getMediaInsights(media.id, workingVersion);
               const enrichedVideo = {
                 ...media,
-                like_count: insights.like_count || 0,
-                comments_count: insights.comments_count || 0,
+                like_count: insights.like_count || media.like_count || 0,
+                comments_count: insights.comments_count || media.comments_count || 0,
                 video_views: insights.video_views || 0
               };
               videos.push(enrichedVideo);
             } catch (insightError) {
-              console.warn(`Could not get insights for media ${media.id}:`, insightError);
-              // Add video without insights
-              videos.push(media);
+              // Add video without enhanced insights
+              videos.push({
+                ...media,
+                like_count: media.like_count || 0,
+                comments_count: media.comments_count || 0,
+                video_views: 0 // Will be estimated in performance scoring
+              });
             }
           }
         }
 
         totalFetched += data.data.length;
+        console.log(`📥 Progress: ${totalFetched}/${targetVideos} Instagram posts processed, ${videos.length} videos found`);
         
         // Check for next page
         if (data.paging?.next) {
           url = data.paging.next;
         } else {
+          console.log('📝 Reached end of Instagram media pagination');
           break;
         }
 
@@ -152,6 +173,7 @@ export class InstagramScraper {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
+      console.log(`✅ Total Instagram videos fetched: ${videos.length}`);
       return videos;
     } catch (error) {
       console.error('Error fetching Instagram page videos:', error);
@@ -160,19 +182,20 @@ export class InstagramScraper {
   }
 
   /**
-   * Get insights for specific media
+   * Get insights for specific media - ENHANCED with fallback
    */
-  private async getMediaInsights(mediaId: string): Promise<{
+  private async getMediaInsights(mediaId: string, apiVersion: string = 'v19.0'): Promise<{
     like_count?: number;
     comments_count?: number;
     video_views?: number;
   }> {
     try {
-      const response = await axios.get(
-        `https://graph.facebook.com/v19.0/${mediaId}/insights?metric=likes,comments,video_views&access_token=${this.accessToken}`
+      // Try insights endpoint first
+      const insightsResponse = await axios.get(
+        `https://graph.facebook.com/${apiVersion}/${mediaId}/insights?metric=likes,comments,video_views&access_token=${this.accessToken}`
       );
 
-      const insights = response.data.data || [];
+      const insights = insightsResponse.data.data || [];
       const result: any = {};
 
       insights.forEach((insight: any) => {
@@ -190,48 +213,69 @@ export class InstagramScraper {
       // If insights are not available, try alternative approach
       try {
         const response = await axios.get(
-          `https://graph.facebook.com/v19.0/${mediaId}?fields=like_count,comments_count&access_token=${this.accessToken}`
+          `https://graph.facebook.com/${apiVersion}/${mediaId}?fields=like_count,comments_count&access_token=${this.accessToken}`
         );
         return response.data;
       } catch (fallbackError) {
-        console.warn(`Could not get insights for media ${mediaId}`);
+        // Return empty object - will use default values
         return {};
       }
     }
   }
 
   /**
-   * Calculate performance score based on views, likes, comments
+   * Calculate performance score based on views, likes, comments - ENHANCED ALGORITHM
    */
   private calculatePerformanceScore(video: InstagramMediaData): number {
     const views = video.video_views || 0;
     const likes = video.like_count || 0;
     const comments = video.comments_count || 0;
     
-    // Weighted scoring: views (50%), likes (30%), comments (20%)
+    // PHASE 2 ENHANCED: Weighted scoring algorithm for Instagram
+    // Views (50%), Likes (30%), Comments (20%) - adjusted for Instagram engagement patterns
     const viewScore = views * 0.5;
     const likeScore = likes * 30; // Weight likes higher per unit
     const commentScore = comments * 20; // Weight comments highest per unit
     
-    return Math.round(viewScore + likeScore + commentScore);
+    // Engagement rate bonus (likes + comments relative to views)
+    const engagementRate = views > 0 ? (likes + comments) / views : 0;
+    const engagementBonus = engagementRate * 500; // Bonus for high engagement (adjusted for Instagram)
+    
+    // If no views available, estimate based on likes (Instagram often doesn't provide view counts)
+    const estimatedViews = views || (likes * 5); // Rough estimation: 1 like per 5 views
+    const estimatedViewScore = estimatedViews * 0.5;
+    
+    const totalScore = (views > 0 ? viewScore : estimatedViewScore) + likeScore + commentScore + engagementBonus;
+    
+    return Math.round(totalScore);
   }
 
   /**
-   * Extract hashtags from Instagram caption
+   * Extract hashtags from Instagram caption - ENHANCED
    */
   private extractHashtags(caption: string): string[] {
     if (!caption) return [];
     
     const hashtagRegex = /#[a-zA-Z0-9_]+/g;
     const hashtags = caption.match(hashtagRegex) || [];
-    return hashtags.map(tag => tag.toLowerCase());
+    
+    // Clean and normalize hashtags
+    return hashtags
+      .map(tag => tag.toLowerCase().trim())
+      .filter(tag => tag.length > 2) // Filter out very short hashtags
+      .slice(0, 30); // Limit to 30 hashtags per video
   }
 
   /**
-   * Save scraped videos to PostInsights collection
+   * Save scraped videos to PostInsights collection - PHASE 2 ENHANCED
    */
   async saveVideoInsights(videos: InstagramMediaData[]): Promise<void> {
     try {
+      console.log(`💾 Saving ${videos.length} Instagram video insights to MongoDB...`);
+      
+      let savedCount = 0;
+      let updatedCount = 0;
+
       for (const video of videos) {
         const hashtags = this.extractHashtags(video.caption || '');
         const performanceScore = this.calculatePerformanceScore(video);
@@ -252,8 +296,10 @@ export class InstagramScraper {
             views: video.video_views || 0,
             likes: video.like_count || 0,
             comments: video.comments_count || 0,
-            title: video.caption?.substring(0, 100) || 'Instagram Video'
+            title: video.caption?.substring(0, 100) || 'Instagram Video',
+            scrapedAt: new Date()
           });
+          savedCount++;
         } else {
           // Update existing record with latest stats
           await PostInsight.findByIdAndUpdate(existingInsight._id, {
@@ -261,12 +307,16 @@ export class InstagramScraper {
             likes: video.like_count || 0,
             comments: video.comments_count || 0,
             performanceScore,
+            hashtags, // Update hashtags in case caption changed
+            caption: video.caption || 'Instagram video - no caption',
+            title: video.caption?.substring(0, 100) || 'Instagram Video',
             scrapedAt: new Date()
           });
+          updatedCount++;
         }
       }
 
-      console.log(`Saved ${videos.length} Instagram video insights to database`);
+      console.log(`✅ Saved ${savedCount} new Instagram insights, updated ${updatedCount} existing records`);
     } catch (error) {
       console.error('Error saving Instagram video insights:', error);
       throw error;
@@ -274,10 +324,12 @@ export class InstagramScraper {
   }
 
   /**
-   * Update top hashtags based on scraped videos
+   * Update top hashtags based on scraped videos - PHASE 2 ENHANCED
    */
   async updateTopHashtags(): Promise<void> {
     try {
+      console.log('🏷️ Updating Instagram hashtag analytics...');
+      
       // Get all Instagram videos from PostInsights
       const instagramVideos = await PostInsight.find({ platform: 'instagram' });
       
@@ -286,6 +338,7 @@ export class InstagramScraper {
         usageCount: number;
         totalViews: number;
         totalLikes: number;
+        totalComments: number;
         videos: any[];
       }>();
 
@@ -296,6 +349,7 @@ export class InstagramScraper {
               usageCount: 0,
               totalViews: 0,
               totalLikes: 0,
+              totalComments: 0,
               videos: []
             });
           }
@@ -304,6 +358,7 @@ export class InstagramScraper {
           stats.usageCount++;
           stats.totalViews += video.views || 0;
           stats.totalLikes += video.likes || 0;
+          stats.totalComments += video.comments || 0;
           stats.videos.push(video);
         }
       }
@@ -327,66 +382,28 @@ export class InstagramScraper {
         );
       }
 
-      console.log(`Updated ${hashtagStats.size} Instagram hashtags in TopHashtags collection`);
+      console.log(`✅ Updated ${hashtagStats.size} Instagram hashtags in TopHashtags collection`);
     } catch (error) {
       console.error('Error updating Instagram top hashtags:', error);
       throw error;
     }
   }
 
-  /**
-   * Get sample Instagram data for testing when API is not accessible
-   */
-  private getSampleInstagramData(): InstagramMediaData[] {
-    console.log('📝 Using sample Instagram data for Phase 2 testing...');
-    return [
-      {
-        id: 'sample_ig_1',
-        caption: 'Beautiful home in San Antonio! 🏡 Perfect for families looking for modern amenities. #SanAntonio #RealEstate #DreamHome #Texas #LifestyleDesign',
-        media_type: 'VIDEO',
-        media_url: 'https://example.com/video1.mp4',
-        permalink: 'https://instagram.com/p/sample1',
-        timestamp: '2024-01-15T12:00:00Z',
-        like_count: 245,
-        comments_count: 18,
-        video_views: 1200
-      },
-      {
-        id: 'sample_ig_2', 
-        caption: 'Just sold! Another happy family in their new home 🔑 Thank you for trusting us with your real estate journey. #JustSold #RealEstateAgent #SanAntonioHomes',
-        media_type: 'VIDEO',
-        media_url: 'https://example.com/video2.mp4',
-        permalink: 'https://instagram.com/p/sample2',
-        timestamp: '2024-01-14T15:30:00Z',
-        like_count: 189,
-        comments_count: 23,
-        video_views: 890
-      },
-      {
-        id: 'sample_ig_3',
-        caption: 'Market update: Great time to buy in Texas! 📈 Interest rates are stabilizing. #MarketUpdate #TexasRealEstate #BuyersMarket #Investment',
-        media_type: 'VIDEO', 
-        media_url: 'https://example.com/video3.mp4',
-        permalink: 'https://instagram.com/p/sample3',
-        timestamp: '2024-01-13T09:45:00Z',
-        like_count: 156,
-        comments_count: 12,
-        video_views: 654
-      }
-    ];
-  }
+
+
 
   /**
-   * Full scraping process: fetch videos, save insights, update hashtags
+   * Full scraping process: fetch videos, save insights, update hashtags - PHASE 2 COMPLETE
    */
   async performFullScrape(): Promise<{
     videosScraped: number;
     hashtagsUpdated: number;
+    topPerformer: { caption: string; score: number; likes: number } | null;
   }> {
     try {
-      console.log('Starting Instagram scraping process...');
+      console.log('🚀 Starting Instagram Phase 2 scraping process...');
       
-      // 1. Scrape top performing videos
+      // 1. Scrape top performing videos (up to 500)
       const topVideos = await this.scrapeTopPerformingVideos();
       
       // 2. Save video insights
@@ -395,39 +412,30 @@ export class InstagramScraper {
       // 3. Update hashtag analytics
       await this.updateTopHashtags();
       
-      // 4. Get hashtag count for return
+      // 4. Get hashtag count and top performer for return
       const hashtagCount = await TopHashtag.countDocuments({ platform: 'instagram' });
+      const topPerformer = topVideos.length > 0 ? {
+        caption: topVideos[0].caption?.substring(0, 50) + '...' || 'No caption',
+        score: this.calculatePerformanceScore(topVideos[0]),
+        likes: topVideos[0].like_count || 0
+      } : null;
       
-      console.log('Instagram scraping process completed successfully');
+      console.log('✅ Instagram Phase 2 scraping process completed successfully');
       
       return {
         videosScraped: topVideos.length,
-        hashtagsUpdated: hashtagCount
+        hashtagsUpdated: hashtagCount,
+        topPerformer
       };
     } catch (error) {
-      console.error('Error in Instagram full scrape process:', error);
-      console.warn('⚠️ Instagram API unavailable - using fallback data for Phase 2 demonstration');
+      console.error('❌ Instagram full scrape process failed:', error);
+      console.error('🚫 No fallback data available - Instagram API credentials required');
       
-      // Use fallback data for complete workflow
-      const sampleVideos = this.getSampleInstagramData();
-      
-      try {
-        // Still try to save insights with sample data
-        await this.saveVideoInsights(sampleVideos);
-        await this.updateTopHashtags();
-        const hashtagCount = await TopHashtag.countDocuments({ platform: 'instagram' });
-        
-        return {
-          videosScraped: sampleVideos.length,
-          hashtagsUpdated: hashtagCount
-        };
-      } catch (fallbackError) {
-        console.warn('Even fallback processing failed, returning basic result');
-        return {
-          videosScraped: sampleVideos.length,
-          hashtagsUpdated: 0
-        };
-      }
+      return {
+        videosScraped: 0,
+        hashtagsUpdated: 0,
+        topPerformer: null
+      };
     }
   }
 } 

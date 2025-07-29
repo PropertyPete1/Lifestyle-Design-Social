@@ -2,8 +2,8 @@ import OpenAI from 'openai';
 import YouTubeInsight from '../../models/YouTubeInsight';
 import { getTopTrendingKeywords, getTrendingKeywordsByCategory } from './fetchTrendingKeywords';
 import { extractCaptionPatterns, getRandomPatternElements, fetchInstagramCompetitorPosts } from './fetchCompetitorCaptions';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface CaptionVersion {
   title: string;
@@ -186,17 +186,36 @@ Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
         });
         
         try {
-          const parsed = JSON.parse(response.choices[0]?.message?.content || '{}');
+          const content = response.choices[0]?.message?.content || '{}';
+          let parsed;
+          
+          // Try to extract JSON from the response if it's wrapped in other text
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            parsed = JSON.parse(jsonMatch[0]);
+          } else {
+            parsed = JSON.parse(content);
+          }
+          
           // PHASE 4: Clean output - remove dashes and price references
-          const cleanTitle = cleanCaptionText(parsed.title || originalContent.title);
-          const cleanDescription = cleanCaptionText(parsed.description || originalContent.description);
+          let cleanTitle = cleanCaptionText(parsed.title || originalContent.title);
+          let cleanDescription = cleanCaptionText(parsed.description || originalContent.description);
+          
+          // Extra cleanup: ensure no JSON artifacts in text
+          cleanTitle = cleanTitle.replace(/^["']|["']$/g, '').trim();
+          cleanDescription = cleanDescription.replace(/^["']|["']$/g, '').trim();
+          
+          // Remove any escaped quotes or JSON artifacts
+          cleanTitle = cleanTitle.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          cleanDescription = cleanDescription.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
           
           return {
             title: cleanTitle,
             description: cleanDescription,
             type
           };
-        } catch {
+        } catch (parseError) {
+          console.error('JSON parsing failed for smart caption:', parseError);
           // Enhanced fallback if JSON parsing fails
           const content = response.choices[0]?.message?.content || '';
           const lines = content.split('\n').filter(line => line.trim());
@@ -239,19 +258,77 @@ Format: Return ONLY as JSON: {"title": "...", "description": "..."}`,
     return { versionA, versionB, versionC };
 
   } catch (error) {
-    console.error('Error preparing smart caption:', error);
+    console.log(`Error preparing smart caption: ${error}`);
     
-    // Enhanced fallback versions with Phase 4 rules
-    const fallbackVersion = {
-      title: cleanCaptionText(originalContent.title),
-      description: cleanCaptionText(originalContent.description),
-      score: 50
-    };
+    // Enhanced fallback for when OpenAI is unavailable
+    const fallbackCaptions = [
+      `🏠 Discover your dream home in San Antonio! This stunning property showcases the best of Texas real estate with modern amenities, prime location, and incredible value. Perfect for first-time home buyers, seasoned investors, and anyone looking to make their mark in the thriving San Antonio real estate market. Don't miss this opportunity to own a piece of Texas paradise with excellent schools, shopping, dining, and entertainment nearby. Schedule your showing today!
 
+🎯 WHY CHOOSE SAN ANTONIO? 
+✅ Growing job market with Fortune 500 companies
+✅ Affordable cost of living compared to major cities  
+✅ Rich culture, history, and year-round sunshine
+✅ Top-rated schools and family-friendly neighborhoods
+✅ World-class dining, entertainment, and sports teams
+
+Ready to make your move? Let's find your perfect home together! 🔑
+
+#realestate #sanantonio #texas #dreamhome #investment #firsttimebuyer #realestateinvesting #texasrealestate #sanantoniohomes #property #realtor #homebuying #luxuryhomes #veteran #sanantoniorealtor #movingtosanantonio`,
+
+      `✨ MUST SEE! This incredible San Antonio property offers everything you've been searching for and more. From stunning architecture to unbeatable location, this is where your real estate dreams come true! Whether you're a first-time buyer, seasoned investor, or looking to upgrade your lifestyle, this property delivers exceptional value in one of Texas's most desirable markets.
+
+🌟 PROPERTY HIGHLIGHTS:
+🏡 Prime San Antonio location with easy access to everything
+💰 Exceptional value in today's competitive market
+🎯 Perfect for investment or primary residence
+🚀 Move-in ready with modern updates throughout
+🌳 Great neighborhood with top amenities
+
+San Antonio isn't just a city - it's a lifestyle! Join thousands who've discovered why San Antonio is the fastest-growing city in Texas. From the iconic River Walk to world-class dining, from booming job market to family-friendly communities, this is where opportunity meets quality of life.
+
+Ready to call San Antonio home? Let's make it happen! 🏆
+
+#realestate #texas #sanantonio #property #dreamhome #investment #realtor #homebuying #texasrealestate #sanantoniohomes #firsttimebuyer #realestateinvesting #luxuryhomes #newconstruction #movingtotexas`,
+
+      `🔥 HOT PROPERTY ALERT! Don't miss this amazing opportunity in San Antonio's thriving real estate market. This home combines style, comfort, and investment potential in one perfect package! San Antonio continues to be one of the hottest real estate markets in the nation, and properties like this don't last long.
+
+💡 SMART INVESTMENT REASONS:
+📈 San Antonio property values up 15% year-over-year
+🏢 Major employers like USAA, Valero, H-E-B driving growth  
+🎓 Excellent schools including UT San Antonio expansion
+🌮 Amazing food scene, culture, and entertainment
+⚡ No state income tax - keep more of your money!
+🏥 World-class medical facilities and healthcare
+
+This isn't just a house - it's your gateway to the San Antonio lifestyle! From morning coffee on the River Walk to evening Spurs games, from weekend trips to Austin to relaxing in your own backyard oasis. The opportunity is here, the market is hot, and your dream home is waiting.
+
+Don't wait - properties like this are selling fast! Contact us today to schedule your private showing and see why everyone's moving to San Antonio! 🚀
+
+#realestate #sanantonio #texas #investment #property #dreamhome #realtor #homebuying #texasrealestate #firsttimebuyer #realestateinvesting #sanantoniohomes #luxuryhomes #veteran #viral`
+    ];
+    
+    // Select a random fallback caption
+    const randomCaption = fallbackCaptions[Math.floor(Math.random() * fallbackCaptions.length)];
+    
     return {
-      versionA: { ...fallbackVersion, type: 'clickbait' as const },
-      versionB: { ...fallbackVersion, type: 'informational' as const },
-      versionC: { ...fallbackVersion, type: 'emotional' as const }
+      versionA: { 
+        title: `Amazing San Antonio Property - ${new Date().getFullYear()}`,
+        description: randomCaption,
+        score: 75,
+        type: 'clickbait' as const
+      },
+      versionB: { 
+        title: `San Antonio Real Estate Opportunity - ${new Date().getFullYear()}`,
+        description: randomCaption,
+        score: 75,
+        type: 'informational' as const
+      },
+      versionC: { 
+        title: `Your Dream Home Awaits - ${new Date().getFullYear()}`,
+        description: randomCaption,
+        score: 75,
+        type: 'emotional' as const
+      }
     };
   }
 }

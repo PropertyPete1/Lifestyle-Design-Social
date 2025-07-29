@@ -1,8 +1,8 @@
 import { Phase9InstagramScraper } from '../lib/youtube/phase9InstagramScraper';
-import { Phase9YouTubeReposter } from '../lib/youtube/phase9YouTubeReposter';
-import { Phase9InstagramReposter } from '../lib/youtube/phase9InstagramReposter';
-import fs from 'fs';
-import path from 'path';
+import { Phase9DualPlatformReposter } from '../lib/youtube/phase9DualPlatformReposter';
+import { Phase9DailyScheduler } from '../lib/youtube/phase9DailyScheduler';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as cron from 'node-cron';
 
 export class Phase9Monitor {
@@ -10,9 +10,13 @@ export class Phase9Monitor {
   private scrapingJob?: any;
   private processingJob?: any;
   private settingsPath: string;
+  private dualPlatformReposter: Phase9DualPlatformReposter;
+  private dailyScheduler: Phase9DailyScheduler;
 
   constructor() {
     this.settingsPath = path.join(__dirname, '../../settings.json');
+    this.dualPlatformReposter = new Phase9DualPlatformReposter();
+    this.dailyScheduler = new Phase9DailyScheduler();
   }
 
   /**
@@ -20,26 +24,29 @@ export class Phase9Monitor {
    */
   async start(): Promise<void> {
     try {
-      console.log('🚀 Phase 9 Monitor: Starting intelligent content repurposing...');
+      console.log('🚀 Phase 9 Monitor: Starting intelligent dual-platform automation...');
 
       const settings = this.loadSettings();
-      const autopostMode = settings.autopostMode || 'off';
+      const phase9AutopilotMode = settings.phase9AutopilotMode || 'off';
 
-      if (autopostMode === 'off') {
+      if (phase9AutopilotMode === 'off') {
         console.log('📴 Phase 9 auto-posting is OFF');
         return;
       }
 
-      if (autopostMode === 'instagram') {
-        console.log('📱 Phase 9: Instagram mode activated - scraping and repurposing content');
-        await this.startInstagramMode(settings);
-      } else if (autopostMode === 'dropbox') {
+      // Start daily scheduling system
+      await this.dailyScheduler.startDailyScheduling();
+
+      if (phase9AutopilotMode === 'both' || phase9AutopilotMode === 'instagram') {
+        console.log('🚀 Phase 9: Dual-platform mode activated - Instagram scraping + both platform repurposing');
+        await this.startDualPlatformMode(settings);
+      } else if (phase9AutopilotMode === 'dropbox') {
         console.log('📂 Phase 9: Dropbox mode activated - monitoring uploads only');
         await this.startDropboxMode(settings);
       }
 
       this.isRunning = true;
-      console.log('✅ Phase 9 Monitor: Successfully started');
+      console.log('✅ Phase 9 Monitor: Successfully started with dual-platform automation');
 
     } catch (error) {
       console.error('❌ Phase 9 Monitor: Failed to start:', error);
@@ -63,19 +70,25 @@ export class Phase9Monitor {
       this.processingJob = undefined;
     }
 
+    this.dailyScheduler.stopDailyScheduling();
+
     this.isRunning = false;
     console.log('✅ Phase 9 Monitor: Stopped');
   }
 
   /**
-   * Start Instagram mode - scrape and repost content automatically
+   * Start dual-platform mode - scrape Instagram and repost to both platforms
    */
-  private async startInstagramMode(settings: any): Promise<void> {
-    console.log('📱 Initializing Instagram intelligent repurposing mode...');
+  private async startDualPlatformMode(settings: any): Promise<void> {
+    console.log('🚀 Initializing dual-platform intelligent repurposing mode...');
 
-    // Validate Instagram settings
+    // Validate credentials for both platforms
     if (!settings.instagramAccessToken || !settings.instagramBusinessId) {
-      throw new Error('Instagram access token and business ID required for Instagram mode');
+      throw new Error('Instagram access token and business ID required for dual-platform mode');
+    }
+
+    if (!settings.youtubeRefreshToken || !settings.youtubeClientId) {
+      throw new Error('YouTube credentials required for dual-platform mode');
     }
 
     // Create service instances
@@ -83,13 +96,8 @@ export class Phase9Monitor {
       settings.instagramAccessToken,
       settings.instagramBusinessId
     );
-    const youtubeReposter = new Phase9YouTubeReposter();
-    const instagramReposter = new Phase9InstagramReposter(
-      settings.instagramAccessToken,
-      settings.instagramBusinessId
-    );
 
-    // Set up scraping schedule - every 2 hours
+    // Set up Instagram scraping schedule - every 2 hours
     this.scrapingJob = cron.schedule('0 */2 * * *', async () => {
       try {
         console.log('⏰ Phase 9 Scheduled: Starting Instagram content scraping...');
@@ -97,6 +105,9 @@ export class Phase9Monitor {
         
         if (scrapingResult.success) {
           console.log(`✅ Scraping completed: ${scrapingResult.postsScraped} posts, ${scrapingResult.topPerformers} top performers`);
+          
+          // Schedule new content for the week
+          await this.dailyScheduler.scheduleRestOfWeek();
         } else {
           console.error(`❌ Scraping failed: ${scrapingResult.error}`);
         }
@@ -105,36 +116,44 @@ export class Phase9Monitor {
       }
     });
 
-    // Set up repost processing - every 30 minutes
-    this.processingJob = cron.schedule('*/30 * * * *', async () => {
+    // Set up dual-platform repost processing - every 15 minutes for real-time posting
+    this.processingJob = cron.schedule('*/15 * * * *', async () => {
       try {
-        console.log('⏰ Phase 9 Scheduled: Processing reposts...');
+        console.log('⏰ Phase 9 Scheduled: Processing dual-platform reposts...');
         
-        // Process YouTube reposts
-        const youtubeResults = await youtubeReposter.processYouTubeReposts();
-        console.log(`📺 YouTube reposts: ${youtubeResults.successful}/${youtubeResults.processed} successful`);
+        // Process both Instagram and YouTube reposts
+        const dualResults = await this.dualPlatformReposter.processDualPlatformReposts();
+        
+        console.log(`🚀 Dual-platform processing: ${dualResults.successful}/${dualResults.processed} successful`);
+        console.log(`   📱 Instagram: ${dualResults.instagram.successful} successful, ${dualResults.instagram.failed} failed`);
+        console.log(`   📺 YouTube: ${dualResults.youtube.successful} successful, ${dualResults.youtube.failed} failed`);
 
-        // Process Instagram reposts  
-        const instagramResults = await instagramReposter.processInstagramReposts();
-        console.log(`📱 Instagram reposts: ${instagramResults.successful}/${instagramResults.processed} successful`);
-
-        if (youtubeResults.errors.length > 0 || instagramResults.errors.length > 0) {
-          console.warn('⚠️ Some reposts failed:', [...youtubeResults.errors, ...instagramResults.errors]);
+        if (dualResults.errors.length > 0) {
+          console.warn('⚠️ Some reposts failed:', dualResults.errors);
         }
 
+        // Clean up old scheduled posts
+        await this.dailyScheduler.cleanupOldScheduledPosts();
+
       } catch (error) {
-        console.error('❌ Phase 9 Repost Processing Job Error:', error);
+        console.error('❌ Phase 9 Dual-Platform Processing Job Error:', error);
       }
     });
 
-    // Run initial scraping
-    console.log('🔄 Running initial Instagram content scraping...');
+    // Run initial scraping and scheduling
+    console.log('🔄 Running initial Instagram content scraping and weekly scheduling...');
     const initialResult = await scraper.scrapeRecentPosts();
     if (initialResult.success) {
       console.log(`✅ Initial scraping: ${initialResult.postsScraped} posts processed, ${initialResult.topPerformers} top performers identified`);
+      
+      // Schedule posts for the rest of the week
+      const weekScheduleResult = await this.dailyScheduler.scheduleRestOfWeek();
+      if (weekScheduleResult.success) {
+        console.log(`📅 Week scheduling: ${weekScheduleResult.scheduledPosts} posts scheduled across both platforms`);
+      }
     }
 
-    console.log('✅ Instagram mode fully initialized with automatic scheduling');
+    console.log('✅ Dual-platform mode fully initialized with automatic scheduling and processing');
   }
 
   /**
@@ -144,23 +163,18 @@ export class Phase9Monitor {
     console.log('📂 Initializing Dropbox monitoring mode...');
 
     // In Dropbox mode, we still process any existing reposts but don't scrape new content
-    const youtubeReposter = new Phase9YouTubeReposter();
-    const instagramReposter = new Phase9InstagramReposter(
-      settings.instagramAccessToken || '',
-      settings.instagramBusinessId || ''
-    );
-
-    // Set up processing schedule - every hour (less frequent than Instagram mode)
+    // Set up processing schedule - every hour (less frequent than dual-platform mode)
     this.processingJob = cron.schedule('0 * * * *', async () => {
       try {
         console.log('⏰ Phase 9 Dropbox Mode: Processing existing reposts...');
         
         // Process any pending reposts
-        const youtubeResults = await youtubeReposter.processYouTubeReposts();
-        const instagramResults = await instagramReposter.processInstagramReposts();
+        const dualResults = await this.dualPlatformReposter.processDualPlatformReposts();
 
-        if (youtubeResults.processed > 0 || instagramResults.processed > 0) {
-          console.log(`📊 Processed reposts - YouTube: ${youtubeResults.successful}/${youtubeResults.processed}, Instagram: ${instagramResults.successful}/${instagramResults.processed}`);
+        if (dualResults.processed > 0) {
+          console.log(`📊 Processed reposts - Total: ${dualResults.successful}/${dualResults.processed} successful`);
+          console.log(`   📱 Instagram: ${dualResults.instagram.successful}/${dualResults.instagram.successful + dualResults.instagram.failed}`);
+          console.log(`   📺 YouTube: ${dualResults.youtube.successful}/${dualResults.youtube.successful + dualResults.youtube.failed}`);
         }
 
       } catch (error) {
@@ -187,13 +201,13 @@ export class Phase9Monitor {
   /**
    * Update auto-posting mode
    */
-  async updateAutopostMode(mode: 'off' | 'dropbox' | 'instagram'): Promise<void> {
+  async updatePhase9AutopilotMode(mode: 'off' | 'dropbox' | 'instagram' | 'both'): Promise<void> {
     try {
       console.log(`🔄 Phase 9: Updating autopost mode to "${mode}"`);
 
       // Load current settings
       const settings = this.loadSettings();
-      settings.autopostMode = mode;
+      settings.phase9AutopilotMode = mode;
 
       // Save updated settings
       fs.writeFileSync(this.settingsPath, JSON.stringify(settings, null, 2));
@@ -213,47 +227,47 @@ export class Phase9Monitor {
   }
 
   /**
-   * Get current Phase 9 status and statistics
+   * Get current Phase 9 status and comprehensive statistics
    */
   async getStatus(): Promise<{
     isRunning: boolean;
-    autopostMode: string;
+    phase9AutopilotMode: string;
     scraperStats?: any;
-    youtubeStats?: any;
-    instagramStats?: any;
+    dualPlatformStats?: any;
+    schedulingStats?: any;
     nextScraping?: string;
     nextProcessing?: string;
   }> {
     try {
       const settings = this.loadSettings();
-      const autopostMode = settings.autopostMode || 'off';
+      const phase9AutopilotMode = settings.phase9AutopilotMode || 'off';
 
       const status: any = {
         isRunning: this.isRunning,
-        autopostMode
+        phase9AutopilotMode
       };
 
-      // Add detailed stats if running in Instagram mode
-      if (autopostMode === 'instagram' && this.isRunning) {
+      // Add detailed stats if running
+      if (this.isRunning) {
         try {
-          const scraper = new Phase9InstagramScraper(
-            settings.instagramAccessToken,
-            settings.instagramBusinessId
-          );
-          status.scraperStats = await scraper.getScrapingStats();
+          // Get scraper stats if in Instagram mode
+          if (phase9AutopilotMode === 'both' || phase9AutopilotMode === 'instagram') {
+            const scraper = new Phase9InstagramScraper(
+              settings.instagramAccessToken,
+              settings.instagramBusinessId
+            );
+            status.scraperStats = await scraper.getScrapingStats();
+            status.nextScraping = 'Every 2 hours';
+            status.nextProcessing = 'Every 15 minutes';
+          } else {
+            status.nextProcessing = 'Every hour (Dropbox mode)';
+          }
 
-          const youtubeReposter = new Phase9YouTubeReposter();
-          status.youtubeStats = await youtubeReposter.getYouTubeRepostStats();
+          // Get dual-platform stats
+          status.dualPlatformStats = await this.dualPlatformReposter.getDualPlatformStats();
 
-          const instagramReposter = new Phase9InstagramReposter(
-            settings.instagramAccessToken,
-            settings.instagramBusinessId
-          );
-          status.instagramStats = await instagramReposter.getInstagramRepostStats();
-
-          // Add schedule info
-          status.nextScraping = 'Every 2 hours';
-          status.nextProcessing = 'Every 30 minutes';
+          // Get scheduling stats
+          status.schedulingStats = await this.dailyScheduler.getSchedulingStats();
 
         } catch (error) {
           console.warn('⚠️ Could not fetch detailed stats:', error);
@@ -266,7 +280,7 @@ export class Phase9Monitor {
       console.error('❌ Error getting Phase 9 status:', error);
       return {
         isRunning: false,
-        autopostMode: 'off'
+        phase9AutopilotMode: 'off'
       };
     }
   }
@@ -291,6 +305,13 @@ export class Phase9Monitor {
       const result = await scraper.scrapeRecentPosts();
       console.log(`✅ Manual scraping completed: ${result.postsScraped} posts, ${result.topPerformers} top performers`);
 
+      // Schedule new content for the week
+      if (result.success && result.topPerformers > 0) {
+        const weekScheduleResult = await this.dailyScheduler.scheduleRestOfWeek();
+        // Add scheduling result to the response
+        (result as any).weekScheduleResult = weekScheduleResult;
+      }
+
       return result;
 
     } catch (error) {
@@ -300,38 +321,107 @@ export class Phase9Monitor {
   }
 
   /**
-   * Manually trigger repost processing
+   * Manually trigger dual-platform reposting
    */
   async triggerManualReposting(): Promise<any> {
     try {
-      console.log('🔄 Phase 9: Manual reposting triggered...');
+      console.log('🔄 Phase 9: Manual dual-platform reposting triggered...');
 
-      const settings = this.loadSettings();
-      const youtubeReposter = new Phase9YouTubeReposter();
-      const instagramReposter = new Phase9InstagramReposter(
-        settings.instagramAccessToken || '',
-        settings.instagramBusinessId || ''
-      );
+      const result = await this.dualPlatformReposter.processDualPlatformReposts();
 
-      const [youtubeResults, instagramResults] = await Promise.all([
-        youtubeReposter.processYouTubeReposts(),
-        instagramReposter.processInstagramReposts()
-      ]);
+      console.log(`✅ Manual reposting completed: ${result.successful}/${result.processed} successful`);
+      console.log(`   📱 Instagram: ${result.instagram.successful} successful, ${result.instagram.failed} failed`);
+      console.log(`   📺 YouTube: ${result.youtube.successful} successful, ${result.youtube.failed} failed`);
 
-      const result = {
-        youtube: youtubeResults,
-        instagram: instagramResults,
-        totalProcessed: youtubeResults.processed + instagramResults.processed,
-        totalSuccessful: youtubeResults.successful + instagramResults.successful,
-        totalFailed: youtubeResults.failed + instagramResults.failed
-      };
-
-      console.log(`✅ Manual reposting completed: ${result.totalSuccessful}/${result.totalProcessed} successful`);
       return result;
 
     } catch (error) {
       console.error('❌ Manual reposting failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Manually trigger weekly scheduling
+   */
+  async triggerWeeklyScheduling(): Promise<any> {
+    try {
+      console.log('📅 Phase 9: Manual weekly scheduling triggered...');
+
+      const result = await this.dailyScheduler.scheduleRestOfWeek();
+      console.log(`✅ Weekly scheduling completed: ${result.scheduledPosts} posts scheduled`);
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Weekly scheduling failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up placeholder and test data from database
+   */
+  async cleanupPlaceholderData(): Promise<{ success: boolean; deletedCounts: any }> {
+    try {
+      console.log('🧹 Phase 9: Cleaning up placeholder and test data...');
+
+      const { InstagramArchive } = require('../models/InstagramContent');
+      const { RepostQueue } = require('../models/RepostQueue');
+      const { VideoStatus } = require('../models/VideoStatus');
+
+      const deletedCounts = {
+        instagramArchive: 0,
+        repostQueue: 0,
+        videoStatus: 0
+      };
+
+      // Clean up test Instagram content
+      const instagramCleanup = await InstagramArchive.deleteMany({
+        $or: [
+          { caption: { $regex: /test|placeholder|mock|sample/i } },
+          { videoId: { $regex: /test|placeholder|mock|sample/i } },
+          { performanceScore: { $lt: 10 } }, // Very low scores are likely test data
+          { viewCount: 0, likeCount: 0, commentCount: 0 } // Zero engagement is likely test
+        ]
+      });
+      deletedCounts.instagramArchive = instagramCleanup.deletedCount;
+
+      // Clean up test repost queue entries
+      const repostCleanup = await RepostQueue.deleteMany({
+        $or: [
+          { sourceMediaId: { $regex: /test|placeholder|mock|sample/i } },
+          { status: 'failed', createdAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } // Old failed entries
+        ]
+      });
+      deletedCounts.repostQueue = repostCleanup.deletedCount;
+
+      // Clean up test video status entries
+      const videoStatusCleanup = await VideoStatus.deleteMany({
+        $or: [
+          { videoId: { $regex: /test|placeholder|mock|sample/i } },
+          { filename: { $regex: /test|placeholder|mock|sample/i } },
+          { status: 'failed', uploadDate: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
+        ]
+      });
+      deletedCounts.videoStatus = videoStatusCleanup.deletedCount;
+
+      console.log('✅ Placeholder data cleanup complete:');
+      console.log(`   📱 Instagram Archive: ${deletedCounts.instagramArchive} entries deleted`);
+      console.log(`   🔄 Repost Queue: ${deletedCounts.repostQueue} entries deleted`);
+      console.log(`   📹 Video Status: ${deletedCounts.videoStatus} entries deleted`);
+
+      return {
+        success: true,
+        deletedCounts
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to cleanup placeholder data:', error);
+      return {
+        success: false,
+        deletedCounts: {}
+      };
     }
   }
 

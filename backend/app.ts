@@ -91,6 +91,10 @@ async function initializeServices() {
     // Start daily repost scheduler
     dailyRepostScheduler.start();
     
+    // Start RepostQueue executor for scheduled posts
+    const { repostQueueExecutor } = await import('./src/services/repostQueueExecutor');
+    repostQueueExecutor.start();
+    
     console.log('✅ All backend services initialized successfully');
   } catch (error) {
     console.error('❌ Error initializing services:', error);

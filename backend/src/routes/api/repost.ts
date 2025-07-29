@@ -41,6 +41,38 @@ router.get('/status', async (req, res) => {
 });
 
 /**
+ * GET /api/repost/trigger
+ * Simple GET endpoint for browser testing
+ */
+router.get('/trigger', async (req, res) => {
+  try {
+    console.log('🎯 Manual repost trigger requested via GET');
+    
+    const results = await smartRepostTrigger.manualTrigger();
+    
+    const summary = {
+      success: true,
+      totalTriggered: results.filter(r => r.triggered).length,
+      platforms: results.map(r => ({
+        platform: r.platform,
+        triggered: r.triggered,
+        newVideoCount: r.newVideoCount,
+        repostsScheduled: r.repostsScheduled,
+        candidates: r.repostCandidates.length
+      }))
+    };
+
+    res.json(summary);
+  } catch (error) {
+    console.error('❌ Manual trigger error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * POST /api/repost/trigger
  * Manually trigger repost check and execution
  */

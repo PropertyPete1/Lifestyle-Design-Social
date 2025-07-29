@@ -10,8 +10,16 @@
   },
   "dependencies": {
     "@runwayml/sdk": "^2.5.0",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/debug": "^4.1.12",
+    "@types/express": "^5.0.3",
     "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.1.0",
     "@types/node-cron": "^3.0.11",
+    "@types/node-schedule": "^2.1.8",
     "@types/uuid": "^10.0.0",
     "axios": "^1.11.0",
     "cookie-parser": "~1.4.4",
@@ -31,18 +39,9 @@
     "node-schedule": "^2.1.1",
     "open": "^10.2.0",
     "openai": "^5.10.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "uuid": "^11.1.0"
   },
-  "devDependencies": {
-    "@types/cookie-parser": "^1.4.9",
-    "@types/cors": "^2.8.19",
-    "@types/debug": "^4.1.12",
-    "@types/express": "^5.0.3",
-    "@types/morgan": "^1.9.10",
-    "@types/multer": "^2.0.0",
-    "@types/node": "^24.1.0",
-    "@types/node-schedule": "^2.1.8",
-    "ts-node": "^10.9.2"
-  }
+  "devDependencies": {}
 }

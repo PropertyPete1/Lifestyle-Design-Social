@@ -7,7 +7,7 @@ import { RealYouTubeUploader } from './realYouTubeUpload';
 import { analyzePeakHours } from './analyzePeakHours';
 import { analyzeTopHashtags } from './analyzeTopHashtags';
 import { fetchTrendingAudio } from './fetchTrendingAudio';
-import { AudioMatchingService } from '../../services/audioMatchingService';
+
 // Video enhancement removed - was ruining video quality
 import axios from 'axios';
 import * as fs from 'fs';
@@ -23,12 +23,10 @@ export class Phase9DualPlatformReposter {
   private uploadsDir: string;
   private settingsPath: string;
   private dropboxService?: DropboxService;
-  private audioMatchingService: AudioMatchingService;
 
   constructor() {
     this.uploadsDir = path.join(__dirname, '../../../uploads');
     this.settingsPath = path.join(__dirname, '../../../settings.json');
-    this.audioMatchingService = new AudioMatchingService();
     
     // Ensure uploads directory exists
     if (!fs.existsSync(this.uploadsDir)) {
@@ -592,25 +590,18 @@ export class Phase9DualPlatformReposter {
       
       // 🧠 SMART FEATURE: Use advanced audio matching service
       const videoId = path.basename(videoPath, '.mp4');
-      const smartAudioMatch = await this.audioMatchingService.matchVideoWithAudio(videoId, 'instagram');
-      
-      if (smartAudioMatch && smartAudioMatch.matchedAudio) {
-        console.log(`✅ Smart Instagram audio matched: "${smartAudioMatch.matchedAudio}" (trending rank: ${smartAudioMatch.audioMetadata?.trending_rank || 'N/A'})`);
-        return {
-          audioId: smartAudioMatch.audioMetadata?.platform_audio_id || smartAudioMatch.matchedAudio,
-          trackName: smartAudioMatch.matchedAudio
-        };
-      }
-
-      // Fallback to Phase 3 audio matching if smart matching fails
-      console.log('🔄 Smart audio matching failed, using fallback...');
+      // Use Phase 3 audio matching directly since VideoId won't be in database for reposts
       const audioMatch = await matchAudioToVideo(videoPath, 'instagram');
       if (audioMatch && audioMatch.audioTrackId) {
+        console.log(`✅ Smart Instagram audio matched: "${audioMatch.audioTrack?.title || 'Default Track'}"`);
         return {
           audioId: audioMatch.audioTrackId,
           trackName: audioMatch.audioTrack?.title || 'Default Track'
         };
       }
+      
+      // If no audio match found, return null
+      console.log('🔄 No Instagram audio match found');
       return null;
     } catch (error) {
       console.error('❌ Smart Instagram audio matching failed:', error);
@@ -627,25 +618,18 @@ export class Phase9DualPlatformReposter {
       
       // 🧠 SMART FEATURE: Use advanced audio matching service
       const videoId = path.basename(videoPath, '.mp4');
-      const smartAudioMatch = await this.audioMatchingService.matchVideoWithAudio(videoId, 'youtube');
-      
-      if (smartAudioMatch && smartAudioMatch.matchedAudio) {
-        console.log(`✅ Smart YouTube audio matched: "${smartAudioMatch.matchedAudio}" (trending rank: ${smartAudioMatch.audioMetadata?.trending_rank || 'N/A'})`);
-        return {
-          audioId: smartAudioMatch.audioMetadata?.platform_audio_id || smartAudioMatch.matchedAudio,
-          trackName: smartAudioMatch.matchedAudio
-        };
-      }
-
-      // Fallback to Phase 3 audio matching if smart matching fails
-      console.log('🔄 Smart audio matching failed, using fallback...');
+      // Use Phase 3 audio matching directly since VideoId won't be in database for reposts
       const audioMatch = await matchAudioToVideo(videoPath, 'youtube');
       if (audioMatch && audioMatch.audioTrackId) {
+        console.log(`✅ Smart YouTube audio matched: "${audioMatch.audioTrack?.title || 'Default Track'}"`);
         return {
           audioId: audioMatch.audioTrackId,
           trackName: audioMatch.audioTrack?.title || 'Default Track'
         };
       }
+      
+      // If no audio match found, return null
+      console.log('🔄 No YouTube audio match found');
       return null;
     } catch (error) {
       console.error('❌ Smart YouTube audio matching failed:', error);

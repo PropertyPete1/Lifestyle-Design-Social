@@ -776,6 +776,13 @@ Generate YouTube description with NO DASHES:`;
   }
 
   /**
+   * Utility delay function for rate limiting
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
    * Get dual-platform repost statistics
    */
   async getDualPlatformStats(): Promise<{

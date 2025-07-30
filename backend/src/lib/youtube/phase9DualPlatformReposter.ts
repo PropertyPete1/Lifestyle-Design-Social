@@ -7,6 +7,7 @@ import { RealYouTubeUploader } from './realYouTubeUpload';
 import { analyzePeakHours } from './analyzePeakHours';
 import { analyzeTopHashtags } from './analyzeTopHashtags';
 import { fetchTrendingAudio } from './fetchTrendingAudio';
+import { AudioMatchingService } from '../../services/audioMatchingService';
 // Video enhancement removed - was ruining video quality
 import axios from 'axios';
 import * as fs from 'fs';
@@ -22,10 +23,12 @@ export class Phase9DualPlatformReposter {
   private uploadsDir: string;
   private settingsPath: string;
   private dropboxService?: DropboxService;
+  private audioMatchingService: AudioMatchingService;
 
   constructor() {
     this.uploadsDir = path.join(__dirname, '../../../uploads');
     this.settingsPath = path.join(__dirname, '../../../settings.json');
+    this.audioMatchingService = new AudioMatchingService();
     
     // Ensure uploads directory exists
     if (!fs.existsSync(this.uploadsDir)) {
@@ -344,10 +347,12 @@ export class Phase9DualPlatformReposter {
   }
 
   /**
-   * Generate optimized Instagram caption with new hook and no dashes
+   * Generate optimized Instagram caption using SMART FEATURES
    */
   private async generateInstagramCaption(originalContent: IInstagramArchive): Promise<{ finalCaption: string; hashtags: string[] }> {
     try {
+      console.log('🧠 Phase 9: Using SMART caption generation with competitor analysis...');
+      
       const settings = this.loadSettings();
       const openaiApiKey = settings.openaiApiKey;
 
@@ -355,46 +360,36 @@ export class Phase9DualPlatformReposter {
         throw new Error('OpenAI API key not configured');
       }
 
-      const prompt = `Rewrite this Instagram real estate caption with a fresh hook, NO DASHES, and engaging content:
+      // 🧠 SMART FEATURE: Use advanced caption generation with competitor patterns
+      const { prepareSmartCaption } = require('./prepareSmartCaption');
+      const smartCaptionResult = await prepareSmartCaption({
+        title: originalContent.caption.split(' ').slice(0, 10).join(' '), // First 10 words as title
+        description: originalContent.caption,
+        tags: originalContent.hashtags
+      }, openaiApiKey, 'instagram');
 
-Original: "${originalContent.caption}"
-
-CRITICAL REQUIREMENTS:
-- Start with an engaging hook (different from original)
-- ABSOLUTELY NO DASHES (-) anywhere in the text
-- Replace any dashes with commas or periods
-- Keep it engaging and real estate focused
-- Include emojis naturally
-- Maximum 150 words
-- No pricing information
-- PHASE 9 RULE: Zero dashes allowed in output
-
-Generate a fresh, engaging caption with NO DASHES:`;
-
-      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-4',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 200,
-        temperature: 0.7
-      }, {
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const finalCaption = response.data.choices[0]?.message?.content?.trim() || originalContent.caption;
-
+      // Use the best performing version (versionA is optimized for engagement)
+      const smartCaption = smartCaptionResult.versionA;
+      
+      // 🧠 SMART FEATURE: Get trending hashtags instead of reusing old ones
+      const { analyzeTopHashtags } = require('./analyzeTopHashtags');
+      const trendingHashtags = await this.getSmartHashtags();
+      
+      // Ensure no dashes in smart-generated content
+      const finalCaption = smartCaption.description.replace(/-/g, ',').replace(/,,/g, ',');
+      
+      console.log('✅ Smart caption generated with competitor patterns and trending hashtags');
+      
       return {
         finalCaption,
-        hashtags: originalContent.hashtags
+        hashtags: trendingHashtags.slice(0, 30) // Instagram allows up to 30 hashtags
       };
 
     } catch (error) {
-      console.error('❌ Failed to generate Instagram caption:', error);
+      console.error('❌ Smart caption generation failed, using fallback:', error);
       console.log('🔄 Using fallback caption with dash removal...');
       
-      // PHASE 9 FALLBACK: Remove dashes even when OpenAI fails
+      // PHASE 9 FALLBACK: Remove dashes even when smart features fail
       const fallbackCaption = originalContent.caption.replace(/-/g, ',').replace(/,,/g, ',');
       
       return {
@@ -405,10 +400,12 @@ Generate a fresh, engaging caption with NO DASHES:`;
   }
 
   /**
-   * Generate optimized YouTube caption with keywords and emojis
+   * Generate optimized YouTube caption using SMART FEATURES
    */
   private async generateYouTubeCaption(originalContent: IInstagramArchive): Promise<{ finalCaption: string; hashtags: string[] }> {
     try {
+      console.log('🧠 Phase 9: Using SMART YouTube caption with SEO keywords and competitor analysis...');
+      
       const settings = this.loadSettings();
       const openaiApiKey = settings.openaiApiKey;
 
@@ -416,47 +413,35 @@ Generate a fresh, engaging caption with NO DASHES:`;
         throw new Error('OpenAI API key not configured');
       }
 
-      const prompt = `Create a YouTube Shorts description for this real estate content:
+      // 🧠 SMART FEATURE: Use advanced caption generation optimized for YouTube
+      const { prepareSmartCaption } = require('./prepareSmartCaption');
+      const smartCaptionResult = await prepareSmartCaption({
+        title: originalContent.caption.split(' ').slice(0, 10).join(' '), // First 10 words as title
+        description: originalContent.caption,
+        tags: originalContent.hashtags
+      }, openaiApiKey, 'youtube');
 
-Original Instagram caption: "${originalContent.caption}"
-
-CRITICAL REQUIREMENTS:
-- Start with compelling hook + keywords for YouTube SEO
-- Include relevant emojis throughout
-- Add call-to-action for engagement
-- Focus on real estate keywords
-- Maximum 200 words
-- ABSOLUTELY NO DASHES (-) anywhere in the text
-- Replace any dashes with commas or periods
-- YouTube Shorts optimized
-- PHASE 9 RULE: Zero dashes allowed in output
-
-Generate YouTube description with NO DASHES:`;
-
-      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-4',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 250,
-        temperature: 0.7
-      }, {
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const finalCaption = response.data.choices[0]?.message?.content?.trim() || originalContent.caption;
-
+      // Use versionB for YouTube (informational/educational tone performs better)
+      const smartCaption = smartCaptionResult.versionB;
+      
+      // 🧠 SMART FEATURE: Get YouTube-specific trending hashtags (limit to 15 for YouTube)
+      const trendingHashtags = await this.getSmartHashtags('youtube');
+      
+      // Ensure no dashes in smart-generated content
+      const finalCaption = smartCaption.description.replace(/-/g, ',').replace(/,,/g, ',');
+      
+      console.log('✅ Smart YouTube caption generated with SEO keywords and trending hashtags');
+      
       return {
         finalCaption,
-        hashtags: originalContent.hashtags
+        hashtags: trendingHashtags.slice(0, 15) // YouTube performs better with fewer, targeted hashtags
       };
 
     } catch (error) {
-      console.error('❌ Failed to generate YouTube caption:', error);
+      console.error('❌ Smart YouTube caption generation failed, using fallback:', error);
       console.log('🔄 Using fallback caption with dash removal...');
       
-      // PHASE 9 FALLBACK: Remove dashes even when OpenAI fails
+      // PHASE 9 FALLBACK: Remove dashes even when smart features fail
       const fallbackCaption = originalContent.caption.replace(/-/g, ',').replace(/,,/g, ',');
       
       return {
@@ -467,11 +452,68 @@ Generate YouTube description with NO DASHES:`;
   }
 
   /**
-   * Get fresh trending Instagram hashtags
+   * Get SMART trending hashtags using advanced analytics
+   */
+  private async getSmartHashtags(platform: 'instagram' | 'youtube' = 'instagram'): Promise<string[]> {
+    try {
+      console.log(`🧠 Getting smart ${platform} hashtags using performance analytics...`);
+      
+      // Use different models based on platform
+      if (platform === 'youtube') {
+        // 🧠 SMART FEATURE: Use YouTube insights for hashtag analysis
+        const { default: YouTubeInsight } = require('../../models/YouTubeInsight');
+        
+        const trendingHashtags = await YouTubeInsight.find({ 
+          metricType: 'hashtag',
+          totalViews: { $gt: 10000 } // Only hashtags with good performance
+        })
+        .sort({ totalViews: -1, avgEngagement: -1 })
+        .limit(15) // YouTube works better with fewer, targeted hashtags
+        .select('hashtag totalViews');
+        
+        if (trendingHashtags.length > 0) {
+          const hashtags = trendingHashtags.map((item: any) => 
+            item.hashtag.startsWith('#') ? item.hashtag : `#${item.hashtag}`
+          );
+          console.log(`📺 Using ${hashtags.length} smart YouTube hashtags (avg views: ${Math.round(trendingHashtags.reduce((sum: number, item: any) => sum + item.totalViews, 0) / trendingHashtags.length)})`);
+          return hashtags;
+        }
+      } else {
+        // 🧠 SMART FEATURE: Use Instagram performance data
+        const { default: TopHashtags } = require('../../models/TopHashtags');
+        
+        const trendingHashtags = await TopHashtags.find({ 
+          platform: 'instagram',
+          avgPerformanceScore: { $gt: 500 } // Only high-performing hashtags
+        })
+        .sort({ avgPerformanceScore: -1, appearances: -1 })
+        .limit(30) // Instagram allows more hashtags
+        .select('hashtag avgPerformanceScore appearances');
+        
+        if (trendingHashtags.length > 0) {
+          const hashtags = trendingHashtags.map((item: any) => 
+            item.hashtag.startsWith('#') ? item.hashtag : `#${item.hashtag}`
+          );
+          console.log(`📱 Using ${hashtags.length} smart Instagram hashtags (avg score: ${Math.round(trendingHashtags.reduce((sum: number, item: any) => sum + item.avgPerformanceScore, 0) / trendingHashtags.length)})`);
+          return hashtags;
+        }
+      }
+      
+      // Fallback to previous method if smart features fail
+      return await this.getFreshInstagramHashtags();
+      
+    } catch (error) {
+      console.error('❌ Smart hashtag analysis failed, using fallback:', error);
+      return await this.getFreshInstagramHashtags();
+    }
+  }
+
+  /**
+   * Get fresh trending Instagram hashtags (fallback method)
    */
   private async getFreshInstagramHashtags(): Promise<string[]> {
     try {
-      const { TopHashtags } = require('../../models/TopHashtags');
+      const { default: TopHashtags } = require('../../models/TopHashtags');
       
       // Get top 30 Instagram hashtags from database
       const trendingHashtags = await TopHashtags.find({ platform: 'instagram' })
@@ -542,11 +584,26 @@ Generate YouTube description with NO DASHES:`;
   }
 
   /**
-   * Match trending Instagram audio
+   * Match trending Instagram audio using SMART AUDIO MATCHING
    */
   private async matchInstagramAudio(videoPath: string): Promise<{ audioId: string; trackName: string } | null> {
     try {
-      // Use Phase 3 audio matching
+      console.log('🧠 Phase 9: Using SMART audio matching for Instagram...');
+      
+      // 🧠 SMART FEATURE: Use advanced audio matching service
+      const videoId = path.basename(videoPath, '.mp4');
+      const smartAudioMatch = await this.audioMatchingService.matchVideoWithAudio(videoId, 'instagram');
+      
+      if (smartAudioMatch && smartAudioMatch.matchedAudio) {
+        console.log(`✅ Smart Instagram audio matched: "${smartAudioMatch.matchedAudio}" (trending rank: ${smartAudioMatch.audioMetadata?.trending_rank || 'N/A'})`);
+        return {
+          audioId: smartAudioMatch.audioMetadata?.platform_audio_id || smartAudioMatch.matchedAudio,
+          trackName: smartAudioMatch.matchedAudio
+        };
+      }
+
+      // Fallback to Phase 3 audio matching if smart matching fails
+      console.log('🔄 Smart audio matching failed, using fallback...');
       const audioMatch = await matchAudioToVideo(videoPath, 'instagram');
       if (audioMatch && audioMatch.audioTrackId) {
         return {
@@ -556,17 +613,32 @@ Generate YouTube description with NO DASHES:`;
       }
       return null;
     } catch (error) {
-      console.error('❌ Failed to match Instagram audio:', error);
+      console.error('❌ Smart Instagram audio matching failed:', error);
       return null;
     }
   }
 
   /**
-   * Match trending YouTube audio
+   * Match trending YouTube audio using SMART AUDIO MATCHING
    */
   private async matchYouTubeAudio(videoPath: string): Promise<{ audioId: string; trackName: string } | null> {
     try {
-      // Use Phase 3 audio matching
+      console.log('🧠 Phase 9: Using SMART audio matching for YouTube...');
+      
+      // 🧠 SMART FEATURE: Use advanced audio matching service
+      const videoId = path.basename(videoPath, '.mp4');
+      const smartAudioMatch = await this.audioMatchingService.matchVideoWithAudio(videoId, 'youtube');
+      
+      if (smartAudioMatch && smartAudioMatch.matchedAudio) {
+        console.log(`✅ Smart YouTube audio matched: "${smartAudioMatch.matchedAudio}" (trending rank: ${smartAudioMatch.audioMetadata?.trending_rank || 'N/A'})`);
+        return {
+          audioId: smartAudioMatch.audioMetadata?.platform_audio_id || smartAudioMatch.matchedAudio,
+          trackName: smartAudioMatch.matchedAudio
+        };
+      }
+
+      // Fallback to Phase 3 audio matching if smart matching fails
+      console.log('🔄 Smart audio matching failed, using fallback...');
       const audioMatch = await matchAudioToVideo(videoPath, 'youtube');
       if (audioMatch && audioMatch.audioTrackId) {
         return {
@@ -576,7 +648,7 @@ Generate YouTube description with NO DASHES:`;
       }
       return null;
     } catch (error) {
-      console.error('❌ Failed to match YouTube audio:', error);
+      console.error('❌ Smart YouTube audio matching failed:', error);
       return null;
     }
   }

@@ -1,7 +1,13 @@
 {
   "phase9AutopilotMode": "both",
-  "maxRepostsPerDay": 4,
+  "maxRepostsPerDay": 8,
   "minDaysBetweenPosts": 30,
+  "phase9Settings": {
+    "maxRepostsPerDay": 8,
+    "maxRepostsPerPlatform": 4,
+    "enableYouTubeReposts": true,
+    "enableInstagramReposts": true
+  },
   "autopostMode": "both",
   "instagramAccessToken": "EAAdtNOsq3ZAYBPNYjipMx5dgN5sv68e1Lpq6XjHePdmRWDGtXh9O8RiFAj5GlZC2AVIZCoj6XaZAZARZBlMVc2PMFas6eyFuVNKjZClZAGfmc9ZABTLwULfRk5YGRgtxaWNAQrZA3QZCzitMU8fVXZAPEnMZBW0gkQPMELtGBZAgyNickI7i6ZCVFU1xlh1xPRgDTDTdjzcd4ZAEM3EdKi4N",
   "instagramBusinessId": "17841454131323777",

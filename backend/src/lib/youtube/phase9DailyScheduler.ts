@@ -82,9 +82,9 @@ export class Phase9DailyScheduler {
       const phase9Settings = settings.phase9Settings || {};
       const weeklySchedule = phase9Settings.dailyScheduling?.weeklySchedule || this.getDefaultWeeklySchedule();
       
-      // Use maxRepostsPerDay from settings, divide by 2 for each platform since same video goes to both
+      // Use maxRepostsPerPlatform from phase9Settings for precise control
       const maxRepostsPerDay = settings.maxRepostsPerDay || 8;
-      const maxPostsPerPlatform = Math.floor(maxRepostsPerDay / 2); // 4 unique videos, each posted to both platforms
+      const maxPostsPerPlatform = phase9Settings.maxRepostsPerPlatform || Math.floor(maxRepostsPerDay / 2); // 4 posts per platform (Instagram + YouTube)
 
       // Get peak hours for both platforms
       const peakHours = await this.getPeakHours();

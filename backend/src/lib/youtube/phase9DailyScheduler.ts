@@ -304,33 +304,51 @@ export class Phase9DailyScheduler {
    */
   private async getPeakHours(): Promise<PeakHours> {
     try {
-      const peakHoursData = await analyzePeakHours();
+      // Get real audience engagement data from database
+      const { peakHoursScheduler } = require('../../lib/peakHours/scheduler');
+      
+      const instagramOptimal = await peakHoursScheduler.getOptimalTimes('instagram', 5);
+      const youtubeOptimal = await peakHoursScheduler.getOptimalTimes('youtube', 5);
+      
+      // Convert optimal times to the expected format
+      const instagramPeaks = instagramOptimal.map((time: any) => ({
+        hour: time.hour,
+        engagement: time.score
+      }));
+      
+      const youtubePeaks = youtubeOptimal.map((time: any) => ({
+        hour: time.hour,
+        engagement: time.score
+      }));
+      
+      console.log(`📊 Using real audience data: Instagram peaks at ${instagramPeaks.map(p => `${p.hour}:00`).join(', ')}`);
+      console.log(`📊 Using real audience data: YouTube peaks at ${youtubePeaks.map(p => `${p.hour}:00`).join(', ')}`);
       
       return {
-        instagram: [
-          { hour: 10, engagement: 100 },
-          { hour: 14, engagement: 95 },
-          { hour: 18, engagement: 90 }
+        instagram: instagramPeaks.length > 0 ? instagramPeaks : [
+          { hour: 14, engagement: 100 }, // Default fallback: Sunday 2PM (from real data)
+          { hour: 22, engagement: 95 },  // Monday 10PM
+          { hour: 13, engagement: 90 }   // Thursday 1PM
         ],
-        youtube: [
-          { hour: 14, engagement: 100 },
-          { hour: 17, engagement: 95 },
-          { hour: 19, engagement: 90 }
+        youtube: youtubePeaks.length > 0 ? youtubePeaks : [
+          { hour: 18, engagement: 100 }, // Default fallback: Friday 6PM (from real data)
+          { hour: 12, engagement: 95 },  // Monday/Friday 12PM
+          { hour: 17, engagement: 90 }   // Standard evening time
         ]
       };
 
     } catch (error) {
-      console.error('❌ Failed to get peak hours, using defaults:', error);
+      console.error('❌ Failed to get real peak hours, using smart defaults:', error);
       return {
         instagram: [
-          { hour: 10, engagement: 100 },
-          { hour: 14, engagement: 95 },
-          { hour: 18, engagement: 90 }
+          { hour: 14, engagement: 100 }, // Sunday 2PM (from your real data)
+          { hour: 22, engagement: 95 },  // Monday 10PM (from your real data)
+          { hour: 13, engagement: 90 }   // Thursday 1PM (from your real data)
         ],
         youtube: [
-          { hour: 14, engagement: 100 },
-          { hour: 17, engagement: 95 },
-          { hour: 19, engagement: 90 }
+          { hour: 18, engagement: 100 }, // Friday 6PM (from your real data)
+          { hour: 12, engagement: 95 },  // Monday 12PM (from your real data)
+          { hour: 17, engagement: 90 }   // Standard evening time
         ]
       };
     }

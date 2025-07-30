@@ -81,7 +81,10 @@ export class Phase9DailyScheduler {
       const settings = this.loadSettings();
       const phase9Settings = settings.phase9Settings || {};
       const weeklySchedule = phase9Settings.dailyScheduling?.weeklySchedule || this.getDefaultWeeklySchedule();
-      const maxPostsPerPlatform = phase9Settings.maxPostsPerPlatform || 4;
+      
+      // Use maxRepostsPerDay from settings, divide by 2 for each platform since same video goes to both
+      const maxRepostsPerDay = settings.maxRepostsPerDay || 8;
+      const maxPostsPerPlatform = Math.floor(maxRepostsPerDay / 2); // 4 unique videos, each posted to both platforms
 
       // Get peak hours for both platforms
       const peakHours = await this.getPeakHours();
@@ -186,9 +189,8 @@ export class Phase9DailyScheduler {
       // Optimize timing based on peak hours
       const optimizedYouTubeTime = this.optimizePostTime(youtubeDate, peakHours.youtube);
 
-      const youtubeContent = availableContent
-        .filter(content => !content.scheduledForYouTube && !content.scheduledForInstagram)
-        .slice(0, maxPostsPerPlatform);
+      // Use the SAME content for YouTube as Instagram (same videos on both platforms)
+      const youtubeContent = instagramContent;
 
       for (let i = 0; i < youtubeContent.length; i++) {
         const content = youtubeContent[i];
@@ -217,15 +219,14 @@ export class Phase9DailyScheduler {
     priority: number
   ): Promise<void> {
     try {
-      // Check if already scheduled
+      // Check if already scheduled (any status to prevent any duplicates)
       const existing = await RepostQueue.findOne({
         sourceMediaId: content.videoId,
-        targetPlatform: platform,
-        status: 'queued'
+        targetPlatform: platform
       });
 
       if (existing) {
-        console.log(`⏭️ Post ${content.videoId} already scheduled for ${platform}`);
+        console.log(`⏭️ Post ${content.videoId} already scheduled for ${platform} (status: ${existing.status})`);
         return;
       }
 
@@ -244,6 +245,7 @@ export class Phase9DailyScheduler {
       await RepostQueue.create({
         sourceMediaId: content.videoId,
         targetPlatform: platform,
+        platform: platform, // Also set platform field for backward compatibility
         priority,
         scheduledFor: scheduledTime,
         originalContent,
@@ -262,21 +264,31 @@ export class Phase9DailyScheduler {
    */
   private async getAvailableContent(): Promise<any[]> {
     try {
-      // Get top performers that haven't been reposted recently
-      const twentyDaysAgo = new Date();
-      twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 20);
+      // Get top performers that haven't been reposted recently (use settings minDaysBetweenPosts)
+      const settings = this.loadSettings();
+      const minDaysBetween = settings.minDaysBetweenPosts || 30;
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - minDaysBetween);
 
       const availableContent = await InstagramArchive.find({
-        mediaType: 'VIDEO',
-        performanceScore: { $gt: 1000 },
-        repostEligible: true,
-        $or: [
-          { lastRepostDate: { $exists: false } },
-          { lastRepostDate: { $lt: twentyDaysAgo } }
+        $and: [
+          {
+            $or: [
+              { mediaType: 'REEL' },
+              { mediaType: 'VIDEO' }
+            ]
+          },
+          { performanceScore: { $gt: 500 } }, // Lower threshold to get more content
+          {
+            $or: [
+              { lastRepostDate: { $exists: false } },
+              { lastRepostDate: { $lt: cutoffDate } }
+            ]
+          }
         ]
       })
       .sort({ performanceScore: -1 })
-      .limit(50); // Get top 50 performers
+      .limit(200); // Get more content to ensure we have enough for the week
 
       console.log(`📊 Found ${availableContent.length} pieces of content available for scheduling`);
       return availableContent;

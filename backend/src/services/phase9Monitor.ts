@@ -190,32 +190,34 @@ export class Phase9Monitor {
    */
   private loadSettings(): any {
     try {
-      // Use environment variables first (for production), fallback to file
-      const settings = {
-        autopostMode: process.env.AUTOPOST_MODE || 'both',
-        phase9AutopilotMode: process.env.PHASE9_AUTOPILOT_MODE || 'both',
-        instagramAccessToken: process.env.INSTAGRAM_ACCESS_TOKEN || '',
-        instagramBusinessId: process.env.INSTAGRAM_BUSINESS_ID || '',
-        youtubeRefreshToken: process.env.YOUTUBE_REFRESH_TOKEN || '',
-        youtubeClientId: process.env.YOUTUBE_CLIENT_ID || '',
-        youtubeClientSecret: process.env.YOUTUBE_CLIENT_SECRET || '',
-        youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
-        youtubeChannelId: process.env.YOUTUBE_CHANNEL_ID || '',
-        maxRepostsPerDay: parseInt(process.env.MAX_REPOSTS_PER_DAY || '8'),
-        minDaysBetweenPosts: parseInt(process.env.MIN_DAYS_BETWEEN_POSTS || '30')
-      };
-
-      // If environment variables are set, use them
-      if (settings.instagramAccessToken && settings.instagramBusinessId) {
-        return settings;
-      }
-
-      // Otherwise, try to load from file (development mode)
+      // Try to load from file first (development mode)
       const settingsData = fs.readFileSync(this.settingsPath, 'utf8');
       const fileSettings = JSON.parse(settingsData);
       
-      // Merge environment and file settings (env takes precedence)
-      return { ...fileSettings, ...settings };
+      // Use environment variables to override file settings (for production)
+      const envOverrides = {
+        autopostMode: process.env.AUTOPOST_MODE,
+        phase9AutopilotMode: process.env.PHASE9_AUTOPILOT_MODE,
+        instagramAccessToken: process.env.INSTAGRAM_ACCESS_TOKEN,
+        instagramBusinessId: process.env.INSTAGRAM_BUSINESS_ID,
+        youtubeRefreshToken: process.env.YOUTUBE_REFRESH_TOKEN,
+        youtubeClientId: process.env.YOUTUBE_CLIENT_ID,
+        youtubeClientSecret: process.env.YOUTUBE_CLIENT_SECRET,
+        youtubeApiKey: process.env.YOUTUBE_API_KEY,
+        youtubeChannelId: process.env.YOUTUBE_CHANNEL_ID,
+        maxRepostsPerDay: process.env.MAX_REPOSTS_PER_DAY ? parseInt(process.env.MAX_REPOSTS_PER_DAY) : undefined,
+        minDaysBetweenPosts: process.env.MIN_DAYS_BETWEEN_POSTS ? parseInt(process.env.MIN_DAYS_BETWEEN_POSTS) : undefined
+      };
+
+      // Remove undefined values from env overrides
+      Object.keys(envOverrides).forEach(key => {
+        if (envOverrides[key] === undefined) {
+          delete envOverrides[key];
+        }
+      });
+      
+      // Merge file settings with environment overrides (env takes precedence only when set)
+      return { ...fileSettings, ...envOverrides };
     } catch (error) {
       console.error('❌ Failed to load settings:', error);
       return { autopostMode: 'off' };

@@ -123,21 +123,21 @@ const TRENDING_AUDIO_SIMULATION: AudioTrack[] = [
     audioTrackId: 'chill_001',
     title: 'Ambient Relaxation',
     category: 'chill',
-    sampleUrl: 'null, // Audio URL to be populated with real datachill_001.mp3',
+    sampleUrl: 'chill_001.mp3', // Audio URL to be populated with real data
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'chill_002',
     title: 'Smooth Vibes',
     category: 'chill',
-    sampleUrl: 'null, // Audio URL to be populated with real datachill_002.mp3',
+    sampleUrl: 'chill_002.mp3', // Audio URL to be populated with real data
     lastUpdated: new Date()
   },
   {
     audioTrackId: 'chill_003',
     title: 'Peaceful Moments',
     category: 'chill',
-    sampleUrl: 'null, // Audio URL to be populated with real datachill_003.mp3',
+    sampleUrl: 'chill_003.mp3', // Audio URL to be populated with real data
     lastUpdated: new Date()
   }
 ];

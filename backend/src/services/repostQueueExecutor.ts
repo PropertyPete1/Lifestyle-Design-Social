@@ -12,10 +12,24 @@ export class RepostQueueExecutor {
   constructor() {
     this.youtubeReposter = new Phase9YouTubeReposter();
     
-    // Get Instagram credentials from environment variables
-    const instagramToken = process.env.INSTAGRAM_ACCESS_TOKEN || '';
-    const instagramBusinessId = process.env.INSTAGRAM_BUSINESS_ID || '';
+    // Get Instagram credentials from settings file
+    const settings = this.loadSettings();
+    const instagramToken = settings.instagramAccessToken || '';
+    const instagramBusinessId = settings.instagramBusinessId || '';
     this.instagramReposter = new Phase9InstagramReposter(instagramToken, instagramBusinessId);
+  }
+
+  private loadSettings(): any {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const settingsPath = path.join(__dirname, '../../settings.json');
+      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      return JSON.parse(settingsData);
+    } catch (error) {
+      console.error('❌ Error loading settings:', error);
+      return {};
+    }
   }
 
   /**
@@ -95,30 +109,53 @@ export class RepostQueueExecutor {
       if (post.targetPlatform === 'youtube') {
         // Process single YouTube repost
         const youtubeResult = await this.youtubeReposter.processYouTubeReposts();
-        result = { success: youtubeResult.successful > 0, videoId: 'unknown', url: 'unknown' };
+        
+        if (youtubeResult.successful > 0) {
+          // Update to completed
+          await RepostQueue.findByIdAndUpdate(post._id, {
+            status: 'completed',
+            completedAt: new Date(),
+            resultData: {
+              uploadedVideoId: 'youtube_repost',
+              uploadedUrl: 'pending_youtube_upload',
+              platform: post.targetPlatform,
+              processed: youtubeResult.processed,
+              successful: youtubeResult.successful,
+              failed: youtubeResult.failed
+            }
+          });
+          
+          console.log(`✅ Successfully processed YouTube repost for ${post.sourceMediaId}: ${youtubeResult.successful}/${youtubeResult.processed} successful`);
+        } else {
+          throw new Error(`YouTube repost failed: ${youtubeResult.errors.join(', ') || 'Unknown error'}`);
+        }
+        
       } else if (post.targetPlatform === 'instagram') {
         // Process single Instagram repost  
         const instagramResult = await this.instagramReposter.processInstagramReposts();
-        result = { success: instagramResult.successful > 0, videoId: 'unknown', url: 'unknown' };
+        
+        if (instagramResult.successful > 0) {
+          // Update to completed
+          await RepostQueue.findByIdAndUpdate(post._id, {
+            status: 'completed',
+            completedAt: new Date(),
+            resultData: {
+              uploadedVideoId: 'instagram_repost',
+              uploadedUrl: 'pending_instagram_upload',
+              platform: post.targetPlatform,
+              processed: instagramResult.processed,
+              successful: instagramResult.successful,
+              failed: instagramResult.failed
+            }
+          });
+          
+          console.log(`✅ Successfully processed Instagram repost for ${post.sourceMediaId}: ${instagramResult.successful}/${instagramResult.processed} successful`);
+        } else {
+          throw new Error(`Instagram repost failed: ${instagramResult.errors.join(', ') || 'Unknown error'}`);
+        }
+        
       } else {
         throw new Error(`Unknown target platform: ${post.targetPlatform}`);
-      }
-
-      if (result.success) {
-        // Update to completed
-        await RepostQueue.findByIdAndUpdate(post._id, {
-          status: 'completed',
-          completedAt: new Date(),
-          resultData: {
-            uploadedVideoId: result.videoId,
-            uploadedUrl: result.url,
-            platform: post.targetPlatform
-          }
-        });
-        
-        console.log(`✅ Successfully posted to ${post.targetPlatform}: ${result.videoId}`);
-      } else {
-        throw new Error(result.error || 'Unknown posting error');
       }
 
     } catch (error) {

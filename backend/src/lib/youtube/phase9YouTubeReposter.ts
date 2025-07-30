@@ -380,6 +380,7 @@ export class Phase9YouTubeReposter {
         platform: 'youtube',
         captionGenerated: true,
         posted: false,
+        fingerprintHash: processedVideo.fileHash, // Add this required field
         filename: processedVideo.filename,
         filePath: processedVideo.filePath,
         status: 'ready',

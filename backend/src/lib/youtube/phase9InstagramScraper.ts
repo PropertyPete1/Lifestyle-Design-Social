@@ -428,18 +428,28 @@ export class Phase9InstagramScraper {
         // Stagger posts - highest priority posts get earlier slots
         youtubeDate.setHours(youtubeDate.getHours() + (priority * 2));
 
-        try {
-          await RepostQueue.create({
-            sourceMediaId: post.videoId,
-            targetPlatform: 'youtube',
-            priority,
-            scheduledFor: youtubeDate,
-            originalContent,
-            status: 'queued'
-          });
-          console.log(`📺 Queued ${post.videoId} for YouTube repost (priority ${priority}, scheduled: ${youtubeDate.toLocaleDateString()})`);
-        } catch (error) {
-          // Might already exist, that's okay
+        // Check if already queued for YouTube
+        const existingYouTube = await RepostQueue.findOne({
+          sourceMediaId: post.videoId,
+          targetPlatform: 'youtube'
+        });
+
+        if (!existingYouTube) {
+          try {
+            await RepostQueue.create({
+              sourceMediaId: post.videoId,
+              targetPlatform: 'youtube',
+              priority,
+              scheduledFor: youtubeDate,
+              originalContent,
+              status: 'queued'
+            });
+            console.log(`📺 Queued ${post.videoId} for YouTube repost (priority ${priority}, scheduled: ${youtubeDate.toLocaleDateString()})`);
+          } catch (error) {
+            console.log(`⏭️ Post ${post.videoId} already queued for YouTube`);
+          }
+        } else {
+          console.log(`⏭️ Post ${post.videoId} already queued for YouTube`);
         }
       }
 
@@ -449,18 +459,28 @@ export class Phase9InstagramScraper {
         instagramDate.setDate(instagramDate.getDate() + 1); // Offset by 1 day from YouTube
         instagramDate.setHours(instagramDate.getHours() + (priority * 3));
 
-        try {
-          await RepostQueue.create({
-            sourceMediaId: post.videoId,
-            targetPlatform: 'instagram',
-            priority,
-            scheduledFor: instagramDate,
-            originalContent,
-            status: 'queued'
-          });
-          console.log(`📱 Queued ${post.videoId} for Instagram repost (priority ${priority}, scheduled: ${instagramDate.toLocaleDateString()})`);
-        } catch (error) {
-          // Might already exist, that's okay
+        // Check if already queued for Instagram
+        const existingInstagram = await RepostQueue.findOne({
+          sourceMediaId: post.videoId,
+          targetPlatform: 'instagram'
+        });
+
+        if (!existingInstagram) {
+          try {
+            await RepostQueue.create({
+              sourceMediaId: post.videoId,
+              targetPlatform: 'instagram',
+              priority,
+              scheduledFor: instagramDate,
+              originalContent,
+              status: 'queued'
+            });
+            console.log(`📱 Queued ${post.videoId} for Instagram repost (priority ${priority}, scheduled: ${instagramDate.toLocaleDateString()})`);
+          } catch (error) {
+            console.log(`⏭️ Post ${post.videoId} already queued for Instagram`);
+          }
+        } else {
+          console.log(`⏭️ Post ${post.videoId} already queued for Instagram`);
         }
       }
 

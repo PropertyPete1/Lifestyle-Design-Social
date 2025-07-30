@@ -177,24 +177,36 @@ export class DailyRepostScheduler {
         console.log(`🎵 Matching trending audio for Instagram repost ${i + 1}/4...`);
         const audioMatch = await this.audioMatchingService.matchVideoWithAudio(post.videoId);
         
-        // Create repost queue entry
-        await RepostQueue.create({
+        // Check if already queued
+        const existingRepost = await RepostQueue.findOne({
           sourceMediaId: post.videoId,
-          targetPlatform: 'instagram',
-          status: 'queued',
-          priority: i + 1,
-          scheduledFor: scheduledTime,
-          queuedAt: new Date(),
-          originalContent: {
-            caption: post.caption,
-            hashtags: post.hashtags,
-            performanceScore: post.performanceScore,
-            viewCount: post.viewCount,
-            likeCount: post.likeCount,
-            commentCount: post.commentCount,
-            media_url: post.media_url,
-            permalink: post.permalink
-          },
+          targetPlatform: 'instagram'
+        });
+
+        if (existingRepost) {
+          console.log(`⏭️ Post ${post.videoId} already scheduled for Instagram repost`);
+          continue;
+        }
+
+        // Create repost queue entry
+        try {
+          await RepostQueue.create({
+            sourceMediaId: post.videoId,
+            targetPlatform: 'instagram',
+            status: 'queued',
+            priority: i + 1,
+            scheduledFor: scheduledTime,
+            queuedAt: new Date(),
+            originalContent: {
+              caption: post.caption,
+              hashtags: post.hashtags,
+              performanceScore: post.performanceScore,
+              viewCount: post.viewCount,
+              likeCount: post.likeCount,
+              commentCount: post.commentCount,
+              media_url: post.media_url,
+              permalink: post.permalink
+            },
           repostContent: {
             optimizedForPlatform: 'instagram',
             matchedAudio: audioMatch ? {
@@ -210,6 +222,10 @@ export class DailyRepostScheduler {
         scheduledCount++;
         const dayName = scheduledTime.toLocaleDateString('en-US', { weekday: 'long' });
         console.log(`📱 Scheduled Instagram repost ${i + 1}/4 for ${dayName} at ${scheduledTime.toLocaleTimeString()}`);
+        
+        } catch (createError) {
+          console.log(`⏭️ Post ${post.videoId} already scheduled for Instagram (duplicate detected)`);
+        }
       }
       
       return scheduledCount;
@@ -247,24 +263,36 @@ export class DailyRepostScheduler {
         console.log(`🎵 Matching trending audio for YouTube repost ${i + 1}/4...`);
         const audioMatch = await this.audioMatchingService.matchVideoWithAudio(post.videoId);
         
-        // Create repost queue entry
-        await RepostQueue.create({
+        // Check if already queued
+        const existingYouTubeRepost = await RepostQueue.findOne({
           sourceMediaId: post.videoId,
-          targetPlatform: 'youtube',
-          status: 'queued',
-          priority: i + 1,
-          scheduledFor: scheduledTime,
-          queuedAt: new Date(),
-          originalContent: {
-            caption: post.caption,
-            hashtags: post.hashtags,
-            performanceScore: post.performanceScore,
-            viewCount: post.viewCount,
-            likeCount: post.likeCount,
-            commentCount: post.commentCount,
-            media_url: post.media_url,
-            permalink: post.permalink
-          },
+          targetPlatform: 'youtube'
+        });
+
+        if (existingYouTubeRepost) {
+          console.log(`⏭️ Post ${post.videoId} already scheduled for YouTube repost`);
+          continue;
+        }
+
+        // Create repost queue entry
+        try {
+          await RepostQueue.create({
+            sourceMediaId: post.videoId,
+            targetPlatform: 'youtube',
+            status: 'queued',
+            priority: i + 1,
+            scheduledFor: scheduledTime,
+            queuedAt: new Date(),
+            originalContent: {
+              caption: post.caption,
+              hashtags: post.hashtags,
+              performanceScore: post.performanceScore,
+              viewCount: post.viewCount,
+              likeCount: post.likeCount,
+              commentCount: post.commentCount,
+              media_url: post.media_url,
+              permalink: post.permalink
+            },
           repostContent: {
             optimizedForPlatform: 'youtube',
             matchedAudio: audioMatch ? {
@@ -280,6 +308,10 @@ export class DailyRepostScheduler {
         scheduledCount++;
         const dayName = scheduledTime.toLocaleDateString('en-US', { weekday: 'long' });
         console.log(`📺 Scheduled YouTube repost ${i + 1}/4 for ${dayName} at ${scheduledTime.toLocaleTimeString()}`);
+        
+        } catch (createError) {
+          console.log(`⏭️ Post ${post.videoId} already scheduled for YouTube (duplicate detected)`);
+        }
       }
       
       return scheduledCount;

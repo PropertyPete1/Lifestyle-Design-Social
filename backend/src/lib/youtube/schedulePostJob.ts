@@ -29,14 +29,20 @@ export async function schedulePostJob({
     }
 
     // Update video status to scheduled in MongoDB
-    await VideoQueue.findByIdAndUpdate(videoId, {
-      status: 'scheduled',
-      scheduledTime: scheduledTime,
-      selectedTitle: title,
-      selectedDescription: description,
-      selectedTags: tags,
-      audioTrackId: audioTrackId
-    });
+    // For Phase 9 reposts, videoId might be a custom string, not ObjectId
+    try {
+      await VideoQueue.findByIdAndUpdate(videoId, {
+        status: 'scheduled',
+        scheduledTime: scheduledTime,
+        selectedTitle: title,
+        selectedDescription: description,
+        selectedTags: tags,
+        audioTrackId: audioTrackId
+      });
+    } catch (error) {
+      // If ObjectId cast fails, it might be a Phase 9 repost with custom ID
+      console.log(`⚠️ Could not update VideoQueue for ${videoId}, may be Phase 9 repost`);
+    }
 
     // Convert scheduled time to cron format
     const cronTime = convertDateToCron(scheduledTime);
@@ -63,10 +69,15 @@ export async function schedulePostJob({
         console.error(`❌ Error in scheduled job for video ${videoId}:`, error);
         
         // Update video status to failed
-        await VideoQueue.findByIdAndUpdate(videoId, {
-          status: 'failed',
-          errorMessage: error instanceof Error ? error.message : 'Scheduled job failed'
-        });
+        try {
+          await VideoQueue.findByIdAndUpdate(videoId, {
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Scheduled job failed'
+          });
+        } catch (updateError) {
+          // If ObjectId cast fails, it might be a Phase 9 repost with custom ID
+          console.log(`⚠️ Could not update VideoQueue status for ${videoId}, may be Phase 9 repost`);
+        }
       }
 
       // Remove job from memory after execution
@@ -104,10 +115,15 @@ export async function cancelScheduledPost(videoId: string): Promise<{ success: b
     }
 
     // Update video status back to pending
-    await VideoQueue.findByIdAndUpdate(videoId, {
-      status: 'pending',
-      scheduledTime: undefined
-    });
+    try {
+      await VideoQueue.findByIdAndUpdate(videoId, {
+        status: 'pending',
+        scheduledTime: undefined
+      });
+    } catch (error) {
+      // If ObjectId cast fails, it might be a Phase 9 repost with custom ID
+      console.log(`⚠️ Could not update VideoQueue for ${videoId}, may be Phase 9 repost`);
+    }
 
     console.log(`🚫 Cancelled scheduled post for video: ${videoId}`);
     

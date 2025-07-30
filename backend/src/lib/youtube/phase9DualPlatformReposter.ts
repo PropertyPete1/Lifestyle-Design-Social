@@ -7,11 +7,12 @@ import { RealYouTubeUploader } from './realYouTubeUpload';
 import { analyzePeakHours } from './analyzePeakHours';
 import { analyzeTopHashtags } from './analyzeTopHashtags';
 import { fetchTrendingAudio } from './fetchTrendingAudio';
-import { enhanceVideoQuality, enhanceVideoWithAnalysis } from './enhanceVideoQuality';
+// Video enhancement removed - was ruining video quality
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+const FormData = require('form-data');
 
 interface DropboxService {
   uploadFile(filePath: string, dropboxPath: string): Promise<{ success: boolean; url?: string; error?: string }>;
@@ -304,20 +305,15 @@ export class Phase9DualPlatformReposter {
       const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
       const originalBuffer = Buffer.from(response.data);
       
-      console.log(`🔆 Phase 9: Applying visual enhancement to ${mediaId}...`);
+      console.log(`💾 Phase 9: Saving original video (no enhancement) for ${mediaId}...`);
       
-      // Apply Phase 9 visual enhancement
-      const enhancementResult = await enhanceVideoWithAnalysis(originalBuffer);
-      
-      console.log(`✨ Visual enhancement complete: ${enhancementResult.qualityImprovement}`);
-      
-      // Save enhanced video
-      const fileName = `enhanced_${mediaId}_${Date.now()}.mp4`;
+      // Save original video without enhancement
+      const fileName = `original_${mediaId}_${Date.now()}.mp4`;
       const filePath = path.join(this.uploadsDir, fileName);
       
-      fs.writeFileSync(filePath, enhancementResult.enhancedVideo);
+      fs.writeFileSync(filePath, originalBuffer);
       
-      console.log(`💾 Enhanced video saved: ${fileName}`);
+      console.log(`💾 Original video saved: ${fileName}`);
       return filePath;
 
     } catch (error) {
@@ -359,19 +355,21 @@ export class Phase9DualPlatformReposter {
         throw new Error('OpenAI API key not configured');
       }
 
-      const prompt = `Rewrite this Instagram real estate caption with a fresh hook, no dashes, and engaging content:
+      const prompt = `Rewrite this Instagram real estate caption with a fresh hook, NO DASHES, and engaging content:
 
 Original: "${originalContent.caption}"
 
-Requirements:
+CRITICAL REQUIREMENTS:
 - Start with an engaging hook (different from original)
-- Remove all dashes (-)
+- ABSOLUTELY NO DASHES (-) anywhere in the text
+- Replace any dashes with commas or periods
 - Keep it engaging and real estate focused
 - Include emojis naturally
 - Maximum 150 words
 - No pricing information
+- PHASE 9 RULE: Zero dashes allowed in output
 
-Generate a fresh, engaging caption:`;
+Generate a fresh, engaging caption with NO DASHES:`;
 
       const response = await axios.post('https://api.openai.com/v1/chat/completions', {
         model: 'gpt-4',
@@ -394,8 +392,13 @@ Generate a fresh, engaging caption:`;
 
     } catch (error) {
       console.error('❌ Failed to generate Instagram caption:', error);
+      console.log('🔄 Using fallback caption with dash removal...');
+      
+      // PHASE 9 FALLBACK: Remove dashes even when OpenAI fails
+      const fallbackCaption = originalContent.caption.replace(/-/g, ',').replace(/,,/g, ',');
+      
       return {
-        finalCaption: originalContent.caption,
+        finalCaption: fallbackCaption,
         hashtags: originalContent.hashtags
       };
     }
@@ -417,16 +420,18 @@ Generate a fresh, engaging caption:`;
 
 Original Instagram caption: "${originalContent.caption}"
 
-Requirements:
+CRITICAL REQUIREMENTS:
 - Start with compelling hook + keywords for YouTube SEO
 - Include relevant emojis throughout
 - Add call-to-action for engagement
 - Focus on real estate keywords
 - Maximum 200 words
-- No dashes (-)
+- ABSOLUTELY NO DASHES (-) anywhere in the text
+- Replace any dashes with commas or periods
 - YouTube Shorts optimized
+- PHASE 9 RULE: Zero dashes allowed in output
 
-Generate YouTube description:`;
+Generate YouTube description with NO DASHES:`;
 
       const response = await axios.post('https://api.openai.com/v1/chat/completions', {
         model: 'gpt-4',
@@ -449,8 +454,13 @@ Generate YouTube description:`;
 
     } catch (error) {
       console.error('❌ Failed to generate YouTube caption:', error);
+      console.log('🔄 Using fallback caption with dash removal...');
+      
+      // PHASE 9 FALLBACK: Remove dashes even when OpenAI fails
+      const fallbackCaption = originalContent.caption.replace(/-/g, ',').replace(/,,/g, ',');
+      
       return {
-        finalCaption: originalContent.caption,
+        finalCaption: fallbackCaption,
         hashtags: originalContent.hashtags
       };
     }
@@ -584,28 +594,51 @@ Generate YouTube description:`;
         throw new Error('Instagram credentials not configured');
       }
 
-      // Create media container
-      const createResponse = await axios.post(`https://graph.facebook.com/v18.0/${businessId}/media`, {
-        video_url: videoPath, // This would need to be a public URL
-        caption: `${caption.finalCaption}\n\n${hashtags.join(' ')}`,
-        access_token: accessToken
-      });
+      console.log('📱 Phase 9: Posting VIDEO to Instagram (not image)');
+      
+      // PHASE 9 FIX: Upload video file to get a media container for video content
+      const form = new FormData();
+      form.append('video', fs.createReadStream(videoPath));
+      form.append('caption', `${caption.finalCaption}\n\n${hashtags.join(' ')}`);
+      form.append('media_type', 'REELS'); // Ensure it's treated as a video reel
+      form.append('access_token', accessToken);
 
-      const containerId = createResponse.data.id;
+      // Upload video directly to Instagram API
+      const uploadResponse = await axios.post(
+        `https://graph.facebook.com/v18.0/${businessId}/media`,
+        form,
+        {
+          headers: {
+            ...form.getHeaders(),
+            'Content-Type': 'multipart/form-data'
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          timeout: 120000 // 2 minutes timeout for video upload
+        }
+      );
 
-      // Publish the media
+      const containerId = uploadResponse.data.id;
+      console.log(`📱 Video container created: ${containerId}`);
+
+      // Wait for video processing
+      console.log('⏳ Waiting for Instagram video processing...');
+      await this.delay(5000); // 5 second delay for video processing
+
+      // Publish the video
       const publishResponse = await axios.post(`https://graph.facebook.com/v18.0/${businessId}/media_publish`, {
         creation_id: containerId,
         access_token: accessToken
       });
 
+      console.log('✅ VIDEO successfully posted to Instagram!');
       return {
         success: true,
         mediaId: publishResponse.data.id
       };
 
     } catch (error) {
-      console.error('❌ Instagram posting failed:', error);
+      console.error('❌ Instagram VIDEO posting failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

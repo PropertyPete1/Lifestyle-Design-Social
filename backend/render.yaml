@@ -5,6 +5,7 @@ services:
     plan: starter
     buildCommand: npm install && npm run build
     startCommand: npm start
+    # Phase 9 autopilot starts automatically via phase9Monitor service
     # healthCheckPath: /api/health  # Temporarily disabled during setup
     envVars:
       - key: NODE_ENV

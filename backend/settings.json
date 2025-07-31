@@ -9,14 +9,15 @@
     "enableInstagramReposts": true
   },
   "autopostMode": "both",
-  "instagramAccessToken": "EAAdtNOsq3ZAYBPNYjipMx5dgN5sv68e1Lpq6XjHePdmRWDGtXh9O8RiFAj5GlZC2AVIZCoj6XaZAZARZBlMVc2PMFas6eyFuVNKjZClZAGfmc9ZABTLwULfRk5YGRgtxaWNAQrZA3QZCzitMU8fVXZAPEnMZBW0gkQPMELtGBZAgyNickI7i6ZCVFU1xlh1xPRgDTDTdjzcd4ZAEM3EdKi4N",
-  "instagramBusinessId": "17841454131323777",
-  "youtubeApiKey": "AIzaSyAqXLUTFa_6SuSfsIg0Flc3uxFf4xQmhwM",
-  "youtubeClientId": "823598477516-htskr4bgptn0nm88bfa32di503tn2prk.apps.googleusercontent.com",
-  "youtubeClientSecret": "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",
-  "youtubeRefreshToken": "1//0fdTp6fY4365mCgYIARAAGA8SNgF-L9IrQ0z8Dsz61Wq3RLAMGf-il2RzSeiOwPzbC2j2UK3l0L4mL2e8NoStGhfhVpe21kq9TA",
-  "youtubeChannelId": "UCqSfOt2aLrKKiROnY4kGBcQ",
-  "openaiApiKey": "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",
+  "instagramAccessToken": "YOUR_INSTAGRAM_ACCESS_TOKEN",
+  "instagramBusinessId": "YOUR_INSTAGRAM_BUSINESS_ID",
+  "youtubeApiKey": "YOUR_YOUTUBE_API_KEY",
+  "youtubeClientId": "YOUR_YOUTUBE_CLIENT_ID",
+  "youtubeClientSecret": "YOUR_YOUTUBE_CLIENT_SECRET",
+  "youtubeRefreshToken": "YOUR_YOUTUBE_REFRESH_TOKEN",
+  "youtubeChannelId": "YOUR_YOUTUBE_CHANNEL_ID",
+  "openaiApiKey": "YOUR_OPENAI_API_KEY",
   "dropboxAccessToken": "",
-  "mongoUri": ""
+  "mongoUri": "",
+  "instagramAccountId": "YOUR_INSTAGRAM_ACCOUNT_ID"
 }

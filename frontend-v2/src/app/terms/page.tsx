@@ -1,4 +1,4 @@
-export default function TermsPage() {
+export default function TermsOfService() {
   return (
     <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>Terms of Service</h1>

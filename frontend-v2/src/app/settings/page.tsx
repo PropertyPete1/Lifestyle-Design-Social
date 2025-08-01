@@ -748,7 +748,78 @@ export default function Settings() {
           <button className="btn-secondary" onClick={testMongoDB}>☁️ Test MongoDB Connection</button>
           <button className="btn-secondary" onClick={testUpload}>📤 Run Test Upload</button>
         </div>
-      </div>
+
+        {/* Terms of Service */}
+        <div className="settings-card">
+          <div className="card-header">
+            <div className="card-emoji">📜</div>
+            <h2 className="card-title">Terms of Service</h2>
+          </div>
+
+          <div className="form-group">
+            <div style={{
+              background: "rgba(255,255,255,0.05)", 
+              padding: "1.5rem", 
+              borderRadius: "10px", 
+              border: "1px solid rgba(255,255,255,0.1)",
+              lineHeight: "1.6",
+              color: "rgba(255,255,255,0.9)"
+            }}>
+              <h3 style={{color: "#fff", marginBottom: "1rem"}}>Terms of Service</h3>
+              <p style={{marginBottom: "1rem"}}>
+                By using this app, you agree to allow us to schedule and publish content to your connected social media accounts.
+                You retain full ownership of your content. We are not responsible for platform restrictions or takedowns.
+              </p>
+              <p style={{fontSize: "0.9rem", color: "rgba(255,255,255,0.7)"}}>
+                <strong>Key Points:</strong>
+              </p>
+              <ul style={{fontSize: "0.9rem", color: "rgba(255,255,255,0.7)", paddingLeft: "1.5rem"}}>
+                <li>You maintain full ownership of all content</li>
+                <li>We only access accounts you explicitly connect</li>
+                <li>Service is provided "as-is" without guarantees</li>
+                <li>You are responsible for compliance with platform policies</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Privacy Policy */}
+        <div className="settings-card">
+          <div className="card-header">
+            <div className="card-emoji">🔒</div>
+            <h2 className="card-title">Privacy Policy</h2>
+          </div>
+
+          <div className="form-group">
+            <div style={{
+              background: "rgba(255,255,255,0.05)", 
+              padding: "1.5rem", 
+              borderRadius: "10px", 
+              border: "1px solid rgba(255,255,255,0.1)",
+              lineHeight: "1.6",
+              color: "rgba(255,255,255,0.9)"
+            }}>
+              <h3 style={{color: "#fff", marginBottom: "1rem"}}>Privacy Policy</h3>
+              <p style={{marginBottom: "1rem"}}>
+                We only access the data required to connect your social media accounts and publish content on your behalf.
+                We do not sell or share your data. You may disconnect your account at any time.
+              </p>
+              <p style={{fontSize: "0.9rem", color: "rgba(255,255,255,0.7)"}}>
+                <strong>Data We Access:</strong>
+              </p>
+              <ul style={{fontSize: "0.9rem", color: "rgba(255,255,255,0.7)", paddingLeft: "1.5rem"}}>
+                <li>Social media account information for posting</li>
+                <li>Video files you choose to upload or process</li>
+                <li>Settings and preferences you configure</li>
+                <li>API tokens (stored securely, never shared)</li>
+              </ul>
+              <p style={{fontSize: "0.9rem", color: "rgba(255,255,255,0.7)", marginTop: "1rem"}}>
+                <strong>Your Rights:</strong> You can disconnect accounts, delete data, or stop using the service at any time.
+              </p>
+            </div>
+          </div>
+        </div>
+
     </div>
   );
 }

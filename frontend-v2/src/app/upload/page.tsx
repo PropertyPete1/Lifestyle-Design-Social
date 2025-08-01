@@ -170,7 +170,7 @@ export default function UploadPage() {
     uploadBox.addEventListener('drop', handleDrop, false);
   };
 
-  const handleDrop = (e: any) => {
+  const handleDrop = (e: DragEvent) => {
     const files = e.dataTransfer.files;
     handleFiles(files);
   };
@@ -327,7 +327,6 @@ export default function UploadPage() {
 
   const handleUrlSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && urlInputRef.current?.value.trim()) {
-      const url = urlInputRef.current.value.trim();
       showNotification('🌐 Processing URL upload...');
       
       setTimeout(() => {

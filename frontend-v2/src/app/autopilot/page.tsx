@@ -20,7 +20,7 @@ const api = {
     return await response.json();
   },
 
-  async post(endpoint: string, data: any) {
+  async post(endpoint: string, data: Record<string, unknown>) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -35,8 +35,8 @@ const api = {
 export default function AutopilotPage() {
   const [autopilotActive, setAutopilotActive] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-  const [autopilotStatus, setAutopilotStatus] = useState<any>(null);
-  const [queueData, setQueueData] = useState<any[]>([]);
+  const [autopilotStatus] = useState<Record<string, unknown> | null>(null);
+  const [queueData, setQueueData] = useState<Record<string, unknown>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const particlesRef = useRef<HTMLDivElement>(null);
 
@@ -266,7 +266,7 @@ export default function AutopilotPage() {
     }, 3000);
   };
 
-  const updateSetting = (key: string, value: any) => {
+  const updateSetting = (key: string, value: string | number | boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
@@ -539,7 +539,7 @@ export default function AutopilotPage() {
                 <div className="hashtags-section">
                   <div className="caption-label">🏷️ Optimized Hashtags ({video.hashtags?.length || 0})</div>
                   <div className="hashtags-container">
-                    {video.hashtags?.slice(0, 20).map((tag, tagIndex) => (
+                    {((video.hashtags as string[]) || []).slice(0, 20).map((tag: string, tagIndex: number) => (
                       <span key={tagIndex} className="hashtag">#{tag}</span>
                     )) || <span className="hashtag-placeholder">No hashtags</span>}
                   </div>

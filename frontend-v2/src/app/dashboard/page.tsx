@@ -36,14 +36,14 @@ export default function Dashboard() {
       autoUploadsPerWeek: '2/week'
     }
   });
-  const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [analyticsLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState<Record<string, unknown>[]>([]);
   const [autopilotRunning, setAutopilotRunning] = useState(false);
   const [queueSize, setQueueSize] = useState(0);
   const [lastQueueUpdate, setLastQueueUpdate] = useState<number>(0);
 
   // Helper function to format activity data
-  const formatActivity = (activity: any) => {
+  const formatActivity = (activity: Record<string, unknown>) => {
     const timeAgo = getTimeAgo(activity.createdAt);
     console.log(`🕒 Activity ${activity.type}: ${activity.createdAt} -> ${timeAgo}`);
     
@@ -173,8 +173,8 @@ export default function Dashboard() {
         fetch('http://localhost:3002/api/youtube/analytics')
         ]);
 
-        let instagramData: any = {};
-        let youtubeData: any = {};
+        let instagramData: Record<string, unknown> = {};
+        let youtubeData: Record<string, unknown> = {};
 
         if (instagramRes.ok) {
           const igResult = await instagramRes.json();

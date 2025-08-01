@@ -26,7 +26,7 @@ const api = {
     }
   },
 
-  async post(endpoint: string, data: any) {
+  async post(endpoint: string, data: Record<string, unknown>) {
     console.log(`🔄 POST: ${API_BASE_URL}${endpoint}`, data);
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
